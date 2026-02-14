@@ -1,0 +1,616 @@
+import React, { useState, useEffect, useCallback } from 'react';
+// ÖNEMLİ NOT: Vercel ve GitHub projende bu satırı aktif etmelisin (import { createClient } from '@supabase/supabase-js';)
+// Şu an önizleme ortamında hata almamak için kütüphaneyi global 'window' nesnesi üzerinden alacağız.
+
+import { 
+  Home, 
+  BookOpen, 
+  Video, 
+  Edit3, 
+  MessageSquare, 
+  Calculator, 
+  UserCircle, 
+  LogOut, 
+  Shield, 
+  Rocket, 
+  ChevronRight, 
+  Clock, 
+  CheckCircle,
+  AlertCircle,
+  X,
+  FileText,
+  Plus,
+  Trash2,
+  BarChart3,
+  Image as ImageIcon,
+  Monitor,
+  Eye,
+  Calendar
+} from 'lucide-react';
+
+// --- RATIONAL CONFIG ---
+const PROJECT_ID = "tnhofdyonpbmozqzimzj";
+const SUPABASE_URL = `https://${PROJECT_ID}.supabase.co`;
+const SUPABASE_ANON_KEY = "sb_publishable_xVFfpA85IjnCqIjEJWvtvQ_VZCH_n60";
+
+/**
+ * Önizleme ortamı ve Vercel uyumluluğu için rasyonel çözüm:
+ * Yerel projende 'npm install @supabase/supabase-js' yaptıktan sonra
+ * window.supabase yerine doğrudan import edilen createClient'ı kullanabilirsin.
+ */
+const getSupabaseClient = () => {
+  if (typeof window !== 'undefined' && window.supabase) {
+    return window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  }
+  // Eğer global nesne yoksa (yerel geliştirme ortamı), kütüphanenin yüklü olduğunu varsayıyoruz
+  // Not: Bu kısım Vercel ortamında build sırasında hata vermemesi için kurgulanmıştır.
+  try {
+    // eslint-disable-next-line no-undef
+    return createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  } catch (e) {
+    console.warn("Supabase kütüphanesi henüz yüklenmedi.");
+    return null;
+  }
+};
+
+const supabaseClient = getSupabaseClient();
+
+const LOGOS = {
+  ACIK: `https://${PROJECT_ID}.supabase.co/storage/v1/object/public/logos/acik.png`,
+  KOYU: `https://${PROJECT_ID}.supabase.co/storage/v1/object/public/logos/koyu.png`
+};
+
+export default function App() {
+  const [view, setView] = useState('landing'); // landing, login, portal, admin
+  const [user, setUser] = useState(null);
+  const [profile, setProfile] = useState(null);
+  const [activeTab, setActiveTab] = useState('dashboard');
+  const [isLoading, setIsLoading] = useState(true);
+  const [isActionLoading, setIsActionLoading] = useState(false);
+
+  // App Data
+  const [data, setData] = useState({ 
+    exams: [], 
+    lessons: [], 
+    assignments: [], 
+    subs: new Set(), 
+    examSubs: new Set(),
+    allSubmissions: [], 
+    allExamResults: []  
+  });
+  
+  const [countdown, setCountdown] = useState({ d: '00', h: '00', m: '00', s: '00' });
+  const [moduleContent, setModuleContent] = useState("");
+
+  // UI States
+  const [selectedAssign, setSelectedAssign] = useState(null);
+  const [multiPhotos, setMultiPhotos] = useState([]);
+  const [examPortal, setExamPortal] = useState({ open: false, data: null, index: 0, answers: {}, finalizing: false });
+  const [adminGallery, setAdminGallery] = useState(null);
+
+  // --- ATOMIC DATA SYNC ---
+  const syncData = useCallback(async (uid, role) => {
+    if (!uid || !supabaseClient) return;
+    try {
+      const promises = [
+        supabaseClient.from('profiles').select('*').eq('id', uid).single(),
+        supabaseClient.from('lessons').select('*').eq('student_id', uid).order('scheduled_at', { ascending: true }),
+        supabaseClient.from('assignments').select('*').eq('student_id', uid).order('created_at', { ascending: false }),
+        supabaseClient.from('submissions').select('assignment_id').eq('student_id', uid),
+        supabaseClient.from('exams').select('*').order('created_at', { ascending: false }),
+        supabaseClient.from('exam_submissions').select('exam_id').eq('student_id', uid)
+      ];
+
+      if (role === 'admin') {
+        promises.push(supabaseClient.from('submissions').select('*, profiles(full_name), assignments(title)').order('created_at', { ascending: false }));
+        promises.push(supabaseClient.from('exam_submissions').select('*, profiles(full_name), exams(title)').order('created_at', { ascending: false }));
+      }
+
+      const results = await Promise.all(promises);
+      const userProfile = results[0].data;
+      setProfile(userProfile);
+      
+      setData({
+        lessons: results[1].data || [],
+        assignments: results[2].data || [],
+        subs: new Set(results[3].data?.map(i => i.assignment_id) || []),
+        exams: results[4].data || [],
+        examSubs: new Set(results[5].data?.map(i => i.exam_id) || []),
+        allSubmissions: role === 'admin' ? results[6].data || [] : [],
+        allExamResults: role === 'admin' ? results[7].data || [] : []
+      });
+
+      // Modül İçeriği Yükleme
+      if (['ask', 'lgs', 'subjects'].includes(activeTab)) {
+        setModuleContent("");
+        const keys = { ask: 'sordur_html', lgs: 'lgs_html', subjects: 'konu_anlatimi_html' };
+        const { data: mData } = await supabaseClient.from('app_settings').select('content').eq('key', keys[activeTab]).single();
+        if(mData) setModuleContent(mData.content.replace(/<\/script>/gi, '<\\/script>'));
+      }
+    } catch (err) { console.error("Senkronizasyon hatası:", err); }
+  }, [activeTab]);
+
+  useEffect(() => {
+    if (!supabaseClient) {
+      setIsLoading(false);
+      return;
+    }
+
+    const init = async () => {
+      const { data: { session } } = await supabaseClient.auth.getSession();
+      if (session) {
+        const { data: p } = await supabaseClient.from('profiles').select('role').eq('id', session.user.id).single();
+        setUser(session.user);
+        await syncData(session.user.id, p?.role);
+        setView(p?.role === 'admin' ? 'admin' : 'portal');
+      }
+      setIsLoading(false);
+    };
+    init();
+
+    const { data: { subscription } } = supabaseClient.auth.onAuthStateChange(async (event, session) => {
+      if (session) {
+        const { data: p } = await supabaseClient.from('profiles').select('role').eq('id', session.user.id).single();
+        setUser(session.user);
+        await syncData(session.user.id, p?.role);
+        setView(p?.role === 'admin' ? 'admin' : 'portal');
+      } else {
+        setUser(null); setProfile(null); setView('landing');
+      }
+    });
+
+    const timer = setInterval(() => {
+      const diff = new Date("June 14, 2026 10:00:00").getTime() - new Date().getTime();
+      if (diff < 0) return;
+      setCountdown({
+        d: Math.floor(diff / 86400000).toString().padStart(2, '0'),
+        h: Math.floor((diff % 86400000) / 3600000).toString().padStart(2, '0'),
+        m: Math.floor((diff % 3600000) / 60000).toString().padStart(2, '0'),
+        s: Math.floor((diff % 60000) / 1000).toString().padStart(2, '0')
+      });
+    }, 1000);
+
+    return () => { subscription.unsubscribe(); clearInterval(timer); };
+  }, [syncData]);
+
+  // --- ACTIONS ---
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    if (!supabaseClient) return;
+    setIsActionLoading(true);
+    const { error } = await supabaseClient.auth.signInWithPassword({ 
+      email: e.target.email.value, 
+      password: e.target.password.value 
+    });
+    if (error) alert("Hata: " + error.message);
+    setIsActionLoading(false);
+  };
+
+  const uploadHomework = async () => {
+    if (!multiPhotos.length || !selectedAssign || !supabaseClient) return;
+    setIsActionLoading(true);
+    try {
+      const urls = [];
+      for(let f of multiPhotos) {
+        const path = `submissions/${user.id}/${Date.now()}_${f.name.replace(/[^a-z0-9.]/gi, '_')}`;
+        await supabaseClient.storage.from('assignments').upload(path, f);
+        const { data: { publicUrl } } = supabaseClient.storage.from('assignments').getPublicUrl(path);
+        urls.push(publicUrl);
+      }
+      const { error } = await supabaseClient.from('submissions').insert([{ 
+        assignment_id: selectedAssign.id, 
+        student_id: user.id, 
+        file_urls: urls 
+      }]);
+      
+      if (!error) {
+        alert("Ödev rasyonel olarak gönderildi!");
+        setMultiPhotos([]); setSelectedAssign(null); syncData(user.id, profile?.role);
+      }
+    } catch (err) { alert("Yükleme hatası: " + err.message); }
+    finally { setIsActionLoading(false); }
+  };
+
+  const startExamPortal = async (ex) => {
+    if (!supabaseClient) return;
+    setIsActionLoading(true);
+    try {
+      const { data: qs } = await supabaseClient.from('exam_questions').select('*').eq('exam_id', ex.id).order('order_no', {ascending:true});
+      setExamPortal({ open: true, data: {...ex, questions: qs}, index: 0, answers: {}, finalizing: false });
+    } catch (err) { alert("Sınav sistemi şu an rasyonel yanıt vermiyor."); }
+    setIsActionLoading(false);
+  };
+
+  const finishExam = async () => {
+    if (!supabaseClient) return;
+    const { error } = await supabaseClient.from('exam_submissions').insert([{ 
+      exam_id: examPortal.data.id, student_id: user.id, answers: examPortal.answers, score: 0 
+    }]);
+    if (!error) { setExamPortal({ ...examPortal, open: false }); syncData(user.id, profile?.role); }
+  };
+
+  // --- RENDER HELPERS ---
+  if (isLoading) return (
+    <div className="h-screen bg-slate-950 flex flex-col items-center justify-center">
+      <div className="w-12 h-12 border-2 border-brand-500 border-t-transparent rounded-full animate-spin"></div>
+      <p className="mt-4 text-brand-500 font-bold uppercase tracking-widest animate-pulse italic">Veriler Yükleniyor</p>
+    </div>
+  );
+
+  // --- VIEWS ---
+
+  const LandingView = () => (
+    <div className="min-h-screen bg-slate-950 flex flex-col items-center italic">
+      <nav className="w-full max-w-7xl flex justify-between items-center p-10 z-50">
+        <img src={LOGOS.ACIK} className="h-10" alt="Logo" />
+        <button onClick={() => setView('login')} className="px-8 py-3 bg-white/5 border border-white/10 rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all">Sisteme Giriş</button>
+      </nav>
+      <main className="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-20 max-w-5xl">
+        <div className="space-y-6">
+          <span className="text-brand-500 font-black uppercase text-[11px] tracking-[0.6em]">Premium Academic Environment</span>
+          <h1 className="text-7xl md:text-[10rem] font-black uppercase leading-[0.8] tracking-tighter text-white">MATOTA<br/><span className="text-slate-800">ELITE</span></h1>
+          <p className="text-slate-400 text-lg md:text-xl max-w-3xl mx-auto font-medium leading-relaxed italic opacity-80 text-center">Ali ŞENGÜL ile rasyonel matematik disiplinine hoş geldiniz. <br/>Zirveye giden yol, planlı çalışmadan geçer.</p>
+        </div>
+        <div className="flex gap-16">
+          {[{v:countdown.d, l:'GÜN'}, {v:countdown.h, l:'SAAT'}, {v:countdown.m, l:'DAKİKA'}].map((c, i) => (
+            <div key={i} className="text-center">
+              <p className="text-6xl font-black text-white tracking-tighter">{c.v}</p>
+              <p className="text-[11px] font-bold text-slate-600 uppercase tracking-widest mt-3">{c.l}</p>
+            </div>
+          ))}
+        </div>
+        <button onClick={() => setView('login')} className="px-20 py-6 bg-brand-500 text-white rounded-[2rem] font-black uppercase tracking-widest text-sm hover:scale-105 transition-all shadow-2xl shadow-brand-500/30">BAŞARIYI BAŞLAT</button>
+      </main>
+      <footer className="p-10 text-[10px] font-black text-slate-800 uppercase tracking-[0.5em]">Ali ŞENGÜL Education v20.1</footer>
+    </div>
+  );
+
+  const LoginView = () => (
+    <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6 italic">
+      <div className="max-w-md w-full bg-slate-900/50 backdrop-blur-3xl p-14 rounded-[4rem] border border-white/5 shadow-2xl">
+        <div className="text-center mb-14">
+          <img src={LOGOS.ACIK} className="h-8 mx-auto mb-10 opacity-30" alt="Logo" />
+          <h3 className="text-3xl font-black text-white tracking-tighter uppercase italic text-center">Akademi Girişi</h3>
+        </div>
+        <form onSubmit={handleLogin} className="space-y-6">
+          <input name="email" type="email" required className="w-full p-4 rounded-2xl bg-white/5 border border-white/10 outline-none focus:border-brand-500 transition-all text-white font-bold" placeholder="E-Posta Adresi" />
+          <input name="password" type="password" required className="w-full p-4 rounded-2xl bg-white/5 border border-white/10 outline-none focus:border-brand-500 transition-all text-white font-bold" placeholder="Portal Şifresi" />
+          <button type="submit" disabled={isActionLoading} className="w-full py-5 bg-brand-500 text-white font-black rounded-3xl uppercase tracking-widest text-[13px] shadow-lg">
+            {isActionLoading ? "DOĞRULANIYOR..." : 'PORTALI AÇ'}
+          </button>
+        </form>
+        <button onClick={() => setView('landing')} className="w-full mt-10 text-[10px] font-black text-slate-700 uppercase hover:text-slate-400 transition-all">Geri Dön</button>
+      </div>
+    </div>
+  );
+
+  const StudentPortal = () => {
+    const ongoing = data.lessons.filter(l => new Date(l.scheduled_at) > new Date(Date.now() - 7200000));
+    const activeExams = data.exams.filter(ex => !data.examSubs.has(ex.id));
+
+    return (
+      <div className="flex h-screen w-screen bg-slate-950 text-slate-300 overflow-hidden italic">
+        <aside className="w-72 bg-slate-900 border-r border-white/5 flex flex-col p-10 shrink-0 z-30 shadow-2xl relative">
+          <img src={LOGOS.ACIK} className="h-8 mb-16 w-fit opacity-90" alt="Logo" />
+          <nav className="flex-1 space-y-2">
+            {[
+              {id:'dashboard', l:'Dashboard', i: Home},
+              {id:'exams', l:'Sınavlar', i: Edit3},
+              {id:'subjects', l:'Konu Anlatımı', i: BookOpen},
+              {id:'lessons', l:'Online Dersler', i: Video},
+              {id:'assignments', l:'Ödev Takibi', i: FileText},
+              {id:'ask', l:'Sordur AI', i: MessageSquare},
+              {id:'lgs', l:'LGS Robotu', i: Calculator}
+            ].map(item => (
+              <button key={item.id} onClick={() => { setActiveTab(item.id); setModuleContent(""); setSelectedAssign(null); }} 
+                className={`flex items-center gap-4 w-full p-4 rounded-2xl font-bold text-sm transition-all ${activeTab === item.id ? 'bg-brand-500 text-white shadow-xl shadow-brand-500/20' : 'text-slate-500 hover:bg-white/5'}`}>
+                <item.i size={18} /> {item.l}
+              </button>
+            ))}
+          </nav>
+          <div className="mt-auto pt-8 border-t border-white/5">
+            <p className="text-[12px] font-black text-white truncate uppercase mb-4 px-4 tracking-tighter italic">{profile?.full_name || 'Öğrenci'}</p>
+            <button onClick={() => supabaseClient.auth.signOut()} className="w-full py-4 bg-red-500/5 text-red-500 rounded-xl font-bold text-[10px] uppercase hover:bg-red-500 hover:text-white transition-all">Güvenli Çıkış</button>
+          </div>
+        </aside>
+
+        <main className="flex-1 overflow-y-auto custom-scroll p-12 relative z-10 text-left">
+          {activeTab === 'dashboard' && (
+            <div className="space-y-12 fade-up">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-left">
+                <div className="p-10 bg-slate-900 border border-white/5 rounded-[3.5rem] space-y-4">
+                  <p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest opacity-60 italic">Bekleyen Görev</p>
+                  <p className="text-6xl font-black text-white leading-none tracking-tighter">{data.assignments.length - data.subs.size}</p>
+                </div>
+                <div className="p-10 bg-slate-900 border border-white/5 rounded-[3.5rem] space-y-4">
+                  <p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest opacity-60 italic">Sıradaki Oturum</p>
+                  {ongoing.length > 0 ? (
+                    <div className="space-y-1 text-left">
+                      <p className="text-xl font-bold text-white uppercase truncate tracking-tighter text-left">{ongoing[0].title}</p>
+                      <p className="text-[11px] text-brand-500 font-bold uppercase italic text-left">{new Date(ongoing[0].scheduled_at).toLocaleString('tr-TR')}</p>
+                    </div>
+                  ) : <p className="text-lg font-bold text-slate-600 uppercase italic text-left">Planlı Ders Yok</p>}
+                </div>
+                <div className="p-10 bg-slate-900 border border-white/5 rounded-[3.5rem] border-brand-500/10">
+                  <p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest opacity-60 italic text-left">Portal Analizi</p>
+                  <p className="text-xl font-bold text-brand-500 uppercase tracking-tighter italic leading-none mt-2 text-left">Zirve Seni Bekliyor!</p>
+                </div>
+              </div>
+              <div className="p-16 bg-gradient-to-br from-brand-600 to-indigo-900 rounded-[5rem] relative overflow-hidden group shadow-2xl border border-white/10">
+                <Rocket size={400} className="absolute -bottom-20 -right-20 opacity-5 rotate-12 group-hover:scale-110 transition-all duration-1000" />
+                <div className="max-w-2xl space-y-6 text-left">
+                  <h2 className="text-6xl font-extrabold uppercase leading-[1.05] tracking-tighter text-white italic text-left">Zirveyi rasyonel <br/>adımlarla fethet.</h2>
+                  <p className="text-slate-100/40 text-lg font-medium leading-relaxed italic text-left">Matematik bir yetenek değil, rasyonel bir disiplindir.</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'assignments' && (
+            <div className="space-y-12 fade-up text-left">
+              {selectedAssign ? (
+                <div className="space-y-10 animate-fade-up text-left">
+                  <div className="flex justify-between items-center bg-slate-900/50 p-8 rounded-[3rem] border border-white/5 shadow-2xl">
+                    <button onClick={() => {setSelectedAssign(null); setMultiPhotos([]);}} className="flex items-center gap-4 text-[12px] font-black text-brand-500 uppercase hover:text-white transition-all italic text-left"><X size={16}/> Kapat</button>
+                    <h3 className="text-3xl font-black uppercase text-white tracking-tighter truncate max-w-lg text-left">{selectedAssign.title}</h3>
+                    <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest text-left">{new Date(selectedAssign.due_date).toLocaleDateString('tr-TR')}</span>
+                  </div>
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 text-left">
+                    <div className="bg-slate-900 rounded-[4rem] overflow-hidden h-[700px] flex flex-col shadow-2xl border border-white/5">
+                      <div className="p-7 border-b border-white/5 flex justify-between items-center bg-black/30">
+                        <span className="text-[11px] font-black text-slate-500 uppercase tracking-[0.3em]">Ödev Dosyası</span>
+                        <a href={selectedAssign.file_url} target="_blank" rel="noreferrer" className="text-[11px] font-black text-brand-500 uppercase text-left">Tam Ekran</a>
+                      </div>
+                      <iframe src={selectedAssign.file_url} className="flex-1 w-full border-none" title="Assignment PDF" />
+                    </div>
+                    <div className="space-y-10 text-left">
+                      {data.subs.has(selectedAssign.id) ? (
+                        <div className="p-20 bg-slate-900 rounded-[4rem] border border-emerald-500/20 text-center flex flex-col items-center justify-center space-y-10 shadow-2xl italic">
+                          <CheckCircle size={120} className="text-emerald-500" />
+                          <h4 className="text-4xl font-black uppercase text-white tracking-tighter italic text-center">Ödev Çözüldü!</h4>
+                        </div>
+                      ) : (
+                        <div className="p-14 bg-slate-900 rounded-[4rem] border border-white/5 space-y-12 shadow-2xl italic text-left">
+                          <div className="border-b border-white/5 pb-8 text-left">
+                            <h4 className="text-3xl font-black uppercase text-white tracking-tighter italic text-left">ÇÖZÜM YÜKLEME</h4>
+                            <p className="text-[13px] text-slate-500 mt-4 italic font-medium text-left">Görselleri seçmek için "+" butonuna basın.</p>
+                          </div>
+                          <div className="grid grid-cols-3 gap-8 text-left">
+                            {multiPhotos.map((file, i) => (
+                              <div key={i} className="relative aspect-square rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center overflow-hidden">
+                                <span className="text-[9px] font-black text-slate-600 p-4 text-center break-all italic">{file.name}</span>
+                                <button onClick={() => setMultiPhotos(prev => prev.filter((_, idx) => idx !== i))} className="absolute top-2 right-2 w-7 h-7 bg-red-600 text-white rounded-full flex items-center justify-center shadow-lg"><X size={14}/></button>
+                              </div>
+                            ))}
+                            <label className="aspect-square rounded-[2rem] border-2 border-dashed border-white/10 flex flex-col items-center justify-center cursor-pointer hover:bg-brand-500/10 transition-all text-left">
+                              <Plus size={40} className="text-brand-500" />
+                              <input type="file" multiple accept="image/*" className="hidden" onChange={(e) => setMultiPhotos(prev => [...prev, ...Array.from(e.target.files)])} />
+                            </label>
+                          </div>
+                          {multiPhotos.length > 0 && (
+                            <button onClick={uploadHomework} disabled={isActionLoading} className="w-full py-6 bg-brand-500 text-white font-black rounded-3xl uppercase tracking-[0.3em] text-[13px] shadow-2xl hover:scale-[1.02] transition-all italic text-center">
+                              {isActionLoading ? "YÜKLENİYOR..." : `GÖNDER (${multiPhotos.length} GÖRSEL)`}
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-12 text-left">
+                  <h3 className="text-3xl font-black text-white uppercase tracking-tighter opacity-20 italic text-left">Ödev Takibi</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10 text-left">
+                    {data.assignments.map(a => {
+                      const done = data.subs.has(a.id);
+                      return (
+                        <div key={a.id} onClick={() => setSelectedAssign(a)} className="bg-slate-900 border border-white/5 rounded-[3.5rem] p-10 space-y-8 cursor-pointer group shadow-2xl relative overflow-hidden text-left italic transition-all hover:border-brand-500/30">
+                          <span className={`absolute top-8 right-8 text-[10px] font-black uppercase px-4 py-1.5 rounded-full italic ${done ? 'bg-emerald-500/20 text-emerald-400' : 'bg-brand-500/20 text-brand-400'}`}>
+                            {done ? 'BİTTİ' : 'AKTİF'}
+                          </span>
+                          <div className="space-y-3 pt-8 italic text-left">
+                            <p className="text-[11px] font-black text-slate-600 uppercase tracking-[0.3em] text-left">{new Date(a.due_date).toLocaleDateString('tr-TR')}</p>
+                            <h4 className="text-2xl font-black text-white uppercase tracking-tighter leading-tight group-hover:text-brand-500 transition-colors h-16 line-clamp-2 italic text-left">{a.title}</h4>
+                          </div>
+                          <div className="flex justify-between items-center pt-8 border-t border-white/5 opacity-40 group-hover:opacity-100 transition-opacity italic text-left">
+                            <span className="text-[11px] font-black text-slate-500 uppercase tracking-widest text-left">İncele</span>
+                            <ChevronRight size={16} />
+                          </div>
+                        </div>
+                      );
+                    })}
+                    {data.assignments.length === 0 && <div className="col-span-full py-48 text-center opacity-10 border border-dashed border-white/5 rounded-[5rem] italic text-center"><p className="text-3xl uppercase font-black tracking-widest leading-none italic text-center">Ödev Kaydı Yok.</p></div>}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'exams' && (
+             <div className="space-y-12 fade-up text-left">
+                <h3 className="text-3xl font-black text-white uppercase tracking-tighter opacity-20 italic text-left">Aktif Sınavlar</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-10 text-left">
+                  {activeExams.map(ex => (
+                    <div key={ex.id} className="p-12 bg-slate-900 border border-white/5 rounded-[4rem] flex justify-between items-center group shadow-2xl transition-all hover:border-brand-500/20 text-left">
+                      <div className="space-y-4 text-left">
+                        <span className="text-[10px] font-black px-5 py-2 bg-brand-500/10 text-brand-400 rounded-full uppercase tracking-widest italic text-left">{ex.duration_minutes} DK</span>
+                        <h4 className="text-3xl font-bold uppercase text-white tracking-tighter text-left italic text-left">{ex.title}</h4>
+                      </div>
+                      <button onClick={() => startExamPortal(ex)} className="px-12 py-5 bg-brand-500 text-white rounded-[2rem] font-black text-[12px] uppercase shadow-lg hover:scale-105 transition-all text-center">Giriş</button>
+                    </div>
+                  ))}
+                  {activeExams.length === 0 && <div className="col-span-full py-40 text-center opacity-10 border border-dashed border-white/5 rounded-[4.5rem] italic text-center"><p className="text-3xl uppercase font-black tracking-widest leading-none text-center">Sınav Kaydı Yok.</p></div>}
+                </div>
+             </div>
+          )}
+
+          {['ask', 'lgs', 'subjects'].includes(activeTab) && (
+            <div className="h-full flex flex-col fade-up text-left">
+              <div key={`${activeTab}-${moduleContent.length}`} className="border border-white/5 bg-white rounded-[3rem] overflow-hidden h-[750px] shadow-2xl relative text-left">
+                {!moduleContent && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-950 text-brand-500 italic text-center">
+                    <div className="w-10 h-10 border-2 border-brand-500 border-t-transparent rounded-full animate-spin mb-6"></div>
+                    <p className="uppercase font-black text-[11px] tracking-[0.5em] italic opacity-40 text-center">Veri Akışı Hazırlanıyor</p>
+                  </div>
+                )}
+                <iframe id={`${activeTab}-frame`} srcDoc={moduleContent} className="w-full h-full border-none text-left" sandbox="allow-scripts allow-forms allow-same-origin allow-popups" title="Module Frame" />
+              </div>
+            </div>
+          )}
+        </main>
+      </div>
+    );
+  };
+
+  const AdminPortal = () => {
+    return (
+      <div className="flex h-screen w-screen bg-slate-950 text-slate-300 overflow-hidden italic">
+        <aside className="w-72 bg-slate-900 border-r border-white/5 flex flex-col p-10 shrink-0 z-30 shadow-2xl relative">
+          <div className="mb-16 flex items-center gap-4 text-left">
+            <div className="w-12 h-12 bg-brand-600 rounded-xl flex items-center justify-center text-white shadow-xl shadow-brand-500/20 text-left"><Shield size={24}/></div>
+            <div className="text-left"><h2 className="text-2xl font-black italic leading-none text-white tracking-tighter text-left">MATOTA</h2><span className="text-[10px] font-black text-brand-500 uppercase tracking-widest text-left">Elite Admin</span></div>
+          </div>
+          <nav className="flex-1 space-y-2 text-left">
+            {[
+              {id:'analysis', l:'Analiz Merkezi', i: BarChart3},
+              {id:'students', l:'Öğrenci Kaydı', i: UserCircle},
+              {id:'lessons', l:'Ders Planla', i: Video},
+              {id:'assignments', l:'Ödev Atama', i: Edit3},
+              {id:'exams', l:'Sınav Yönetimi', i: Monitor},
+              {id:'modules', l:'Modül Ayarları', i: MessageSquare}
+            ].map(item => (
+              <button key={item.id} onClick={() => { setActiveTab(item.id); setAdminGallery(null); }} 
+                className={`flex items-center gap-4 w-full p-4 rounded-2xl font-bold text-sm transition-all text-left ${activeTab === item.id ? 'bg-brand-500 text-white shadow-xl' : 'text-slate-500 hover:bg-white/5'}`}>
+                <item.i size={18} /> {item.l}
+              </button>
+            ))}
+          </nav>
+          <button onClick={() => supabaseClient.auth.signOut()} className="mt-auto py-4 bg-red-500/5 text-red-500 rounded-xl font-bold text-[10px] uppercase border border-red-500/10 text-center">Güvenli Çıkış</button>
+        </aside>
+
+        <main className="flex-1 overflow-y-auto custom-scroll p-12 text-left italic">
+          <header className="mb-12 border-b border-white/5 pb-10 flex justify-between items-end italic text-left">
+            <div className="text-left">
+              <p className="text-brand-500 font-black uppercase tracking-[0.4em] text-[11px] mb-2 leading-none italic text-left">Ali ŞENGÜL Management Center</p>
+              <h2 className="text-4xl font-black italic tracking-tighter uppercase leading-none text-white text-left">{activeTab.toUpperCase().replace('-', ' ')}</h2>
+            </div>
+            <div className="flex gap-4 text-left">
+              <div className="px-8 py-4 bg-slate-900 border border-white/5 rounded-[2rem] text-center">
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest italic text-center">Durum</p>
+                <p className="text-xl font-black text-brand-500 italic text-center uppercase">AKTİF</p>
+              </div>
+            </div>
+          </header>
+
+          {activeTab === 'analysis' && (
+            <div className="space-y-12 fade-up text-left italic">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-10 italic text-left">
+                <div className="space-y-8 italic text-left">
+                  <h3 className="text-2xl font-black text-brand-500 uppercase tracking-tighter italic flex items-center gap-3 text-left"><ImageIcon size={20}/> Ödev Gönderileri</h3>
+                  <div className="space-y-4 text-left">
+                    {data.allSubmissions.map(sub => (
+                      <div key={sub.id} className="bg-slate-900 border border-white/5 p-8 rounded-[3rem] flex justify-between items-center group transition-all hover:border-brand-500/30 text-left">
+                        <div className="text-left italic text-left">
+                          <h4 className="text-xl font-black text-white uppercase italic text-left">{sub.profiles?.full_name}</h4>
+                          <p className="text-xs text-slate-500 font-bold italic mt-1 opacity-60 text-left">{sub.assignments?.title}</p>
+                          <p className="text-[9px] text-slate-700 mt-2 font-black uppercase italic text-left">{new Date(sub.created_at).toLocaleString('tr-TR')}</p>
+                        </div>
+                        <button onClick={() => setAdminGallery({ urls: sub.file_urls || [], name: sub.profiles?.full_name })} 
+                          className="px-6 py-3 bg-brand-500/10 text-brand-500 rounded-2xl font-black text-[10px] uppercase group-hover:bg-brand-500 group-hover:text-white transition-all italic text-center">Çözümleri Gör</button>
+                      </div>
+                    ))}
+                    {data.allSubmissions.length === 0 && <p className="opacity-20 italic text-left">Ödev gönderimi yok.</p>}
+                  </div>
+                </div>
+                <div className="space-y-8 italic text-left">
+                  <h3 className="text-2xl font-black text-indigo-400 uppercase tracking-tighter italic flex items-center gap-3 text-left"><BarChart3 size={20}/> Sınav Başarıları</h3>
+                  <div className="space-y-4 italic text-left">
+                    {data.allExamResults.map(res => (
+                      <div key={res.id} className="bg-slate-900 border border-white/5 p-8 rounded-[3rem] flex justify-between items-center text-left">
+                        <div className="text-left italic text-left">
+                          <h4 className="text-xl font-black text-white uppercase italic text-left">{res.profiles?.full_name}</h4>
+                          <p className="text-xs text-slate-500 font-bold italic mt-1 opacity-60 text-left">{res.exams?.title}</p>
+                        </div>
+                        <div className="text-right italic text-right">
+                          <p className="text-[10px] opacity-30 uppercase font-black italic text-right">Skor</p>
+                          <p className="text-3xl font-black text-brand-500 italic tracking-tighter text-right">{res.score}</p>
+                        </div>
+                      </div>
+                    ))}
+                    {data.allExamResults.length === 0 && <p className="opacity-20 italic text-left">Sınav sonucu yok.</p>}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Admin Gallery Modal */}
+          {adminGallery && (
+            <div className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-xl p-12 flex flex-col italic text-left">
+               <div className="flex justify-between items-center mb-10 italic text-left">
+                  <h4 className="text-3xl font-black uppercase text-white tracking-tighter text-left">{adminGallery.name} - Çözüm Dosyaları</h4>
+                  <button onClick={() => setAdminGallery(null)} className="w-12 h-12 bg-white/5 rounded-full flex items-center justify-center hover:bg-red-600 transition-all text-center"><X/></button>
+               </div>
+               <div className="grid grid-cols-2 md:grid-cols-4 gap-8 overflow-y-auto custom-scroll pb-20 italic text-left">
+                  {adminGallery.urls.map((u, i) => (
+                    <img key={i} src={u} className="w-full rounded-3xl border border-white/10 shadow-2xl cursor-pointer hover:scale-[1.02] transition-all" onClick={() => window.open(u, '_blank')} alt="Solution" />
+                  ))}
+               </div>
+            </div>
+          )}
+          
+          <div className="py-20 text-center opacity-10 italic text-center">
+             <p className="text-sm font-bold uppercase tracking-[0.5em] text-center">Admin modülleri v20.1 sürümünde tamamen rasyonalize edilmiştir.</p>
+          </div>
+        </main>
+      </div>
+    );
+  };
+
+  // --- MAIN RENDER ROUTING ---
+  return (
+    <div className="min-h-screen bg-slate-950">
+      {view === 'landing' && <LandingView />}
+      {view === 'login' && <LoginView />}
+      {view === 'portal' && <StudentPortal />}
+      {view === 'admin' && <AdminPortal />}
+
+      {/* PORTAL SINAV OVERLAY */}
+      {examPortal.open && (
+        <div className="fixed inset-0 z-[600] bg-slate-950 flex flex-col italic text-left">
+          <header className="p-10 bg-slate-900 border-b border-white/5 flex justify-between items-center shadow-2xl italic text-left">
+            <div className="flex items-center gap-10 text-left"><img src={LOGOS.ACIK} className="h-9 opacity-90" alt="Logo" /><h2 className="text-4xl font-black uppercase text-white tracking-tighter italic text-left">{examPortal.index + 1} <span className="opacity-20 mx-3">/</span> {examPortal.data.questions.length}</h2></div>
+            <button onClick={() => setExamPortal({...examPortal, finalizing: true})} className="px-14 py-5 bg-red-600 text-white rounded-[2rem] font-black text-[13px] uppercase shadow-2xl hover:bg-red-700 tracking-widest transition-all italic text-center">BİTİR</button>
+          </header>
+          <main className="flex-1 overflow-y-auto p-20 custom-scroll flex flex-col items-center bg-[radial-gradient(circle_at_center,_rgba(56,189,248,0.04)_0,_transparent_100%)] italic text-left">
+            <div className="max-w-6xl w-full space-y-20 flex flex-col items-center italic text-left">
+              <div className="w-full bg-slate-900 p-12 rounded-[5rem] flex justify-center shadow-2xl border border-white/10 relative group italic text-center">
+                <img src={examPortal.data.questions[examPortal.index].image_url} className="max-w-full max-h-[72vh] object-contain rounded-[3rem] z-10 shadow-inner" alt="Soru" />
+              </div>
+              <div className="flex flex-wrap justify-center gap-16 py-10 italic text-center">
+                {['A', 'B', 'C', 'D'].map(opt => (
+                  <button key={opt} onClick={() => setExamPortal(prev => ({...prev, answers: {...prev.answers, [prev.data.questions[prev.index].id]: opt}}))} 
+                    className={`text-4xl !w-24 !h-24 rounded-3xl border-2 font-black transition-all text-center ${examPortal.answers[examPortal.data.questions[examPortal.index].id] === opt ? 'bg-brand-500 border-brand-500 text-white shadow-[0_0_40px_rgba(14,165,233,0.4)]' : 'border-white/10 text-slate-500 hover:bg-white/5'}`}>{opt}</button>
+                ))}
+              </div>
+            </div>
+          </main>
+          <footer className="p-14 bg-slate-900 border-t border-white/5 flex justify-between items-center shadow-2xl italic text-left">
+            <button disabled={examPortal.index === 0} onClick={() => setExamPortal(prev => ({...prev, index: prev.index - 1}))} className="px-20 py-7 bg-white/5 border border-white/10 rounded-[2.5rem] font-black text-[13px] uppercase text-white hover:bg-white/10 transition-all italic text-center">GERİ</button>
+            <button onClick={() => { if (examPortal.index === examPortal.data.questions.length - 1) setExamPortal(prev => ({...prev, finalizing: true})); else setExamPortal(prev => ({...prev, index: prev.index + 1})); }} 
+              className="px-20 py-7 bg-brand-500 text-white rounded-[2.5rem] font-black text-[13px] uppercase shadow-2xl hover:scale-105 transition-all tracking-widest italic text-center">İLERİ</button>
+          </footer>
+          {examPortal.finalizing && (
+            <div className="fixed inset-0 z-[700] flex items-center justify-center p-12 bg-black/98 backdrop-blur-3xl italic text-center">
+              <div className="max-w-2xl w-full bg-slate-900 p-24 rounded-[6rem] text-center border border-white/10 shadow-2xl animate-fade-up italic text-center">
+                <CheckCircle size={150} className="text-brand-500 mb-14 mx-auto" />
+                <h3 className="text-4xl font-black italic uppercase mb-8 text-white tracking-tighter leading-tight italic text-center">Analiz Hazır Mı?</h3>
+                <div className="grid grid-cols-2 gap-10 italic text-center"><button onClick={() => setExamPortal(prev => ({...prev, finalizing: false}))} className="py-7 bg-white/5 rounded-[2.5rem] font-black text-[13px] uppercase text-white hover:bg-white/10 transition-all italic text-center">VAZGEÇ</button><button onClick={finishExam} className="py-7 bg-brand-500 text-white rounded-[2.5rem] font-black text-[13px] uppercase shadow-2xl hover:brightness-110 italic transition-all text-center">GÖNDER</button></div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
