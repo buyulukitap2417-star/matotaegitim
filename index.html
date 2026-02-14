@@ -8,7 +8,6 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <script>
-        // Tailwind Dark Mode Yapılandırması
         tailwind.config = {
             darkMode: 'class',
             theme: {
@@ -33,6 +32,7 @@
         .dark .hero-gradient { background: radial-gradient(circle at top right, #1e293b 0%, #0f172a 50%); }
         .custom-shadow { box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 10px 10px -5px rgba(0, 0, 0, 0.02); }
         .dark .custom-shadow { box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3); }
+        .logo-img { transition: opacity 0.3s ease; height: 40px; width: auto; }
     </style>
 </head>
 <body class="text-slate-800 dark:text-slate-100 dark:bg-darkBg overflow-x-hidden">
@@ -50,9 +50,8 @@
         <!-- Navbar -->
         <nav class="fixed top-0 w-full z-50 glass border-b border-slate-100 dark:border-slate-800">
             <div class="max-w-7xl mx-auto px-6 h-20 flex justify-between items-center">
-                <div class="text-3xl font-black text-blue-600 tracking-tighter italic">MATOTA</div>
+                <img src="" alt="MATOTA Logo" id="nav-logo" class="logo-img">
                 <div class="flex items-center gap-4">
-                    <!-- Tema Değiştirici -->
                     <button onclick="toggleDarkMode()" class="p-2.5 rounded-xl text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition">
                         <i class="fa-solid fa-moon dark:hidden"></i>
                         <i class="fa-solid fa-sun hidden dark:block"></i>
@@ -73,29 +72,10 @@
                 <p class="text-lg md:text-xl text-slate-500 dark:text-slate-400 mb-12 max-w-2xl mx-auto font-medium">
                     Online dersler, akıllı ödev takibi ve rasyonalist analiz raporları ile LGS yolculuğunda her zaman bir adım öndesiniz.
                 </p>
-                <div class="flex flex-col md:flex-row gap-6 justify-center">
+                <div class="flex gap-6 justify-center">
                     <button onclick="showAuthScreen('student')" class="px-10 py-5 bg-slate-900 dark:bg-blue-600 text-white rounded-[2rem] font-bold text-lg hover:bg-black dark:hover:bg-blue-700 transition shadow-2xl flex items-center justify-center gap-3">
                         Hemen Başla <i class="fa-solid fa-arrow-right"></i>
                     </button>
-                </div>
-            </div>
-            
-            <!-- Preview Grid -->
-            <div class="mt-24 grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl w-full">
-                <div class="bg-white dark:bg-darkCard p-8 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 custom-shadow text-left">
-                    <div class="h-12 w-12 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-2xl flex items-center justify-center mb-6 text-xl"><i class="fa-solid fa-video"></i></div>
-                    <h3 class="font-black text-xl mb-3">Online Dersler</h3>
-                    <p class="text-slate-500 dark:text-slate-400 font-medium leading-relaxed text-sm">Zoom ve Meet entegrasyonu ile interaktif canlı ders deneyimi.</p>
-                </div>
-                <div class="bg-white dark:bg-darkCard p-8 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 custom-shadow text-left">
-                    <div class="h-12 w-12 bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400 rounded-2xl flex items-center justify-center mb-6 text-xl"><i class="fa-solid fa-file-signature"></i></div>
-                    <h3 class="font-black text-xl mb-3">Akıllı Sınavlar</h3>
-                    <p class="text-slate-500 dark:text-slate-400 font-medium leading-relaxed text-sm">Görsel destekli, optik formlu profesyonel deneme sınavları.</p>
-                </div>
-                <div class="bg-white dark:bg-darkCard p-8 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 custom-shadow text-left">
-                    <div class="h-12 w-12 bg-orange-50 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 rounded-2xl flex items-center justify-center mb-6 text-xl"><i class="fa-solid fa-chart-line"></i></div>
-                    <h3 class="font-black text-xl mb-3">Detaylı Analiz</h3>
-                    <p class="text-slate-500 dark:text-slate-400 font-medium leading-relaxed text-sm">Öğrenci gelişimini adım adım takip eden analiz raporları.</p>
                 </div>
             </div>
         </main>
@@ -128,9 +108,8 @@
     <div id="app" class="hidden min-h-screen flex flex-col md:flex-row">
         <!-- Sidebar -->
         <aside class="w-full md:w-72 glass border-r border-slate-100 dark:border-slate-800 flex flex-col sticky top-0 h-screen z-50 overflow-hidden">
-            <div class="p-8 flex justify-between items-center">
-                <h2 onclick="location.reload()" class="text-3xl font-black text-blue-600 tracking-tighter italic cursor-pointer">MATOTA</h2>
-                <button onclick="toggleDarkMode()" class="md:hidden text-slate-400"><i class="fa-solid fa-moon dark:hidden"></i><i class="fa-solid fa-sun hidden dark:block"></i></button>
+            <div class="p-8">
+                <img src="" alt="MATOTA Logo" id="sidebar-logo" class="logo-img cursor-pointer" onclick="location.reload()">
             </div>
             <nav class="flex-1 px-4 space-y-1 overflow-y-auto" id="sidebar-nav"></nav>
             <div class="p-6 border-t border-slate-50 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/20">
@@ -178,6 +157,20 @@
         let currentUser = null;
         let userProfile = null;
 
+        // --- LOGO LOGIC ---
+        function updateLogos() {
+            const isDark = document.documentElement.classList.contains('dark');
+            // Ali Hoca: "Açıkta koyu logo Koyuda açık logo" (Ters kullanım mantığı)
+            const logoFilename = isDark ? 'acik.png' : 'koyu.png';
+            const logoUrl = `${SUPABASE_URL}/storage/v1/object/public/logos/${logoFilename}`;
+            
+            const navLogo = document.getElementById('nav-logo');
+            const sideLogo = document.getElementById('sidebar-logo');
+            
+            if (navLogo) navLogo.src = logoUrl;
+            if (sideLogo) sideLogo.src = logoUrl;
+        }
+
         // --- THEME LOGIC ---
         function applyInitialTheme() {
             if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
@@ -185,6 +178,7 @@
             } else {
                 document.documentElement.classList.remove('dark');
             }
+            updateLogos();
         }
 
         function toggleDarkMode() {
@@ -195,32 +189,23 @@
                 document.documentElement.classList.add('dark');
                 localStorage.theme = 'dark';
             }
+            updateLogos();
         }
 
         // --- AUTH FLOW & PERSISTENCE ---
         async function initAuth() {
             applyInitialTheme();
-            
-            // Mevcut oturumu kontrol et
             const { data: { session } } = await supabaseClient.auth.getSession();
             handleSession(session);
-
-            // Oturum değişikliklerini dinle - SUPABASE V2'DE onAuthStateChange (sonunda d yok)
             supabaseClient.auth.onAuthStateChange((event, session) => {
-                if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-                    handleSession(session);
-                } else if (event === 'SIGNED_OUT') {
-                    showLanding();
-                }
+                if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') handleSession(session);
+                else if (event === 'SIGNED_OUT') showLanding();
             });
         }
 
         async function handleSession(session) {
-            if (session) {
-                await loadProfile(session.user);
-            } else {
-                showLanding();
-            }
+            if (session) await loadProfile(session.user);
+            else showLanding();
             hideLoading();
         }
 
@@ -235,9 +220,7 @@
                 showDashboard();
                 renderSidebar();
                 navigate('dashboard');
-            } else {
-                logout();
-            }
+            } else logout();
         }
 
         function hideLoading() {
@@ -245,11 +228,11 @@
             setTimeout(() => document.getElementById('loading').classList.add('hidden'), 500);
         }
 
-        // --- SCREEN TOGGLES ---
         function showLanding() {
             document.getElementById('landing-page').classList.remove('hidden');
             document.getElementById('app').classList.add('hidden');
             document.getElementById('login-overlay').classList.add('hidden');
+            updateLogos();
         }
 
         function showAuthScreen(role) {
@@ -259,14 +242,11 @@
             overlay.classList.remove('hidden');
         }
 
-        function hideAuthScreen() {
-            document.getElementById('login-overlay').classList.add('hidden');
-        }
-
+        function hideAuthScreen() { document.getElementById('login-overlay').classList.add('hidden'); }
         function showDashboard() {
             document.getElementById('landing-page').classList.add('hidden');
-            document.getElementById('login-overlay').classList.add('hidden');
             document.getElementById('app').classList.remove('hidden');
+            updateLogos();
         }
 
         document.getElementById('login-form').onsubmit = async (e) => {
@@ -275,10 +255,8 @@
             const password = document.getElementById('login-password').value;
             const errorEl = document.getElementById('login-error');
             const btn = document.getElementById('login-btn');
-            
             btn.disabled = true;
             btn.innerText = "GİRİŞ YAPILIYOR...";
-
             const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
             if (error) {
                 errorEl.innerText = "HATA: Bilgilerinizi kontrol edin.";
@@ -288,12 +266,9 @@
             }
         };
 
-        function logout() { 
-            supabaseClient.auth.signOut(); 
-            localStorage.removeItem('supabase.auth.token'); 
-        }
+        function logout() { supabaseClient.auth.signOut(); localStorage.removeItem('supabase.auth.token'); }
 
-        // --- NAVIGATION & CONTENT ---
+        // --- NAVIGATION ---
         const views = {
             teacher: [
                 { id: 'dashboard', name: 'Dashboard', icon: 'fa-chart-pie', sub: 'GENEL ANALİZ' },
@@ -332,17 +307,14 @@
             const content = document.getElementById('view-content');
             const menu = userProfile.role === 'teacher' ? views.teacher : views.student;
             const viewInfo = menu.find(v => v.id === viewId);
-            
             document.getElementById('page-title').innerText = viewInfo.name;
             document.getElementById('page-subtitle').innerText = viewInfo.sub;
-            
             content.innerHTML = `<div class="flex justify-center py-24"><div class="h-10 w-10 border-4 border-blue-600 border-t-transparent animate-spin rounded-full"></div></div>`;
-
             switch(viewId) {
                 case 'dashboard': renderDashboard(); break;
                 case 't-settings': renderTeacherSettings(); break;
                 case 's-study': case 's-sordur': case 's-lgs': renderDynamicView(viewId.split('-')[1]); break;
-                default: content.innerHTML = `<div class="p-20 text-center text-slate-300 dark:text-slate-600 font-bold italic uppercase tracking-widest text-sm">Bu modül öğretmeniniz tarafından yapılandırılıyor...</div>`;
+                default: content.innerHTML = `<div class="p-20 text-center text-slate-300 dark:text-slate-600 font-bold italic uppercase tracking-widest text-sm">Yapılandırılıyor...</div>`;
             }
         }
 
@@ -350,24 +322,10 @@
             const content = document.getElementById('view-content');
             content.innerHTML = `
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-                    <div class="bg-blue-600 p-10 rounded-[3rem] text-white shadow-2xl shadow-blue-200 dark:shadow-none relative overflow-hidden group">
-                        <i class="fa-solid fa-bolt absolute -right-6 -bottom-6 text-9xl opacity-10 group-hover:scale-110 transition duration-700"></i>
+                    <div class="bg-blue-600 p-10 rounded-[3rem] text-white shadow-2xl relative overflow-hidden group">
+                        <i class="fa-solid fa-bolt absolute -right-6 -bottom-6 text-9xl opacity-10"></i>
                         <p class="opacity-70 mb-2 font-black uppercase tracking-widest text-[10px]">Hoş Geldiniz,</p>
                         <h3 class="text-4xl font-black tracking-tighter italic">${userProfile.full_name}</h3>
-                        <div class="mt-8 flex items-center gap-3 bg-white/20 w-fit px-4 py-2 rounded-full backdrop-blur-md border border-white/10">
-                            <i class="fa-solid fa-calendar-check text-xs"></i>
-                            <span class="text-[10px] font-black uppercase tracking-widest">${new Date().toLocaleDateString('tr-TR', { weekday: 'long', day: 'numeric', month: 'long' })}</span>
-                        </div>
-                    </div>
-                    <div class="bg-white dark:bg-darkCard p-10 rounded-[3rem] border border-slate-100 dark:border-slate-800 shadow-sm custom-shadow flex flex-col justify-between transition-colors">
-                        <div>
-                            <p class="text-slate-400 text-[10px] font-black uppercase tracking-widest mb-4">Eğitim Durumu</p>
-                            <h3 class="text-3xl font-black text-slate-800 dark:text-white tracking-tighter">LGS Modu Aktif</h3>
-                        </div>
-                        <div class="flex items-center gap-3 mt-6">
-                            <span class="h-3 w-3 bg-green-500 rounded-full animate-pulse"></span>
-                            <span class="text-xs font-black text-green-600 uppercase tracking-widest">Bağlantı Başarılı</span>
-                        </div>
                     </div>
                 </div>
             `;
@@ -377,9 +335,9 @@
             const { data } = await supabaseClient.from('dynamic_content').select('html_content').eq('type', type).maybeSingle();
             const content = document.getElementById('view-content');
             if(data?.html_content) {
-                content.innerHTML = `<div class="bg-white dark:bg-darkCard p-12 rounded-[3rem] shadow-sm border border-slate-100 dark:border-slate-800 min-h-[60vh] transition-colors">${data.html_content}</div>`;
+                content.innerHTML = `<div class="bg-white dark:bg-darkCard p-12 rounded-[3rem] shadow-sm border border-slate-100 dark:border-slate-800 min-h-[60vh]">${data.html_content}</div>`;
             } else {
-                content.innerHTML = `<div class="py-40 text-center"><i class="fa-solid fa-ghost text-6xl text-slate-100 dark:text-slate-800 mb-6"></i><p class="text-slate-300 dark:text-slate-700 font-black uppercase tracking-widest text-xs">Henüz İçerik Eklenmedi</p></div>`;
+                content.innerHTML = `<div class="py-40 text-center"><p class="text-slate-300 dark:text-slate-700 font-black uppercase tracking-widest text-xs">Henüz İçerik Eklenmedi</p></div>`;
             }
         }
 
@@ -391,13 +349,10 @@
                 const { data } = await supabaseClient.from('dynamic_content').select('html_content').eq('type', t).maybeSingle();
                 document.getElementById('settings-grid').innerHTML += `
                     <div class="bg-white dark:bg-darkCard p-10 rounded-[3rem] border border-slate-100 dark:border-slate-800 custom-shadow">
-                        <h3 class="font-black mb-6 uppercase text-blue-600 flex items-center gap-3 tracking-widest text-xs">
-                            <i class="fa-solid fa-terminal"></i> ${t} MODÜLÜ KODU
-                        </h3>
-                        <textarea id="code-${t}" class="w-full h-80 p-6 font-mono text-sm bg-slate-900 text-green-400 rounded-[2rem] outline-none ring-8 ring-slate-800 dark:ring-slate-950 mb-6 focus:ring-blue-900 transition-all">${data?.html_content || ''}</textarea>
-                        <button onclick="saveDynamicCode('${t}')" class="bg-slate-900 dark:bg-blue-600 text-white px-10 py-4 rounded-2xl font-black hover:bg-black transition shadow-xl text-xs tracking-widest uppercase">GÜNCELLE</button>
-                    </div>
-                `;
+                        <h3 class="font-black mb-6 uppercase text-blue-600 tracking-widest text-xs italic">${t} MODÜLÜ</h3>
+                        <textarea id="code-${t}" class="w-full h-80 p-6 font-mono text-sm bg-slate-900 text-green-400 rounded-[2rem] outline-none ring-8 ring-slate-800 dark:ring-slate-950 mb-6">${data?.html_content || ''}</textarea>
+                        <button onclick="saveDynamicCode('${t}')" class="bg-slate-900 dark:bg-blue-600 text-white px-10 py-4 rounded-2xl font-black text-xs uppercase">GÜNCELLE</button>
+                    </div>`;
             }
         }
 
@@ -407,7 +362,6 @@
             if(!error) alert("Modül Başarıyla Güncellendi!");
         }
 
-        // Initialize on load
         window.onload = initAuth;
     </script>
 </body>
