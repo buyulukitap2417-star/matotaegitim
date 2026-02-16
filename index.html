@@ -143,12 +143,12 @@
         <div class="max-w-md w-full bg-white dark:bg-darkCard p-10 rounded-[3rem] shadow-2xl relative view-fade">
             <button onclick="hideAuthScreen()" class="absolute top-8 right-8 text-slate-400 hover:text-slate-600 transition"><i class="fa-solid fa-xmark text-2xl"></i></button>
             <div class="text-center mb-8">
-                <span id="login-role-badge" class="px-3 py-1 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full text-[10px] font-black uppercase mb-4 inline-block tracking-widest italic">GİRİŞ</span>
-                <h2 class="text-3xl font-black dark:text-white tracking-tighter">Hoş Geldiniz</h2>
+                <span id="login-role-badge" class="px-3 py-1 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full text-[10px] font-black uppercase mb-4 inline-block italic tracking-widest">GİRİŞ</span>
+                <h2 class="text-3xl font-black dark:text-white tracking-tighter text-slate-800">Hoş Geldiniz</h2>
             </div>
             <form id="login-form" class="space-y-4">
-                <input type="email" id="login-email" required class="w-full px-6 py-4 rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500 transition" placeholder="E-posta Adresi">
-                <input type="password" id="login-password" required class="w-full px-6 py-4 rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500 transition" placeholder="Şifre">
+                <input type="email" id="login-email" required class="w-full px-6 py-4 rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500 transition font-medium" placeholder="E-posta Adresi">
+                <input type="password" id="login-password" required class="w-full px-6 py-4 rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500 transition font-medium" placeholder="Şifre">
                 <button type="submit" id="login-btn" class="w-full brand-bg text-white py-4 rounded-2xl font-black transition shadow-xl uppercase tracking-widest">Giriş Yap</button>
             </form>
             <div id="login-error-container" class="mt-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/30 rounded-2xl hidden text-center"><p id="login-error" class="text-red-600 dark:text-red-400 text-xs font-bold"></p></div>
@@ -375,8 +375,24 @@
             let lessonsHTML = lessons?.map(l => {
                 return '<div class="p-6 bg-white dark:bg-darkCard border dark:border-slate-800 rounded-2xl flex justify-between items-center shadow-sm"><div><h5 class="font-black italic uppercase text-sm">' + l.title + '</h5><p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">' + (l.profiles?.full_name || 'Bilinmiyor') + ' • ' + new Date(l.scheduled_at).toLocaleString('tr-TR') + '</p></div><button onclick="deleteItem(\'lessons\', \'' + l.id + '\', renderTeacherLessons)" class="text-red-400 transition hover:scale-110"><i class="fa-solid fa-trash"></i></button></div>';
             }).join('') || '<p class="text-center text-slate-300 font-bold uppercase text-xs">Atanmış ders yok.</p>';
+            
             document.getElementById('view-content').innerHTML = '<div class="grid md:grid-cols-2 gap-10 view-fade"><form id="lesson-form" class="bg-white dark:bg-darkCard p-8 rounded-3xl border dark:border-slate-800 space-y-4 h-fit"><h4 class="font-black text-lg mb-2">Canlı Ders Tanımla</h4><select id="l-student" class="w-full p-4 rounded-xl border dark:bg-darkBg dark:border-slate-800 outline-none">' + students?.map(s => '<option value="' + s.id + '">' + s.full_name + '</option>').join('') + '</select><input type="text" id="l-title" placeholder="Ders Başlığı" required class="w-full p-4 rounded-xl border dark:bg-darkBg dark:border-slate-800"><input type="url" id="l-link" placeholder="Meet Linki" required class="w-full p-4 rounded-xl border dark:bg-darkBg dark:border-slate-800"><input type="datetime-local" id="l-time" required class="w-full p-4 rounded-xl border dark:bg-darkBg dark:border-slate-800"><button type="submit" class="w-full brand-bg text-white py-4 rounded-xl font-black shadow-lg">Yayınla</button></form><div class="space-y-4">' + lessonsHTML + '</div></div>';
-            document.getElementById('lesson-form').onsubmit = async (e) => { e.preventDefault(); await supabaseClient.from('lessons').insert([{ student_id: document.getElementById('l-student').value, title: document.getElementById('l-title').value, link: document.getElementById('l-link').value, scheduled_at: document.getElementById('l-time').value }]); renderTeacherLessons(); };
+            
+            document.getElementById('lesson-form').onsubmit = async (e) => {
+                e.preventDefault();
+                const btn = e.target.querySelector('button');
+                btn.disabled = true; btn.innerText = "KAYDEDİLİYOR...";
+                
+                const { error } = await supabaseClient.from('lessons').insert([{
+                    student_id: document.getElementById('l-student').value,
+                    title: document.getElementById('l-title').value,
+                    link: document.getElementById('l-link').value,
+                    scheduled_at: document.getElementById('l-time').value
+                }]);
+                
+                if(!error) { alert("Ders başarıyla planlandı!"); renderTeacherLessons(); }
+                else { alert("Ders kaydedilemedi: " + error.message); btn.disabled = false; btn.innerText = "Yayınla"; }
+            };
         }
 
         async function renderTeacherHomeworks() {
@@ -441,7 +457,7 @@
                     '<button onclick="showSubmitForm(\'' + h.id + '\')" class="px-6 py-3 brand-bg text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg">Ödevi Yükle</button></div></div>';
             }).join('') || '<p class="py-20 text-center text-slate-300 font-black italic uppercase text-xs tracking-widest">Ödev listesi boş.</p>';
             document.getElementById('view-content').innerHTML = '<div class="grid gap-6 view-fade">' + hwsHTML + '</div><div id="submit-overlay" class="fixed inset-0 z-[150] bg-slate-900/60 backdrop-blur-md hidden flex items-center justify-center p-6"><div class="max-w-lg w-full bg-white dark:bg-darkCard p-10 rounded-[3rem] shadow-2xl relative view-fade"><button onclick="document.getElementById(\'submit-overlay\').classList.add(\'hidden\')" class="absolute top-8 right-8 text-slate-400 transition hover:scale-110"><i class="fa-solid fa-xmark text-2xl"></i></button><h3 class="text-2xl font-black mb-6 italic tracking-tighter">Ödevi Tamamla</h3><form id="hw-submit-form" class="space-y-4"><input type="hidden" id="submit-hw-id"><input type="url" id="submit-url" placeholder="Drive / Dosya Linki" required class="w-full p-4 rounded-xl border dark:bg-darkBg dark:border-slate-800 outline-none focus:ring-2 focus:ring-blue-500"><textarea id="submit-note" placeholder="Ali Hoca\'ya mesajın..." class="w-full p-4 rounded-xl border dark:bg-darkBg dark:border-slate-800 h-32 outline-none focus:ring-2 focus:ring-blue-500"></textarea><button type="submit" class="w-full brand-bg text-white py-4 rounded-xl font-black shadow-xl uppercase text-xs tracking-widest">Gönderiyi Tamamla</button></form></div></div>';
-            document.getElementById('hw-submit-form').onsubmit = async (e) => { e.preventDefault(); await supabaseClient.from('homework_submissions').insert([{ homework_id: document.getElementById('submit-hw-id').value, student_id: userProfile.id, submission_url: document.getElementById('submit-url').value, note: document.getElementById('submit-note').value }]); alert("Gönderildi!"); document.getElementById('submit-overlay').classList.add('hidden'); };
+            document.getElementById('hw-submit-form').onsubmit = async (e) => { e.preventDefault(); const { error } = await supabaseClient.from('homework_submissions').insert([{ homework_id: document.getElementById('submit-hw-id').value, student_id: userProfile.id, submission_url: document.getElementById('submit-url').value, note: document.getElementById('submit-note').value }]); if(!error) { alert("Gönderildi!"); document.getElementById('submit-overlay').classList.add('hidden'); } };
         }
 
         function showSubmitForm(hid) { document.getElementById('submit-hw-id').value = hid; document.getElementById('submit-overlay').classList.remove('hidden'); }
@@ -491,7 +507,14 @@
         }
 
         async function saveDynamicCode(type) { const html = document.getElementById('code-' + type).value; const { error } = await supabaseClient.from('dynamic_content').upsert({ type, html_content: html }); if (!error) alert("Sistem güncellendi!"); }
-        async function deleteItem(table, id, cb) { if(confirm("Emin misin?")) { await supabaseClient.from(table).delete().eq('id', id); cb(); } }
+        
+        async function deleteItem(table, id, cb) { 
+            if(confirm("Bu kaydı silmek istediğine emin misin?")) { 
+                const { error } = await supabaseClient.from(table).delete().eq('id', id); 
+                if(!error) cb();
+                else alert("Silme hatası: " + error.message);
+            } 
+        }
 
         window.onload = initAuth;
     </script>
