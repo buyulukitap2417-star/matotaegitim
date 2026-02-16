@@ -124,9 +124,9 @@
                             </div>
                         </div>
                         <form id="contact-form" class="space-y-4">
-                            <input type="text" id="c-name" placeholder="Ad Soyad" required class="w-full px-6 py-4 bg-white/10 border border-white/10 rounded-2xl text-white outline-none focus:ring-2 focus:ring-blue-500 transition font-medium">
-                            <input type="email" id="c-email" placeholder="E-posta" required class="w-full px-6 py-4 bg-white/10 border border-white/10 rounded-2xl text-white outline-none focus:ring-2 focus:ring-blue-500 transition font-medium">
-                            <textarea id="c-msg" placeholder="Mesajınız..." required class="w-full px-6 py-4 bg-white/10 border border-white/10 rounded-2xl text-white outline-none focus:ring-2 focus:ring-blue-500 h-32 transition font-medium"></textarea>
+                            <input type="text" id="c-name" placeholder="Ad Soyad" required class="w-full px-6 py-4 bg-white/10 border border-white/10 rounded-2xl text-white outline-none focus:ring-2 focus:ring-blue-500 transition">
+                            <input type="email" id="c-email" placeholder="E-posta" required class="w-full px-6 py-4 bg-white/10 border border-white/10 rounded-2xl text-white outline-none focus:ring-2 focus:ring-blue-500 transition">
+                            <textarea id="c-msg" placeholder="Mesajınız..." required class="w-full px-6 py-4 bg-white/10 border border-white/10 rounded-2xl text-white outline-none focus:ring-2 focus:ring-blue-500 h-32 transition"></textarea>
                             <button type="submit" id="c-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-2xl font-black transition shadow-xl">GÖNDER</button>
                         </form>
                     </div>
@@ -170,7 +170,7 @@
         <main class="flex-1 p-6 md:p-12 bg-white dark:bg-darkBg min-h-screen overflow-y-auto">
             <header class="mb-12 flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div><h1 class="text-4xl font-black text-slate-900 dark:text-white tracking-tight" id="page-title">Yükleniyor...</h1><p class="text-slate-400 mt-1 font-bold text-sm uppercase tracking-widest italic" id="page-subtitle"></p></div>
-                <button onclick="toggleDarkMode()" class="w-12 h-12 flex items-center justify-center rounded-2xl bg-slate-50 dark:bg-darkCard transition shadow-sm"><i class="fa-solid fa-moon dark:hidden"></i><i class="fa-solid fa-sun hidden dark:block"></i></button>
+                <button onclick="toggleDarkMode()" class="w-12 h-12 flex items-center justify-center rounded-2xl bg-slate-50 dark:bg-darkCard transition shadow-sm"><i class="fa-solid fa-moon dark:hidden"></i><i class="fa-solid fa-sun hidden dark:block text-white"></i></button>
             </header>
             <div id="view-content" class="max-w-7xl mx-auto view-fade"></div>
         </main>
@@ -195,7 +195,7 @@
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         
         let currentUser = null, userProfile = null, activeExamData = null, currentQuestionIndex = 0, studentAnswers = [], examTimerInterval = null;
-        let editingLessonId = null; // Düzenlenen dersin ID'sini tutmak için rasyonalist değişken
+        let editingLessonId = null; 
 
         function updateTheme(role) {
             const body = document.getElementById('main-body');
@@ -377,8 +377,9 @@
             const { data: lessons } = await supabaseClient.from('lessons').select('*, profiles(full_name)');
             
             let lessonsHTML = lessons?.map(l => {
+                const lessonDate = new Date(l.scheduled_at);
                 return '<div class="p-6 bg-white dark:bg-darkCard border dark:border-slate-800 rounded-2xl flex justify-between items-center shadow-sm">' +
-                    '<div><h5 class="font-black italic uppercase text-sm">' + l.title + '</h5><p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">' + (l.profiles?.full_name || 'Bilinmiyor') + ' • ' + new Date(l.scheduled_at).toLocaleString('tr-TR') + '</p></div>' +
+                    '<div><h5 class="font-black italic uppercase text-sm">' + l.title + '</h5><p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">' + (l.profiles?.full_name || 'Bilinmiyor') + ' • ' + lessonDate.toLocaleString('tr-TR') + '</p></div>' +
                     '<div class="flex gap-2">' +
                         '<button onclick="startEditLesson(\'' + l.id + '\')" class="p-2 text-blue-500 transition hover:scale-110"><i class="fa-solid fa-pencil"></i></button>' +
                         '<button onclick="deleteItem(\'lessons\', \'' + l.id + '\', renderTeacherLessons)" class="p-2 text-red-400 transition hover:scale-110"><i class="fa-solid fa-trash"></i></button>' +
@@ -403,11 +404,16 @@
                 const btn = document.getElementById('lesson-form-btn');
                 btn.disabled = true; btn.innerText = "İŞLENİYOR...";
                 
+                // Rasyonalist Fix: Saati ISO string'e çevirerek gönderiyoruz.
+                // Bu sayede yerel saat dilimi (TR GMT+3) korunur.
+                const localDate = new Date(document.getElementById('l-time').value);
+                const isoDate = localDate.toISOString();
+
                 const lessonData = {
                     student_id: document.getElementById('l-student').value,
                     title: document.getElementById('l-title').value,
                     link: document.getElementById('l-link').value,
-                    scheduled_at: document.getElementById('l-time').value
+                    scheduled_at: isoDate
                 };
 
                 let error;
@@ -443,19 +449,17 @@
                 document.getElementById('l-title').value = lesson.title;
                 document.getElementById('l-link').value = lesson.link;
                 
-                // DateTime-local input formatına çevirme (YYYY-MM-DDThh:mm)
+                // Rasyonalist Fix: UTC veriyi datetime-local formatına (YYYY-MM-DDThh:mm) TR saatine göre çevirme
                 const date = new Date(lesson.scheduled_at);
-                const isoString = new Date(date.getTime() - (date.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
+                const offsetDate = new Date(date.getTime() - (date.getTimezoneOffset() * 60000));
+                const isoString = offsetDate.toISOString().slice(0, 16);
                 document.getElementById('l-time').value = isoString;
                 
                 document.getElementById('lesson-form').scrollIntoView({ behavior: 'smooth' });
             }
         }
 
-        function cancelEditLesson() {
-            editingLessonId = null;
-            renderTeacherLessons();
-        }
+        function cancelEditLesson() { editingLessonId = null; renderTeacherLessons(); }
 
         async function renderTeacherHomeworks() {
             document.getElementById('page-title').innerText = 'Ödev Yönetimi';
@@ -499,20 +503,15 @@
             document.getElementById('page-title').innerText = 'Derslerim';
             const { data: lessons } = await supabaseClient.from('lessons').select('*').eq('student_id', userProfile.id);
             const now = new Date();
-            
             let lessonsHTML = lessons?.map(l => {
                 const lessonDate = new Date(l.scheduled_at);
                 const isLive = now >= lessonDate;
-                
                 return '<div class="bg-white dark:bg-darkCard p-10 rounded-[2.5rem] border dark:border-slate-800 relative group transition hover:scale-[1.02] shadow-sm">' +
                     '<h4 class="text-2xl font-black mb-2 italic uppercase tracking-tighter">' + l.title + '</h4>' +
                     '<p class="text-slate-400 font-bold text-[10px] uppercase mb-8 tracking-[0.2em]"><i class="fa-solid fa-clock"></i> ' + lessonDate.toLocaleString('tr-TR') + '</p>' +
-                    (isLive 
-                        ? '<a href="' + l.link + '" target="_blank" class="w-full brand-bg text-white py-5 rounded-2xl font-black flex items-center justify-center gap-3 shadow-xl uppercase text-xs tracking-widest transition hover:brightness-110">DERSE KATIL</a>'
-                        : '<button disabled class="w-full bg-slate-100 dark:bg-slate-800 text-slate-400 py-5 rounded-2xl font-black flex items-center justify-center gap-3 uppercase text-xs tracking-widest cursor-not-allowed">Ders Saati Bekleniyor</button>') +
+                    (isLive ? '<a href="' + l.link + '" target="_blank" class="w-full brand-bg text-white py-5 rounded-2xl font-black flex items-center justify-center gap-3 shadow-xl uppercase text-xs tracking-widest transition hover:brightness-110">DERSE KATIL</a>' : '<button disabled class="w-full bg-slate-100 dark:bg-slate-800 text-slate-400 py-5 rounded-2xl font-black flex items-center justify-center gap-3 uppercase text-xs tracking-widest cursor-not-allowed">Ders Saati Bekleniyor</button>') +
                 '</div>';
             }).join('') || '<p class="py-32 text-center text-slate-300 uppercase font-black text-xs italic tracking-widest">Şu an planlı dersin yok.</p>';
-            
             document.getElementById('view-content').innerHTML = '<div class="grid md:grid-cols-2 gap-8 view-fade">' + lessonsHTML + '</div>';
         }
 
