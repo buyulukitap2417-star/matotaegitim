@@ -52,21 +52,21 @@
         <main class="flex-1 flex flex-col items-center justify-center pt-32 text-center px-6">
             <h1 class="text-6xl md:text-8xl font-black tracking-tighter mb-8 leading-none">Eğitimde <span class="text-blue-600 italic">MATOTA</span> Çağı.</h1>
             <p class="text-slate-500 max-w-xl mb-12 text-lg">Ali Hoca ile LGS Hazırlık Süreci Tamamen Dijital ve Rasyonalist.</p>
-            <button onclick="showAuthScreen('student')" class="px-12 py-5 bg-slate-900 dark:bg-blue-600 text-white rounded-full font-bold text-lg hover:scale-105 transition">Hemen Başla</button>
+            <button onclick="showAuthScreen('student')" class="px-12 py-5 bg-slate-900 dark:bg-blue-600 text-white rounded-full font-bold text-lg hover:scale-105 transition shadow-xl">Hemen Başla</button>
         </main>
     </div>
 
     <!-- 2. LOGIN OVERLAY -->
     <div id="login-overlay" class="fixed inset-0 z-[60] bg-slate-900/60 backdrop-blur-md hidden flex items-center justify-center p-4">
         <div class="max-w-md w-full bg-white dark:bg-darkCard p-10 rounded-[3rem] shadow-2xl relative view-fade">
-            <button onclick="hideAuthScreen()" class="absolute top-8 right-8 text-slate-400"><i class="fa-solid fa-xmark text-2xl"></i></button>
+            <button onclick="hideAuthScreen()" class="absolute top-8 right-8 text-slate-400 hover:text-slate-600 transition"><i class="fa-solid fa-xmark text-2xl"></i></button>
             <div class="text-center mb-8">
                 <span id="login-role-badge" class="px-3 py-1 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full text-[10px] font-black uppercase mb-4 inline-block italic tracking-widest">GİRİŞ</span>
                 <h2 class="text-3xl font-black dark:text-white tracking-tighter">Hoş Geldiniz</h2>
             </div>
             <form id="login-form" class="space-y-4">
-                <input type="email" id="login-email" required class="w-full px-6 py-4 rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500 transition" placeholder="E-posta Adresi">
-                <input type="password" id="login-password" required class="w-full px-6 py-4 rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500 transition" placeholder="Şifre">
+                <input type="email" id="login-email" required class="w-full px-6 py-4 rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500 transition font-medium" placeholder="E-posta Adresi">
+                <input type="password" id="login-password" required class="w-full px-6 py-4 rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500 transition font-medium" placeholder="Şifre">
                 <button type="submit" id="login-btn" class="w-full bg-blue-600 text-white py-4 rounded-2xl font-black hover:bg-blue-700 transition shadow-xl">GİRİŞ YAP</button>
             </form>
             <div id="login-error-container" class="mt-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/30 rounded-2xl hidden">
@@ -108,10 +108,9 @@
     </div>
 
     <script>
-        // --- KRİTİK AYARLAR ---
-        // Ali Hoca, buradaki URL ve KEY senin projenle TAM eşleşmeli.
-        const SUPABASE_URL = "https://mpqncrkclcprjmaohpgm.supabase.co"; 
-        const SUPABASE_ANON_KEY = "sb_publishable_0TPVUMiQ0_5zLkzhcEe4yQ_xsDSIaF4"; 
+        // --- GÜNCEL SUPABASE AYARLARI ---
+        const SUPABASE_URL = "https://tnhofdyonpbmozqzimzj.supabase.co"; 
+        const SUPABASE_ANON_KEY = "sb_publishable_xVFfpA85IjnCqIjEJWvtvQ_VZCH_n60"; 
 
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         let userProfile = null;
@@ -152,24 +151,24 @@
 
         async function handleSession(session) {
             try {
-                // Rasyonalist Sorgulama: Önce ID ile, olmazsa E-posta ile ara
+                // Rasyonalist Kontrol: Yeni projede profil tablosu olmayabilir.
                 let { data, error } = await supabaseClient.from('profiles').select('*').eq('id', session.user.id).maybeSingle();
                 
-                if (!data) {
-                    // Eğer ID eşleşmezse (manuel kayıt durumunda olabilir), e-posta ile son bir kez dene
-                    const { data: fallbackData } = await supabaseClient.from('profiles').select('*').eq('email', session.user.email).maybeSingle();
-                    data = fallbackData;
+                if (error) {
+                    alert(`Supabase Hatası: ${error.message}\nLütfen SQL Editor'den tabloları kurduğunuzdan emin olun Ali Hoca.`);
+                    logout();
+                    return;
                 }
 
                 if (!data) {
                     console.error("Profil bulunamadı. UID:", session.user.id);
-                    alert(`Ali Hoca, Auth girişin başarılı ama 'profiles' tablosunda kaydın görünmüyor.\nHata Detayı: ${error ? error.message : 'Kayıt bulunamadı'}`);
+                    alert(`Ali Hoca, Auth girişin başarılı ama 'profiles' tablosunda kaydın görünmüyor.\n\nLütfen SQL Editor kısmında verdiğim onarım kodunu çalıştırın.`);
                     logout();
                     return;
                 }
 
                 userProfile = data;
-                document.getElementById('user-name').innerText = data.full_name;
+                document.getElementById('user-name').innerText = data.full_name || 'İsimsiz Kullanıcı';
                 document.getElementById('user-role').innerText = data.role === 'teacher' ? 'EĞİTMEN' : 'ÖĞRENCİ';
                 document.getElementById('user-avatar').innerText = data.full_name ? data.full_name[0].toUpperCase() : '?';
                 
@@ -238,7 +237,7 @@
             updateLogos();
         }
 
-        // --- NAVIGASYON VE SIDEBAR ---
+        // --- NAVIGASYON ---
         function renderSidebar() {
             const nav = document.getElementById('sidebar-nav');
             const menu = userProfile.role === 'teacher' ? [
@@ -279,7 +278,7 @@
         async function renderTeacherStudents() {
             const { data: students } = await supabaseClient.from('profiles').select('*').eq('role', 'student');
             document.getElementById('view-content').innerHTML = `
-                <div class="bg-white dark:bg-darkCard p-8 rounded-3xl border dark:border-slate-800">
+                <div class="bg-white dark:bg-darkCard p-8 rounded-3xl border dark:border-slate-800 shadow-sm">
                     <form id="add-student-form" class="grid md:grid-cols-4 gap-4 mb-8">
                         <input type="text" id="s-name" placeholder="Ad Soyad" required class="p-4 rounded-xl border dark:bg-darkBg dark:border-slate-800">
                         <input type="email" id="s-email" placeholder="E-posta" required class="p-4 rounded-xl border dark:bg-darkBg dark:border-slate-800">
@@ -287,7 +286,7 @@
                         <button type="submit" class="bg-blue-600 text-white rounded-xl font-bold">KAYDET</button>
                     </form>
                     <div class="space-y-2">
-                        ${students?.map(s => `<div class="p-4 bg-slate-50 dark:bg-darkBg rounded-xl flex justify-between"><span>${s.full_name} (${s.email})</span></div>`).join('') || 'Öğrenci yok.'}
+                        ${students?.map(s => `<div class="p-4 bg-slate-50 dark:bg-darkBg rounded-xl flex justify-between items-center"><span class="font-medium">${s.full_name}</span><span class="text-xs text-slate-400 font-mono">${s.email}</span></div>`).join('') || 'Henüz kayıtlı öğrenci yok.'}
                     </div>
                 </div>`;
             document.getElementById('add-student-form').onsubmit = async (e) => {
@@ -297,7 +296,7 @@
                     password: document.getElementById('s-pass').value, 
                     options: { data: { full_name: document.getElementById('s-name').value, role: 'student' } } 
                 });
-                if(!error) renderTeacherStudents(); else alert(error.message);
+                if(!error) { alert("Öğrenci başarıyla eklendi."); renderTeacherStudents(); } else alert(error.message);
             };
         }
 
@@ -307,9 +306,9 @@
             for(let t of types) {
                 const { data } = await supabaseClient.from('dynamic_content').select('html_content').eq('type', t).maybeSingle();
                 html += `<div class="bg-white dark:bg-darkCard p-6 rounded-2xl border dark:border-slate-800">
-                    <h3 class="font-bold mb-2 uppercase text-blue-600 text-xs">${t} Kodu</h3>
-                    <textarea id="code-${t}" class="w-full h-48 p-4 font-mono text-xs bg-slate-900 text-green-400 rounded-xl mb-4">${data?.html_content || ''}</textarea>
-                    <button onclick="saveDynamicCode('${t}')" class="bg-blue-600 text-white px-6 py-2 rounded-lg text-xs font-bold">KAYDET</button>
+                    <h3 class="font-bold mb-2 uppercase text-blue-600 text-[10px] tracking-widest">${t} MODÜL KODU</h3>
+                    <textarea id="code-${t}" class="w-full h-48 p-4 font-mono text-xs bg-slate-900 text-green-400 rounded-xl mb-4 outline-none">${data?.html_content || ''}</textarea>
+                    <button onclick="saveDynamicCode('${t}')" class="bg-blue-600 text-white px-6 py-2 rounded-lg text-xs font-bold shadow-lg">KAYDET</button>
                 </div>`;
             }
             document.getElementById('view-content').innerHTML = html + '</div>';
@@ -317,13 +316,13 @@
 
         async function renderDynamicView(type) {
             const { data } = await supabaseClient.from('dynamic_content').select('html_content').eq('type', type).maybeSingle();
-            document.getElementById('view-content').innerHTML = data?.html_content || '<div class="p-20 text-center text-slate-400">İçerik yok.</div>';
+            document.getElementById('view-content').innerHTML = data?.html_content || '<div class="p-20 text-center text-slate-400 font-medium italic uppercase tracking-widest text-xs">Bu içerik henüz hazırlanmadı.</div>';
         }
 
         async function saveDynamicCode(type) {
             const html = document.getElementById(`code-${type}`).value;
-            await supabaseClient.from('dynamic_content').upsert({ type, html_content: html });
-            alert("Rasyonalist Bir Şekilde Kaydedildi!");
+            const { error } = await supabaseClient.from('dynamic_content').upsert({ type, html_content: html });
+            if(!error) alert("Rasyonalist Bir Şekilde Kaydedildi!"); else alert(error.message);
         }
 
         window.onload = initAuth;
