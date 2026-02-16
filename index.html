@@ -77,7 +77,7 @@
             </form>
             <div id="login-error-container" class="mt-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/30 rounded-2xl hidden">
                 <p id="login-error" class="text-red-600 dark:text-red-400 text-xs font-bold text-center"></p>
-                <p id="error-hint" class="text-[10px] text-red-400 mt-2 text-center uppercase tracking-tighter">Lütfen Supabase Auth ayarlarından 'Email Confirm' seçeneğini kapatın.</p>
+                <p id="error-hint" class="text-[10px] text-red-400 mt-2 text-center uppercase tracking-tighter italic">Eğer "Forbidden" hatası alıyorsanız, lütfen 'anon public' key kullandığınızdan emin olun.</p>
             </div>
         </div>
     </div>
@@ -119,8 +119,9 @@
 
     <script>
         // --- CONFIG ---
+        // Ali Hoca, buraya MUTLAKA 'anon public' key gelmeli. 'service_role' veya 'secret' hata verir.
         const SUPABASE_URL = "https://mpqncrkclcprjmaohpgm.supabase.co"; 
-        const SUPABASE_ANON_KEY = "sb_secret_oIDZdOdQGA0KTG51K4g2Bw_4HDDTnmN"; 
+        const SUPABASE_ANON_KEY = "sb_publishable_0TPVUMiQ0_5zLkzhcEe4yQ_xsDSIaF4"; // Publishable key kullanıldı
 
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         let userProfile = null;
@@ -128,7 +129,7 @@
         // --- LOGO & THEME ---
         function updateLogos() {
             const isDark = document.documentElement.classList.contains('dark');
-            const logoFilename = isDark ? 'acik.png' : 'koyu.png'; // Rasyonel: Açıkta koyu, koyuda açık logo
+            const logoFilename = isDark ? 'acik.png' : 'koyu.png';
             const logoUrl = `${SUPABASE_URL}/storage/v1/object/public/logos/${logoFilename}?t=${new Date().getTime()}`;
             document.getElementById('nav-logo').src = logoUrl;
             if(document.getElementById('sidebar-logo')) document.getElementById('sidebar-logo').src = logoUrl;
@@ -147,13 +148,18 @@
             }
             updateLogos();
 
-            const { data: { session } } = await supabaseClient.auth.getSession();
-            handleSession(session);
+            try {
+                const { data: { session } } = await supabaseClient.auth.getSession();
+                handleSession(session);
 
-            supabaseClient.auth.onAuthStateChange((event, session) => {
-                if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') handleSession(session);
-                else if (event === 'SIGNED_OUT') showLanding();
-            });
+                supabaseClient.auth.onAuthStateChange((event, session) => {
+                    if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') handleSession(session);
+                    else if (event === 'SIGNED_OUT') showLanding();
+                });
+            } catch (err) {
+                console.error("Auth init error:", err);
+                showLanding();
+            }
         }
 
         async function handleSession(session) {
@@ -168,7 +174,6 @@
                     renderSidebar();
                     navigate('dashboard');
                 } else {
-                    console.error("Profil bulunamadı:", error);
                     logout();
                 }
             } else {
@@ -190,9 +195,10 @@
             btn.innerText = "KONTROL EDİLİYOR...";
             errCont.classList.add('hidden');
 
-            const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
-            
-            if (error) {
+            try {
+                const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+                if (error) throw error;
+            } catch (error) {
                 errEl.innerText = `HATA: ${error.message}`;
                 errCont.classList.remove('hidden');
                 btn.disabled = false;
@@ -248,14 +254,9 @@
             document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('active'));
             document.getElementById(`nav-${viewId}`)?.classList.add('active');
             const content = document.getElementById('view-content');
-            const menu = [...views.teacher, ...views.student]; // Basitleştirilmiş navigasyon için
-            const viewInfo = menu.find(v => v.id === viewId) || { name: 'Dashboard', sub: 'GENEL' };
-            
-            document.getElementById('page-title').innerText = viewInfo.name;
-            document.getElementById('page-subtitle').innerText = viewInfo.sub;
             
             if(viewId === 'dashboard') {
-                content.innerHTML = `<div class="bg-blue-600 p-12 rounded-[3rem] text-white shadow-2xl relative overflow-hidden italic font-black text-4xl">Hoş Geldin, Ali Hoca!</div>`;
+                content.innerHTML = `<div class="bg-blue-600 p-12 rounded-[3rem] text-white shadow-2xl relative overflow-hidden italic font-black text-4xl">Hoş Geldin, ${userProfile.full_name}!</div>`;
             } else if(viewId === 't-settings') {
                 renderTeacherSettings();
             } else {
@@ -263,11 +264,9 @@
             }
         }
 
-        const views = { teacher: [{id: 't-settings', name: 'Kodlar', sub: 'HTML'}], student: [{id: 's-study', name: 'Ders', sub: 'KUTUP'}, {id: 's-sordur', name: 'Sor', sub: 'CEVAP'}, {id: 's-lgs', name: 'LGS', sub: 'ROBOT'}] };
-
         async function renderDynamicView(type) {
             const { data } = await supabaseClient.from('dynamic_content').select('html_content').eq('type', type).maybeSingle();
-            document.getElementById('view-content').innerHTML = data?.html_content || '<p class="text-center py-20 text-slate-400">İçerik henüz eklenmedi.</p>';
+            document.getElementById('view-content').innerHTML = data?.html_content || '<p class="text-center py-20 text-slate-400 font-bold uppercase tracking-widest text-xs italic">İçerik henüz eklenmedi.</p>';
         }
 
         async function renderTeacherSettings() {
@@ -288,7 +287,7 @@
         async function saveDynamicCode(type) {
             const html = document.getElementById(`code-${type}`).value;
             await supabaseClient.from('dynamic_content').upsert({ type, html_content: html });
-            alert("Güncellendi!");
+            alert("Rasyonalist Bir Şekilde Güncellendi!");
         }
 
         window.onload = initAuth;
