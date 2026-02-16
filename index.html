@@ -15,10 +15,7 @@
                     colors: {
                         darkBg: '#0f172a',
                         darkCard: '#1e293b',
-                        brand: {
-                            blue: '#2563eb',
-                            orange: '#ea580c'
-                        }
+                        brand: { blue: '#2563eb', orange: '#ea580c' }
                     }
                 }
             }
@@ -30,22 +27,20 @@
         .glass { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(12px); }
         .dark .glass { background: rgba(30, 41, 59, 0.8); border-color: rgba(51, 65, 85, 0.5); }
         
-        /* Dinamik Tema Renkleri */
         .theme-blue .brand-bg { background-color: #2563eb; }
         .theme-blue .brand-text { color: #2563eb; }
         .theme-blue .sidebar-link.active { background-color: #2563eb; color: white; }
         .theme-blue .brand-border { border-color: #2563eb; }
-        .theme-blue .accent-ring { --tw-ring-color: #2563eb; }
         
         .theme-orange .brand-bg { background-color: #ea580c; }
         .theme-orange .brand-text { color: #ea580c; }
         .theme-orange .sidebar-link.active { background-color: #ea580c; color: white; }
         .theme-orange .brand-border { border-color: #ea580c; }
-        .theme-orange .accent-ring { --tw-ring-color: #ea580c; }
 
         .view-fade { animation: fadeIn 0.4s ease-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
         .logo-img { height: 45px; width: auto; object-fit: contain; }
+        .dynamic-frame { width: 100%; min-height: 80vh; border: none; border-radius: 1.5rem; background: white; }
     </style>
 </head>
 <body class="text-slate-800 dark:text-slate-100 dark:bg-darkBg overflow-x-hidden theme-blue" id="main-body">
@@ -70,7 +65,7 @@
             </div>
         </nav>
         <main class="flex-1 flex flex-col items-center justify-center pt-32 text-center px-6">
-            <h1 class="text-6xl md:text-8xl font-black tracking-tighter mb-8 leading-none italic">MATOTA<span class="text-blue-600">.</span></h1>
+            <h1 class="text-6xl md:text-8xl font-black tracking-tighter mb-8 italic">MATOTA<span class="text-blue-600">.</span></h1>
             <p class="text-slate-500 dark:text-slate-400 max-w-xl mb-12 text-lg">Ali ŞENGÜL ile LGS Hazırlık Süreci Tamamen Dijital ve Rasyonalist.</p>
             <button onclick="showAuthScreen('student')" class="px-12 py-5 bg-slate-900 dark:bg-blue-600 text-white rounded-full font-bold text-lg hover:scale-105 transition shadow-2xl">Hemen Başla</button>
         </main>
@@ -79,7 +74,7 @@
     <!-- 2. LOGIN OVERLAY -->
     <div id="login-overlay" class="fixed inset-0 z-[60] bg-slate-900/60 backdrop-blur-md hidden flex items-center justify-center p-4">
         <div class="max-w-md w-full bg-white dark:bg-darkCard p-10 rounded-[3rem] shadow-2xl relative view-fade">
-            <button onclick="hideAuthScreen()" class="absolute top-8 right-8 text-slate-400"><i class="fa-solid fa-xmark text-2xl"></i></button>
+            <button onclick="hideAuthScreen()" class="absolute top-8 right-8 text-slate-400 hover:text-slate-600 transition"><i class="fa-solid fa-xmark text-2xl"></i></button>
             <div class="text-center mb-8">
                 <span id="login-role-badge" class="px-3 py-1 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full text-[10px] font-black uppercase mb-4 inline-block italic tracking-widest">GİRİŞ</span>
                 <h2 class="text-3xl font-black dark:text-white tracking-tighter">Hoş Geldiniz</h2>
@@ -122,11 +117,9 @@
                     <h1 class="text-4xl font-black text-slate-900 dark:text-white tracking-tight" id="page-title">Yükleniyor...</h1>
                     <p class="text-slate-400 mt-1 font-bold text-sm uppercase tracking-widest italic" id="page-subtitle"></p>
                 </div>
-                <div class="flex items-center gap-3">
-                    <button onclick="toggleDarkMode()" class="w-12 h-12 flex items-center justify-center rounded-2xl bg-slate-50 dark:bg-darkCard transition shadow-sm">
-                        <i class="fa-solid fa-moon dark:hidden"></i><i class="fa-solid fa-sun hidden dark:block"></i>
-                    </button>
-                </div>
+                <button onclick="toggleDarkMode()" class="w-12 h-12 flex items-center justify-center rounded-2xl bg-slate-50 dark:bg-darkCard transition shadow-sm">
+                    <i class="fa-solid fa-moon dark:hidden"></i><i class="fa-solid fa-sun hidden dark:block"></i>
+                </button>
             </header>
             <div id="view-content" class="max-w-7xl mx-auto view-fade"></div>
         </main>
@@ -162,16 +155,11 @@
         let studentAnswers = [];
         let examTimerInterval = null;
 
-        // --- THEME & COLOR LOGIC ---
+        // --- THEME LOGIC ---
         function updateTheme(role) {
             const body = document.getElementById('main-body');
-            if (role === 'teacher') {
-                body.classList.remove('theme-blue');
-                body.classList.add('theme-orange');
-            } else {
-                body.classList.remove('theme-orange');
-                body.classList.add('theme-blue');
-            }
+            body.classList.remove('theme-blue', 'theme-orange');
+            body.classList.add(role === 'teacher' ? 'theme-orange' : 'theme-blue');
             updateLogos();
         }
 
@@ -199,8 +187,11 @@
             else { showLanding(); hideLoading(); }
 
             supabaseClient.auth.onAuthStateChange((event, session) => {
-                if (event === 'SIGNED_IN') handleSession(session);
-                else if (event === 'SIGNED_OUT') showLanding();
+                if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+                    if(session) handleSession(session);
+                } else if (event === 'SIGNED_OUT') {
+                    showLanding();
+                }
             });
         }
 
@@ -221,29 +212,26 @@
                 document.getElementById('user-role').innerText = data.role === 'teacher' ? 'EĞİTMEN' : 'ÖĞRENCİ';
                 document.getElementById('user-avatar').innerText = data.full_name ? data.full_name[0].toUpperCase() : '?';
                 
-                // Rasyonalist Fix: Eğer zaten app içindeysek navigasyon yapma, sadece dashboard göster (container bazlı)
-                const isAppVisible = !document.getElementById('app').classList.contains('hidden');
                 showDashboard();
                 renderSidebar();
-
-                if (!isAppVisible) {
-                    const lastView = localStorage.getItem('lastView') || 'dashboard';
-                    navigate(lastView);
-                }
+                
+                const lastView = localStorage.getItem('lastView') || 'dashboard';
+                navigate(lastView);
+            } catch (err) {
+                console.error("Session Error:", err);
             } finally { hideLoading(); }
         }
 
         document.getElementById('login-form').onsubmit = async (e) => {
             e.preventDefault();
             const btn = document.getElementById('login-btn');
-            btn.disabled = true; btn.innerText = "GİRİŞ YAPILIYOR...";
+            btn.disabled = true; btn.innerText = "KONTROL EDİLİYOR...";
             const { error } = await supabaseClient.auth.signInWithPassword({
                 email: document.getElementById('login-email').value,
                 password: document.getElementById('login-password').value
             });
             if (error) {
-                const errEl = document.getElementById('login-error');
-                errEl.innerText = error.message;
+                document.getElementById('login-error').innerText = error.message;
                 document.getElementById('login-error-container').classList.remove('hidden');
                 btn.disabled = false; btn.innerText = "GİRİŞ YAP";
             }
@@ -253,6 +241,7 @@
             localStorage.removeItem('lastView');
             supabaseClient.auth.signOut(); 
             localStorage.removeItem('supabase.auth.token'); 
+            location.reload();
         }
 
         function hideLoading() { document.getElementById('loading').classList.add('opacity-0'); setTimeout(() => document.getElementById('loading').classList.add('hidden'), 500); }
@@ -267,9 +256,9 @@
             const teacherViews = [
                 { id: 'dashboard', name: 'Dashboard', icon: 'fa-chart-line' },
                 { id: 't-students', name: 'Öğrenci Kayıt', icon: 'fa-user-plus' },
-                { id: 't-lessons', name: 'Ders Planlama', icon: 'fa-calendar-day' },
-                { id: 't-homeworks', name: 'Ödev Atama', icon: 'fa-book' },
-                { id: 't-exams', name: 'Sınav Merkezi', icon: 'fa-file-signature' },
+                { id: 't-lessons', name: 'Ders Planla', icon: 'fa-calendar-day' },
+                { id: 't-homeworks', name: 'Ödev Yönetimi', icon: 'fa-book' },
+                { id: 't-exams', name: 'Sınav Hazırla', icon: 'fa-file-signature' },
                 { id: 't-settings', name: 'Sistem Kodları', icon: 'fa-code' }
             ];
             const studentViews = [
@@ -294,10 +283,9 @@
             document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('active'));
             const btn = document.getElementById(`nav-${viewId}`);
             if (btn) btn.classList.add('active');
+            localStorage.setItem('lastView', viewId);
             
             const content = document.getElementById('view-content');
-            localStorage.setItem('lastView', viewId); // Rasyonalist State Persistence
-            
             content.innerHTML = `<div class="p-20 flex justify-center"><div class="animate-spin h-10 w-10 border-4 border-slate-200 border-t-blue-600 rounded-full"></div></div>`;
 
             switch(viewId) {
@@ -311,48 +299,49 @@
                 case 's-homeworks': renderStudentHomeworks(); break;
                 case 's-exams': renderStudentExams(); break;
                 case 's-study': case 's-sordur': case 's-lgs': renderDynamicView(viewId.split('-')[1]); break;
-                default: content.innerHTML = `<p class="p-20 text-center text-slate-400">Modül hazırlanıyor...</p>`;
+                default: renderDashboard();
             }
         }
 
-        // --- DASHBOARD ---
         function renderDashboard() {
             document.getElementById('page-title').innerText = 'Dashboard';
-            document.getElementById('page-subtitle').innerText = 'GENEL BAKIŞ';
+            document.getElementById('page-subtitle').innerText = 'SİSTEM ANALİZİ';
             document.getElementById('view-content').innerHTML = `
-                <div class="grid md:grid-cols-3 gap-8">
-                    <div class="brand-bg p-10 rounded-[3rem] text-white shadow-2xl relative overflow-hidden group">
-                        <i class="fa-solid fa-graduation-cap absolute -right-6 -bottom-6 text-9xl opacity-10"></i>
-                        <h3 class="text-3xl font-black italic tracking-tighter mb-2">Hoş Geldin, ${userProfile.full_name}!</h3>
-                        <p class="opacity-70 text-sm font-bold uppercase tracking-widest">Sistem Rasyonalist Olarak Çalışıyor.</p>
-                    </div>
-                </div>
-            `;
+                <div class="brand-bg p-12 rounded-[3rem] text-white shadow-2xl relative overflow-hidden italic font-black text-4xl view-fade">
+                    Hoş Geldin, ${userProfile.full_name}!
+                    <i class="fa-solid fa-rocket absolute -right-4 -bottom-4 text-9xl opacity-20"></i>
+                </div>`;
         }
 
-        // --- TEACHER: ÖĞRENCİ KAYIT ---
+        // --- TEACHER MODÜLLERİ ---
         async function renderTeacherStudents() {
-            document.getElementById('page-title').innerText = 'Öğrenci Yönetimi';
+            document.getElementById('page-title').innerText = 'Öğrenci Kayıt';
             const { data: students } = await supabaseClient.from('profiles').select('*').eq('role', 'student');
+            
+            let studentListHTML = students?.map(s => {
+                return '<div class="p-6 flex justify-between items-center group transition hover:bg-slate-50 dark:hover:bg-slate-900/50">' +
+                    '<div><p class="font-black">' + s.full_name + '</p><p class="text-xs text-slate-400 font-mono">' + s.email + '</p></div>' +
+                    '<button onclick="deleteItem(\'profiles\', \'' + s.id + '\', renderTeacherStudents)" class="text-red-400 opacity-0 group-hover:opacity-100 transition"><i class="fa-solid fa-trash"></i></button>' +
+                '</div>';
+            }).join('') || '<p class="p-10 text-center text-slate-400">Liste boş.</p>';
+
             document.getElementById('view-content').innerHTML = `
-                <div class="grid md:grid-cols-12 gap-10">
-                    <form id="add-student-form" class="md:col-span-4 bg-white dark:bg-darkCard p-8 rounded-3xl border dark:border-slate-800 space-y-4 h-fit">
-                        <h4 class="font-black text-lg mb-2">Yeni Öğrenci</h4>
+                <div class="grid md:grid-cols-2 gap-10 view-fade">
+                    <form id="add-student-form" class="bg-white dark:bg-darkCard p-8 rounded-3xl border dark:border-slate-800 space-y-4 h-fit">
+                        <h4 class="font-black text-lg mb-2">Yeni Kayıt</h4>
                         <input type="text" id="s-name" placeholder="Ad Soyad" required class="w-full p-4 rounded-xl border dark:bg-darkBg dark:border-slate-800 outline-none focus:ring-2 focus:ring-blue-500">
                         <input type="email" id="s-email" placeholder="E-posta" required class="w-full p-4 rounded-xl border dark:bg-darkBg dark:border-slate-800 outline-none focus:ring-2 focus:ring-blue-500">
                         <input type="password" id="s-pass" placeholder="Şifre" required class="w-full p-4 rounded-xl border dark:bg-darkBg dark:border-slate-800 outline-none focus:ring-2 focus:ring-blue-500">
-                        <button type="submit" class="w-full brand-bg text-white py-4 rounded-xl font-bold shadow-lg uppercase text-xs tracking-widest">Öğrenci Kaydet</button>
+                        <button type="submit" class="w-full brand-bg text-white py-4 rounded-xl font-black uppercase text-xs shadow-lg">Öğrenciyi Kaydet</button>
                     </form>
-                    <div class="md:col-span-8 bg-white dark:bg-darkCard rounded-3xl border dark:border-slate-800 overflow-hidden">
-                        <div class="p-6 font-black border-b dark:border-slate-800 uppercase text-xs tracking-widest">Öğrenci Listesi</div>
+                    <div class="bg-white dark:bg-darkCard rounded-3xl border dark:border-slate-800 overflow-hidden">
+                        <div class="p-6 font-black border-b dark:border-slate-800 uppercase text-xs">Kayıtlı Öğrenciler</div>
                         <div class="divide-y dark:divide-slate-800">
-                            ${students?.map(s => `<div class="p-6 flex justify-between items-center group">
-                                <div><p class="font-black text-slate-800 dark:text-white">${s.full_name}</p><p class="text-xs text-slate-400">${s.email}</p></div>
-                                <button onclick="deleteItem('profiles', '${s.id}', renderTeacherStudents)" class="text-red-400 p-2 opacity-0 group-hover:opacity-100 transition"><i class="fa-solid fa-trash"></i></button>
-                            </div>`).join('') || '<p class="p-10 text-center text-slate-400 italic font-medium">Kayıtlı öğrenci yok.</p>'}
+                            ${studentListHTML}
                         </div>
                     </div>
                 </div>`;
+
             document.getElementById('add-student-form').onsubmit = async (e) => {
                 e.preventDefault();
                 const { error } = await supabaseClient.auth.signUp({
@@ -364,306 +353,269 @@
             };
         }
 
-        // --- TEACHER: DERS PLANLAMA ---
         async function renderTeacherLessons() {
-            document.getElementById('page-title').innerText = 'Ders Programı';
+            document.getElementById('page-title').innerText = 'Ders Planlama';
             const { data: students } = await supabaseClient.from('profiles').select('*').eq('role', 'student');
             const { data: lessons } = await supabaseClient.from('lessons').select('*, profiles(full_name)');
+            
+            let lessonsHTML = lessons?.map(l => {
+                return '<div class="p-6 bg-white dark:bg-darkCard border dark:border-slate-800 rounded-2xl flex justify-between items-center shadow-sm">' +
+                    '<div><h5 class="font-black italic uppercase text-sm">' + l.title + '</h5><p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">' + (l.profiles?.full_name || 'Bilinmiyor') + ' • ' + new Date(l.scheduled_at).toLocaleString('tr-TR') + '</p></div>' +
+                    '<button onclick="deleteItem(\'lessons\', \'' + l.id + '\', renderTeacherLessons)" class="text-red-400 transition hover:scale-110"><i class="fa-solid fa-trash"></i></button>' +
+                '</div>';
+            }).join('') || '<p class="text-center text-slate-300 font-bold uppercase text-xs">Atanmış ders yok.</p>';
+
             document.getElementById('view-content').innerHTML = `
-                <div class="grid md:grid-cols-12 gap-10">
-                    <form id="lesson-form" class="md:col-span-4 bg-white dark:bg-darkCard p-8 rounded-3xl border dark:border-slate-800 space-y-4 h-fit">
-                        <h4 class="font-black text-lg mb-2 italic">Ders Tanımla</h4>
+                <div class="grid md:grid-cols-2 gap-10 view-fade">
+                    <form id="lesson-form" class="bg-white dark:bg-darkCard p-8 rounded-3xl border dark:border-slate-800 space-y-4 h-fit">
+                        <h4 class="font-black text-lg mb-2">Canlı Ders Tanımla</h4>
                         <select id="l-student" class="w-full p-4 rounded-xl border dark:bg-darkBg dark:border-slate-800 outline-none">
-                            ${students?.map(s => `<option value="${s.id}">${s.full_name}</option>`).join('')}
+                            ${students?.map(s => '<option value="' + s.id + '">' + s.full_name + '</option>').join('')}
                         </select>
-                        <input type="text" id="l-title" placeholder="Ders Başlığı" required class="w-full p-4 rounded-xl border dark:bg-darkBg dark:border-slate-800 outline-none">
-                        <input type="url" id="l-link" placeholder="Meet/Zoom URL" required class="w-full p-4 rounded-xl border dark:bg-darkBg dark:border-slate-800 outline-none">
-                        <input type="datetime-local" id="l-time" required class="w-full p-4 rounded-xl border dark:bg-darkBg dark:border-slate-800 outline-none">
-                        <button type="submit" class="w-full brand-bg text-white py-4 rounded-xl font-bold shadow-lg uppercase text-xs tracking-widest">Planı Yayınla</button>
+                        <input type="text" id="l-title" placeholder="Ders Başlığı" required class="w-full p-4 rounded-xl border dark:bg-darkBg dark:border-slate-800">
+                        <input type="url" id="l-link" placeholder="Meet Linki" required class="w-full p-4 rounded-xl border dark:bg-darkBg dark:border-slate-800">
+                        <input type="datetime-local" id="l-time" required class="w-full p-4 rounded-xl border dark:bg-darkBg dark:border-slate-800">
+                        <button type="submit" class="w-full brand-bg text-white py-4 rounded-xl font-black shadow-lg">Yayınla</button>
                     </form>
-                    <div class="md:col-span-8 space-y-4">
-                        ${lessons?.map(l => `<div class="p-6 bg-white dark:bg-darkCard border dark:border-slate-800 rounded-2xl flex justify-between items-center group">
-                            <div><h5 class="font-black italic text-slate-800 dark:text-white uppercase tracking-tighter">${l.title}</h5><p class="text-xs font-bold text-slate-400 uppercase tracking-widest">${l.profiles?.full_name} • ${new Date(l.scheduled_at).toLocaleString('tr-TR')}</p></div>
-                            <button onclick="deleteItem('lessons', '${l.id}', renderTeacherLessons)" class="text-red-400 opacity-0 group-hover:opacity-100 transition"><i class="fa-solid fa-trash"></i></button>
-                        </div>`).join('') || '<p class="text-center py-20 text-slate-300 font-bold uppercase tracking-widest text-xs italic">Planlanmış ders yok.</p>'}
+                    <div class="space-y-4">
+                        ${lessonsHTML}
                     </div>
                 </div>`;
+
             document.getElementById('lesson-form').onsubmit = async (e) => {
                 e.preventDefault();
-                const student_id = document.getElementById('l-student').value;
-                await supabaseClient.from('lessons').insert([{
-                    student_id: student_id,
-                    title: document.getElementById('l-title').value,
-                    link: document.getElementById('l-link').value,
-                    scheduled_at: document.getElementById('l-time').value
-                }]);
+                await supabaseClient.from('lessons').insert([{ student_id: document.getElementById('l-student').value, title: document.getElementById('l-title').value, link: document.getElementById('l-link').value, scheduled_at: document.getElementById('l-time').value }]);
                 renderTeacherLessons();
             };
         }
 
-        // --- TEACHER: ÖDEV ---
         async function renderTeacherHomeworks() {
-            document.getElementById('page-title').innerText = 'Ödev Sistemi';
+            document.getElementById('page-title').innerText = 'Ödev Yönetimi';
             const { data: students } = await supabaseClient.from('profiles').select('*').eq('role', 'student');
             const { data: hws } = await supabaseClient.from('homeworks').select('*, profiles(full_name)');
+            const { data: subs } = await supabaseClient.from('homework_submissions').select('*, profiles(full_name), homeworks(title)');
+
+            let subsHTML = subs?.map(s => {
+                return '<div class="p-6 bg-white dark:bg-darkCard border-2 brand-border rounded-2xl shadow-sm">' +
+                    '<p class="font-black text-[10px] brand-text uppercase mb-1 tracking-widest">' + (s.homeworks?.title || 'Ödev') + '</p>' +
+                    '<p class="font-bold text-sm mb-3">' + (s.profiles?.full_name || 'Öğrenci') + '</p>' +
+                    '<a href="' + s.submission_url + '" target="_blank" class="px-4 py-2 bg-blue-50 dark:bg-blue-900/30 text-blue-600 rounded-lg font-black text-[10px] uppercase tracking-widest">Linke Git</a>' +
+                    '<p class="text-slate-400 text-[10px] mt-3 italic bg-slate-50 dark:bg-slate-900 p-2 rounded-lg">Not: ' + (s.note || '-') + '</p>' +
+                '</div>';
+            }).join('') || '<p class="text-center text-slate-300 italic">Henüz teslimat yok.</p>';
+
             document.getElementById('view-content').innerHTML = `
-                <div class="grid md:grid-cols-12 gap-10">
-                    <form id="hw-form" class="md:col-span-4 bg-white dark:bg-darkCard p-8 rounded-3xl border dark:border-slate-800 space-y-4 h-fit">
-                        <h4 class="font-black text-lg mb-2">Ödev Atama</h4>
-                        <select id="hw-student" class="w-full p-4 rounded-xl border dark:bg-darkBg dark:border-slate-800 outline-none">
-                            ${students?.map(s => `<option value="${s.id}">${s.full_name}</option>`).join('')}
+                <div class="grid md:grid-cols-2 gap-10 view-fade">
+                    <form id="hw-form" class="bg-white dark:bg-darkCard p-8 rounded-3xl border dark:border-slate-800 space-y-4 h-fit">
+                        <h4 class="font-black text-lg mb-2">Yeni Ödev Ataması</h4>
+                        <select id="hw-student" class="w-full p-4 rounded-xl border dark:bg-darkBg dark:border-slate-800">
+                            ${students?.map(s => '<option value="' + s.id + '">' + s.full_name + '</option>').join('')}
                         </select>
-                        <input type="text" id="hw-title" placeholder="Ödev Konusu" required class="w-full p-4 rounded-xl border dark:bg-darkBg dark:border-slate-800 outline-none">
-                        <input type="text" id="hw-pdf" placeholder="PDF/Dosya Linki" required class="w-full p-4 rounded-xl border dark:bg-darkBg dark:border-slate-800 outline-none">
-                        <input type="datetime-local" id="hw-deadline" required class="w-full p-4 rounded-xl border dark:bg-darkBg dark:border-slate-800 outline-none">
-                        <button type="submit" class="w-full brand-bg text-white py-4 rounded-xl font-bold uppercase text-xs tracking-widest">Ödevi Gönder</button>
+                        <input type="text" id="hw-title" placeholder="Ödev Konusu" required class="w-full p-4 rounded-xl border dark:bg-darkBg dark:border-slate-800">
+                        <input type="text" id="hw-pdf" placeholder="PDF/Drive Linki" required class="w-full p-4 rounded-xl border dark:bg-darkBg dark:border-slate-800">
+                        <input type="datetime-local" id="hw-deadline" required class="w-full p-4 rounded-xl border dark:bg-darkBg dark:border-slate-800">
+                        <button type="submit" class="w-full brand-bg text-white py-4 rounded-xl font-black shadow-lg">Ödevi Yayınla</button>
                     </form>
-                    <div class="md:col-span-8 space-y-4">
-                        ${hws?.map(h => `<div class="p-6 bg-white dark:bg-darkCard border dark:border-slate-800 rounded-2xl flex justify-between items-center group">
-                            <div class="flex items-center gap-4"><div class="w-12 h-12 bg-orange-50 dark:bg-orange-900/30 text-orange-600 rounded-xl flex items-center justify-center"><i class="fa-solid fa-file-pdf text-xl"></i></div>
-                            <div><h5 class="font-black text-slate-800 dark:text-white uppercase tracking-tighter italic">${h.title}</h5><p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">${h.profiles?.full_name} • Teslim: ${new Date(h.deadline).toLocaleString('tr-TR')}</p></div></div>
-                            <button onclick="deleteItem('homeworks', '${h.id}', renderTeacherHomeworks)" class="text-red-400 opacity-0 group-hover:opacity-100 transition"><i class="fa-solid fa-trash"></i></button>
-                        </div>`).join('') || '<p class="text-center py-20 text-slate-300 italic font-bold text-xs uppercase">Ödev bulunmuyor.</p>'}
+                    <div class="space-y-6">
+                        <h4 class="font-black text-[10px] uppercase tracking-[0.2em] text-slate-400 mb-2 italic">Gelen Çözümler</h4>
+                        ${subsHTML}
                     </div>
                 </div>`;
+
             document.getElementById('hw-form').onsubmit = async (e) => {
                 e.preventDefault();
-                await supabaseClient.from('homeworks').insert([{
-                    student_id: document.getElementById('hw-student').value,
-                    title: document.getElementById('hw-title').value,
-                    pdf_url: document.getElementById('hw-pdf').value,
-                    deadline: document.getElementById('hw-deadline').value
-                }]);
+                await supabaseClient.from('homeworks').insert([{ student_id: document.getElementById('hw-student').value, title: document.getElementById('hw-title').value, pdf_url: document.getElementById('hw-pdf').value, deadline: document.getElementById('hw-deadline').value }]);
                 renderTeacherHomeworks();
             };
         }
 
-        // --- TEACHER: SINAV YÖNETİMİ ---
-        let tempQuestions = [];
         async function renderTeacherExams() {
             document.getElementById('page-title').innerText = 'Sınav Hazırlama';
             const { data: students } = await supabaseClient.from('profiles').select('*').eq('role', 'student');
+            
             document.getElementById('view-content').innerHTML = `
-                <div class="grid md:grid-cols-2 gap-12">
-                    <div class="bg-white dark:bg-darkCard p-10 rounded-[2.5rem] border dark:border-slate-800 space-y-6">
-                        <h4 class="text-2xl font-black italic tracking-tighter">Sınav Kurulumu</h4>
-                        <div class="space-y-4">
-                            <select id="ex-student" class="w-full p-4 rounded-2xl border dark:bg-darkBg dark:border-slate-800 font-bold outline-none">
-                                ${students?.map(s => `<option value="${s.id}">${s.full_name}</option>`).join('')}
-                            </select>
-                            <input type="text" id="ex-title" placeholder="Sınav Adı" class="w-full p-4 rounded-2xl border dark:bg-darkBg dark:border-slate-800 font-bold outline-none">
-                            <input type="number" id="ex-duration" placeholder="Süre (DK)" class="w-full p-4 rounded-2xl border dark:bg-darkBg dark:border-slate-800 font-bold outline-none">
-                        </div>
-                        <div class="p-8 border-2 border-dashed dark:border-slate-800 rounded-3xl space-y-4 bg-slate-50/50 dark:bg-slate-900/50">
-                            <p class="text-[10px] font-black uppercase text-slate-400 tracking-widest italic">Soru İçeriği</p>
-                            <input type="text" id="q-image" placeholder="Soru Görsel URL" class="w-full p-4 rounded-xl border dark:bg-darkBg dark:border-slate-800 font-bold outline-none">
+                <div class="grid md:grid-cols-2 gap-10 view-fade">
+                    <div class="bg-white dark:bg-darkCard p-8 rounded-[2.5rem] border dark:border-slate-800 space-y-4 shadow-sm">
+                        <select id="ex-student" class="w-full p-4 rounded-2xl border dark:bg-darkBg dark:border-slate-800 font-bold outline-none">
+                            ${students?.map(s => '<option value="' + s.id + '">' + s.full_name + '</option>').join('')}
+                        </select>
+                        <input type="text" id="ex-title" placeholder="Sınav Başlığı" class="w-full p-4 rounded-2xl border dark:bg-darkBg dark:border-slate-800">
+                        <input type="number" id="ex-duration" placeholder="Süre (Dakika)" class="w-full p-4 rounded-2xl border dark:bg-darkBg dark:border-slate-800">
+                        <div class="p-6 border-2 border-dashed dark:border-slate-800 rounded-3xl space-y-4 bg-slate-50 dark:bg-slate-900">
+                            <input type="text" id="q-image" placeholder="Soru Görsel URL" class="w-full p-4 rounded-xl border dark:bg-darkBg dark:border-slate-800">
                             <div class="grid grid-cols-4 gap-2">
-                                ${['A','B','C','D'].map(opt => `<button onclick="selCorrect('${opt}')" class="q-opt-btn p-3 rounded-xl border dark:border-slate-800 font-black transition" id="btn-q-${opt}">${opt}</button>`).join('')}
+                                ${['A','B','C','D'].map(opt => '<button onclick="selCorrect(\'' + opt + '\')" class="q-opt-btn p-3 rounded-xl border dark:border-slate-800 font-black transition" id="btn-q-' + opt + '">' + opt + '</button>').join('')}
                             </div>
                             <input type="hidden" id="q-correct">
-                            <button onclick="addQToTemp()" class="w-full brand-bg text-white py-4 rounded-xl font-black uppercase text-xs tracking-widest">Soru Ekle</button>
+                            <button onclick="addQToTemp()" class="w-full brand-bg text-white py-3 rounded-xl font-black uppercase text-[10px] tracking-widest shadow-lg">Soruyu Ekle</button>
                         </div>
-                        <button onclick="publishExamFinal()" class="w-full bg-slate-900 dark:bg-white dark:text-slate-900 py-5 rounded-[2rem] font-black text-xl shadow-2xl transition hover:scale-[1.02]">Yayınla</button>
+                        <button onclick="publishExamFinal()" class="w-full bg-slate-900 dark:bg-white dark:text-slate-900 py-5 rounded-[2rem] font-black text-xl shadow-2xl transition hover:scale-[1.02]">SINAVI YAYINLA</button>
                     </div>
-                    <div class="space-y-4">
-                        <h4 class="text-slate-400 font-black uppercase text-[10px] tracking-[0.2em] mb-6 italic">Soru Listesi (<span id="q-count">0</span>)</h4>
-                        <div id="q-preview-list" class="space-y-3"></div>
-                    </div>
+                    <div id="q-preview-list" class="space-y-3"></div>
                 </div>`;
             tempQuestions = [];
         }
 
-        function selCorrect(o) {
-            document.querySelectorAll('.q-opt-btn').forEach(b => b.className = 'q-opt-btn p-3 rounded-xl border dark:border-slate-800 font-black transition');
-            document.getElementById(`btn-q-${o}`).className = 'q-opt-btn p-3 rounded-xl brand-bg text-white font-black shadow-lg';
-            document.getElementById('q-correct').value = o;
-        }
+        function selCorrect(o) { document.querySelectorAll('.q-opt-btn').forEach(b => b.className = 'q-opt-btn p-3 rounded-xl border dark:border-slate-800 font-black transition'); document.getElementById('btn-q-' + o).className = 'q-opt-btn p-3 rounded-xl brand-bg text-white font-black shadow-md'; document.getElementById('q-correct').value = o; }
+        function addQToTemp() { const img = document.getElementById('q-image').value; const cor = document.getElementById('q-correct').value; if(!img || !cor) return alert("Eksik veri!"); tempQuestions.push({ image: img, correct: cor }); document.getElementById('q-image').value = ''; renderQPreview(); }
+        function renderQPreview() { document.getElementById('q-preview-list').innerHTML = tempQuestions.map((q, i) => '<div class="p-4 bg-white dark:bg-darkCard rounded-xl border dark:border-slate-800 flex justify-between items-center shadow-sm"><span class="font-black italic text-xs uppercase tracking-widest">Soru ' + (i+1) + '</span><span class="px-2 py-1 bg-green-50 dark:bg-green-900/30 text-green-600 rounded text-[10px] font-black">CEVAP: ' + q.correct + '</span></div>').join(''); }
+        async function publishExamFinal() { const sid = document.getElementById('ex-student').value; const title = document.getElementById('ex-title').value; const dur = document.getElementById('ex-duration').value; if(!title || !dur || tempQuestions.length === 0) return alert("Hoppa! Eksik bir şeyler var Ali Hoca."); await supabaseClient.from('exams').insert([{ student_id: sid, title, duration: parseInt(dur), questions: tempQuestions }]); alert("Sınav başarıyla kaydedildi."); renderTeacherExams(); }
 
-        function addQToTemp() {
-            const img = document.getElementById('q-image').value;
-            const cor = document.getElementById('q-correct').value;
-            if(!img || !cor) return alert("Soru görseli ve doğru şık seçilmeli!");
-            tempQuestions.push({ image: img, correct: cor });
-            document.getElementById('q-image').value = '';
-            document.getElementById('q-count').innerText = tempQuestions.length;
-            renderQPreview();
-        }
-
-        function renderQPreview() {
-            document.getElementById('q-preview-list').innerHTML = tempQuestions.map((q, i) => `
-                <div class="p-5 bg-white dark:bg-darkCard rounded-2xl border dark:border-slate-800 flex justify-between items-center group shadow-sm">
-                    <span class="font-black italic text-sm">SORU ${i+1}</span>
-                    <span class="px-3 py-1 bg-green-50 dark:bg-green-900/30 text-green-600 rounded-lg text-[10px] font-black">DOĞRU: ${q.correct}</span>
-                    <button onclick="tempQuestions.splice(${i},1);renderQPreview()" class="text-red-400 opacity-0 group-hover:opacity-100 transition"><i class="fa-solid fa-circle-minus"></i></button>
-                </div>`).join('');
-        }
-
-        async function publishExamFinal() {
-            const title = document.getElementById('ex-title').value;
-            const dur = document.getElementById('ex-duration').value;
-            const sid = document.getElementById('ex-student').value;
-            if(!title || !dur || tempQuestions.length === 0) return alert("Sınav bilgileri eksik!");
-            await supabaseClient.from('exams').insert([{ student_id: sid, title, duration: parseInt(dur), questions: tempQuestions }]);
-            alert("Sınav başarıyla kaydedildi.");
-            renderTeacherExams();
-        }
-
-        // --- TEACHER: SISTEM KODLARI ---
         async function renderTeacherSettings() {
             document.getElementById('page-title').innerText = 'Sistem Kodları';
             const types = ['study', 'sordur', 'lgs'];
-            let html = '<div class="grid gap-10">';
+            let html = '<div class="grid gap-10 view-fade">';
             for(let t of types) {
                 const { data } = await supabaseClient.from('dynamic_content').select('html_content').eq('type', t).maybeSingle();
-                html += `
-                    <div class="bg-white dark:bg-darkCard p-10 rounded-[3rem] border dark:border-slate-800 shadow-sm">
-                        <h4 class="font-black mb-6 uppercase brand-text tracking-widest text-[10px] italic">${t} Modülü HTML/JS Kodları</h4>
-                        <textarea id="code-${t}" class="w-full h-80 p-6 font-mono text-xs bg-slate-900 text-green-400 rounded-[2rem] outline-none border-8 border-slate-800 dark:border-slate-950 mb-6">${data?.html_content || ''}</textarea>
-                        <button onclick="saveDynamicCode('${t}')" class="brand-bg text-white px-10 py-4 rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg">GÜNCELLE</button>
-                    </div>`;
+                html += '<div class="bg-white dark:bg-darkCard p-10 rounded-[3rem] border dark:border-slate-800 shadow-sm transition hover:shadow-lg">' +
+                    '<h4 class="font-black mb-4 uppercase brand-text text-[10px] tracking-widest italic">' + t + ' Modülü Kodu</h4>' +
+                    '<textarea id="code-' + t + '" class="w-full h-80 p-6 font-mono text-xs bg-slate-900 text-green-400 rounded-[2rem] outline-none border-8 border-slate-800 dark:border-slate-950 mb-6 shadow-inner">' + (data?.html_content || '') + '</textarea>' +
+                    '<button onclick="saveDynamicCode(\'' + t + '\')" class="brand-bg text-white px-10 py-4 rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl">GÜNCELLE</button>' +
+                '</div>';
             }
             document.getElementById('view-content').innerHTML = html + '</div>';
         }
 
-        // --- STUDENT: DERSLERIM ---
+        // --- ÖĞRENCİ MODÜLLERİ ---
         async function renderStudentLessons() {
-            document.getElementById('page-title').innerText = 'Canlı Derslerim';
+            document.getElementById('page-title').innerText = 'Derslerim';
             const { data: lessons } = await supabaseClient.from('lessons').select('*').eq('student_id', userProfile.id);
-            const now = new Date();
-            const filtered = lessons?.filter(l => new Date(l.scheduled_at) > new Date(now.getTime() - 3600000));
-            document.getElementById('view-content').innerHTML = `
-                <div class="grid md:grid-cols-2 gap-8">
-                    ${filtered?.map(l => `
-                        <div class="bg-white dark:bg-darkCard p-10 rounded-[2.5rem] border dark:border-slate-800 custom-shadow relative group transition hover:scale-[1.01]">
-                            <div class="absolute top-8 right-8"><span class="flex h-3 w-3 bg-red-500 rounded-full animate-ping"></span></div>
-                            <h4 class="text-2xl font-black text-slate-800 dark:text-white mb-2 italic tracking-tighter uppercase">${l.title}</h4>
-                            <p class="text-slate-400 font-bold flex items-center gap-2 mb-8 uppercase text-[10px] tracking-[0.2em]"><i class="fa-solid fa-clock"></i> ${new Date(l.scheduled_at).toLocaleString('tr-TR')}</p>
-                            <a href="${l.link}" target="_blank" class="w-full brand-bg text-white py-5 rounded-2xl font-black flex items-center justify-center gap-3 shadow-xl uppercase text-xs tracking-widest">
-                                <i class="fa-solid fa-video"></i> Derse Katıl
-                            </a>
-                        </div>`).join('') || '<div class="col-span-2 py-32 text-center text-slate-300 font-black italic uppercase text-xs tracking-widest">Henüz atanmış ders yok.</div>'}
-                </div>`;
+            
+            let lessonsHTML = lessons?.map(l => {
+                return '<div class="bg-white dark:bg-darkCard p-10 rounded-[2.5rem] border dark:border-slate-800 relative group transition hover:scale-[1.02]">' +
+                    '<h4 class="text-2xl font-black mb-2 italic uppercase tracking-tighter">' + l.title + '</h4>' +
+                    '<p class="text-slate-400 font-bold text-[10px] uppercase mb-8 tracking-[0.2em]"><i class="fa-solid fa-clock"></i> ' + new Date(l.scheduled_at).toLocaleString('tr-TR') + '</p>' +
+                    '<a href="' + l.link + '" target="_blank" class="w-full brand-bg text-white py-5 rounded-2xl font-black flex items-center justify-center gap-3 shadow-xl">DERSE KATIL</a>' +
+                '</div>';
+            }).join('') || '<p class="py-32 text-center text-slate-300 uppercase font-black text-xs italic tracking-widest">Şu an planlı dersin yok.</p>';
+
+            document.getElementById('view-content').innerHTML = '<div class="grid md:grid-cols-2 gap-8 view-fade">' + lessonsHTML + '</div>';
         }
 
-        // --- STUDENT: ÖDEVLERİM ---
         async function renderStudentHomeworks() {
             document.getElementById('page-title').innerText = 'Ödevlerim';
             const { data: hws } = await supabaseClient.from('homeworks').select('*').eq('student_id', userProfile.id);
+            
+            let hwsHTML = hws?.map(h => {
+                return '<div class="bg-white dark:bg-darkCard p-8 rounded-3xl border dark:border-slate-800 flex flex-col md:flex-row justify-between items-center gap-6 shadow-sm transition hover:bg-slate-50 dark:hover:bg-slate-900/50">' +
+                    '<div class="flex items-center gap-6">' +
+                        '<div class="h-16 w-16 bg-orange-50 dark:bg-orange-900/30 text-orange-600 rounded-2xl flex items-center justify-center text-2xl shadow-inner"><i class="fa-solid fa-file-pdf"></i></div>' +
+                        '<div><h4 class="text-xl font-black italic uppercase tracking-tighter">' + h.title + '</h4><p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1 italic">Bitiş: ' + new Date(h.deadline).toLocaleString('tr-TR') + '</p></div>' +
+                    '</div>' +
+                    '<div class="flex gap-4">' +
+                        '<a href="' + h.pdf_url + '" target="_blank" class="px-6 py-3 border-2 brand-border brand-text rounded-xl font-black text-[10px] uppercase tracking-widest transition hover:bg-brand-orange hover:text-white">Dosyayı Aç</a>' +
+                        '<button onclick="showSubmitForm(\'' + h.id + '\')" class="px-6 py-3 brand-bg text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg">Ödevi Yükle</button>' +
+                    '</div>' +
+                '</div>';
+            }).join('') || '<p class="py-20 text-center text-slate-300 font-black italic uppercase text-xs tracking-widest">Ödev listesi boş.</p>';
+
             document.getElementById('view-content').innerHTML = `
-                <div class="grid gap-6">
-                    ${hws?.map(h => `
-                        <div class="bg-white dark:bg-darkCard p-8 rounded-3xl border dark:border-slate-800 flex justify-between items-center group transition hover:bg-slate-50 dark:hover:bg-slate-900/50">
-                            <div class="flex items-center gap-6">
-                                <div class="h-14 w-14 bg-orange-50 dark:bg-orange-900/30 text-orange-600 rounded-2xl flex items-center justify-center text-xl shadow-inner"><i class="fa-solid fa-file-pdf"></i></div>
-                                <div><h4 class="text-xl font-black text-slate-800 dark:text-white italic tracking-tighter uppercase">${h.title}</h4><p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Son: ${new Date(h.deadline).toLocaleString('tr-TR')}</p></div>
-                            </div>
-                            <a href="${h.pdf_url}" target="_blank" class="px-8 py-3 brand-bg text-white rounded-xl font-black text-xs tracking-widest shadow-lg uppercase">Ödevi Aç</a>
-                        </div>`).join('') || '<p class="text-center py-20 text-slate-300 font-black text-xs uppercase italic">Yeni ödev bulunamadı.</p>'}
+                <div class="grid gap-6 view-fade">
+                    ${hwsHTML}
+                </div>
+                <div id="submit-overlay" class="fixed inset-0 z-[150] bg-slate-900/60 backdrop-blur-md hidden flex items-center justify-center p-6">
+                    <div class="max-w-lg w-full bg-white dark:bg-darkCard p-10 rounded-[3rem] shadow-2xl relative view-fade">
+                        <button onclick="document.getElementById('submit-overlay').classList.add('hidden')" class="absolute top-8 right-8 text-slate-400 transition hover:scale-110"><i class="fa-solid fa-xmark text-2xl"></i></button>
+                        <h3 class="text-2xl font-black mb-6 italic tracking-tighter">Ödevi Tamamla</h3>
+                        <form id="hw-submit-form" class="space-y-4">
+                            <input type="hidden" id="submit-hw-id">
+                            <input type="url" id="submit-url" placeholder="Drive / Dosya Linki" required class="w-full p-4 rounded-xl border dark:bg-darkBg dark:border-slate-800 outline-none focus:ring-2 focus:ring-blue-500">
+                            <textarea id="submit-note" placeholder="Ali Hoca'ya mesajın..." class="w-full p-4 rounded-xl border dark:bg-darkBg dark:border-slate-800 h-32 outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+                            <button type="submit" class="w-full brand-bg text-white py-4 rounded-xl font-black shadow-xl uppercase text-xs tracking-widest">Gönderiyi Tamamla</button>
+                        </form>
+                    </div>
                 </div>`;
+
+            document.getElementById('hw-submit-form').onsubmit = async (e) => {
+                e.preventDefault();
+                const hid = document.getElementById('submit-hw-id').value;
+                const url = document.getElementById('submit-url').value;
+                const note = document.getElementById('submit-note').value;
+                const { error } = await supabaseClient.from('homework_submissions').insert([{ homework_id: hid, student_id: userProfile.id, submission_url: url, note: note }]);
+                if(!error) {
+                    alert("Rasyonalist bir şekilde gönderildi!");
+                    document.getElementById('submit-overlay').classList.add('hidden');
+                } else alert(error.message);
+            };
         }
 
-        // --- STUDENT: SINAVLARIM ---
+        function showSubmitForm(hid) { document.getElementById('submit-hw-id').value = hid; document.getElementById('submit-overlay').classList.remove('hidden'); }
+
         async function renderStudentExams() {
-            document.getElementById('page-title').innerText = 'Sınav Merkezi';
+            document.getElementById('page-title').innerText = 'Sınavlarım';
             const { data: exams } = await supabaseClient.from('exams').select('*').eq('student_id', userProfile.id);
-            document.getElementById('view-content').innerHTML = `
-                <div class="grid md:grid-cols-3 gap-8">
-                    ${exams?.map(e => `
-                        <div class="bg-white dark:bg-darkCard p-10 rounded-[2.5rem] border dark:border-slate-800 shadow-sm flex flex-col justify-between transition hover:shadow-lg">
-                            <div>
-                                <h4 class="text-2xl font-black dark:text-white italic tracking-tighter mb-4 uppercase">${e.title}</h4>
-                                <div class="flex gap-4 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-10">
-                                    <span><i class="fa-solid fa-hourglass-half"></i> ${e.duration} DK</span>
-                                    <span><i class="fa-solid fa-layer-group"></i> ${e.questions.length} SORU</span>
-                                </div>
-                            </div>
-                            <button onclick="startStudentExam('${e.id}')" class="w-full brand-bg text-white py-4 rounded-2xl font-black hover:bg-slate-900 transition shadow-lg uppercase text-xs">Sınava Başla</button>
-                        </div>`).join('') || '<p class="col-span-3 text-center py-20 text-slate-300 uppercase font-black text-xs italic">Sınav bulunamadı.</p>'}
-                </div>`;
+            
+            let examsHTML = exams?.map(e => {
+                return '<div class="bg-white dark:bg-darkCard p-10 rounded-[2.5rem] border dark:border-slate-800 shadow-sm flex flex-col justify-between transition hover:shadow-lg">' +
+                    '<div><h4 class="text-2xl font-black italic uppercase mb-4 tracking-tighter">' + e.title + '</h4><div class="flex gap-4 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-10"><span>' + e.duration + ' DK</span><span>' + e.questions.length + ' SORU</span></div></div>' +
+                    '<button onclick="startStudentExam(\'' + e.id + '\')" class="w-full brand-bg text-white py-4 rounded-2xl font-black shadow-lg uppercase text-xs tracking-widest">Hemen Başla</button>' +
+                '</div>';
+            }).join('') || '<p class="col-span-3 text-center text-slate-300 py-20 font-black italic text-xs uppercase tracking-widest">Sınav yok.</p>';
+
+            document.getElementById('view-content').innerHTML = '<div class="grid md:grid-cols-3 gap-8 view-fade">' + examsHTML + '</div>';
         }
 
-        // --- SINAV MODU ---
+        // --- SINAV MOTORU ---
         async function startStudentExam(eid) {
             const { data: exam } = await supabaseClient.from('exams').select('*').eq('id', eid).single();
-            activeExamData = exam;
-            currentQuestionIndex = 0;
-            studentAnswers = new Array(exam.questions.length).fill(null);
-            document.getElementById('active-exam-title').innerText = exam.title;
-            document.getElementById('exam-overlay').classList.remove('hidden');
-            let timeLeft = exam.duration * 60;
-            updateExamUI();
-            examTimerInterval = setInterval(() => {
-                timeLeft--;
-                const mins = Math.floor(timeLeft / 60); const secs = timeLeft % 60;
-                document.getElementById('exam-timer').innerText = `${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}`;
-                if(timeLeft <= 0) finishExam();
-            }, 1000);
+            activeExamData = exam; currentQuestionIndex = 0; studentAnswers = new Array(exam.questions.length).fill(null);
+            document.getElementById('active-exam-title').innerText = exam.title; document.getElementById('exam-overlay').classList.remove('hidden');
+            let timeLeft = exam.duration * 60; updateExamUI();
+            examTimerInterval = setInterval(() => { timeLeft--; const mins = Math.floor(timeLeft / 60); const secs = timeLeft % 60; document.getElementById('exam-timer').innerText = (mins < 10 ? '0' : '') + mins + ':' + (secs < 10 ? '0' : '') + secs; if(timeLeft <= 0) finishExam(); }, 1000);
         }
 
         function updateExamUI() {
             const q = activeExamData.questions[currentQuestionIndex];
-            const area = document.getElementById('exam-question-area');
-            const pag = document.getElementById('exam-pagination');
-            area.innerHTML = `
-                <div class="md:w-3/5 bg-slate-50 dark:bg-slate-900 rounded-[3rem] p-4 flex items-center justify-center border dark:border-slate-800 shadow-inner">
-                    <img src="${q.image}" class="max-w-full h-auto rounded-2xl shadow-xl">
-                </div>
+            const studentAns = studentAnswers[currentQuestionIndex];
+            
+            let optionsHTML = ['A','B','C','D'].map(o => {
+                const isActive = studentAns === o;
+                return '<button onclick="pickAns(\'' + o + '\')" class="ans-btn w-full p-5 rounded-2xl border-2 dark:border-slate-800 font-black text-xl flex justify-between items-center transition ' + (isActive ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/30 text-blue-600 shadow-lg' : 'bg-white dark:bg-darkCard hover:bg-slate-50') + '">' +
+                    '<span>SEÇENEK ' + o + '</span>' + (isActive ? '<i class="fa-solid fa-circle-check"></i>' : '') +
+                '</button>';
+            }).join('');
+
+            document.getElementById('exam-question-area').innerHTML = `
+                <div class="md:w-3/5 bg-slate-50 dark:bg-slate-900 rounded-[3rem] p-4 flex items-center justify-center border dark:border-slate-800 shadow-inner"><img src="${q.image}" class="max-w-full h-auto rounded-2xl shadow-xl"></div>
                 <div class="md:w-2/5 flex flex-col justify-center space-y-4">
                     <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest italic">Soru ${currentQuestionIndex+1} / ${activeExamData.questions.length}</p>
-                    <div class="grid gap-3">
-                        ${['A','B','C','D'].map(o => `
-                            <button onclick="pickAns('${o}')" class="ans-btn w-full p-5 rounded-2xl border-2 dark:border-slate-800 font-black text-xl flex justify-between items-center transition
-                                ${studentAnswers[currentQuestionIndex] === o ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/30 text-blue-600' : 'bg-white dark:bg-darkCard hover:bg-slate-50 dark:hover:bg-slate-800/50'}" id="ans-${o}">
-                                <span>SEÇENEK ${o}</span>
-                                ${studentAnswers[currentQuestionIndex] === o ? '<i class="fa-solid fa-circle-check"></i>' : ''}
-                            </button>
-                        `).join('')}
-                    </div>
+                    <div class="grid gap-3">${optionsHTML}</div>
                 </div>`;
-            pag.innerHTML = activeExamData.questions.map((_, i) => `
-                <button onclick="currentQuestionIndex = ${i};updateExamUI();" class="w-10 h-10 rounded-xl font-black text-xs transition border dark:border-slate-800
-                    ${i === currentQuestionIndex ? 'brand-bg text-white shadow-lg' : studentAnswers[i] ? 'bg-green-100 dark:bg-green-900/20 text-green-700' : 'bg-white dark:bg-darkCard'}">${i+1}</button>
-            `).join('');
+
+            document.getElementById('exam-pagination').innerHTML = activeExamData.questions.map((_, i) => {
+                const isCur = i === currentQuestionIndex;
+                const isAns = studentAnswers[i] !== null;
+                return '<button onclick="currentQuestionIndex = ' + i + ';updateExamUI();" class="w-10 h-10 rounded-xl font-black text-[10px] transition border dark:border-slate-800 ' + (isCur ? 'brand-bg text-white shadow-lg' : (isAns ? 'bg-green-100 text-green-700' : 'bg-white dark:bg-darkCard')) + '">' + (i+1) + '</button>';
+            }).join('');
         }
 
         function pickAns(o) { studentAnswers[currentQuestionIndex] = o; updateExamUI(); }
-        function finishExamPrompt() { if(confirm("Bitiriyoruz Ali Hoca? Tüm cevaplar kaydedilecek.")) finishExam(); }
-        async function finishExam() {
-            clearInterval(examTimerInterval);
-            let score = 0;
-            activeExamData.questions.forEach((q, i) => { if(q.correct === studentAnswers[i]) score++; });
-            await supabaseClient.from('submissions').insert([{ exam_id: activeExamData.id, student_id: userProfile.id, answers: studentAnswers, score: (score / activeExamData.questions.length) * 100 }]);
-            document.getElementById('exam-overlay').classList.add('hidden');
-            navigate('dashboard');
-        }
+        function finishExamPrompt() { if(confirm("Bitiriyor muyuz Ali Hoca? Tüm cevaplar mühürlenecek.")) finishExam(); }
+        async function finishExam() { clearInterval(examTimerInterval); let score = 0; activeExamData.questions.forEach((q, i) => { if(q.correct === studentAnswers[i]) score++; }); await supabaseClient.from('submissions').insert([{ exam_id: activeExamData.id, student_id: userProfile.id, answers: studentAnswers, score: (score / activeExamData.questions.length) * 100 }]); document.getElementById('exam-overlay').classList.add('hidden'); navigate('dashboard'); }
 
-        // --- DİNAMİK İÇERİKLER ---
+        // --- DİNAMİK İÇERİK (SORDUR VS) ---
         async function renderDynamicView(type) {
             const { data } = await supabaseClient.from('dynamic_content').select('html_content').eq('type', type).maybeSingle();
             const viewCont = document.getElementById('view-content');
             
             if (data?.html_content) {
-                // Rasyonalist Script Injection
-                viewCont.innerHTML = data.html_content;
-                const scripts = viewCont.querySelectorAll("script");
-                scripts.forEach(oldScript => {
-                    const newScript = document.createElement("script");
-                    Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
-                    newScript.appendChild(document.createTextNode(oldScript.innerHTML));
-                    oldScript.parentNode.replaceChild(newScript, oldScript);
-                });
+                const frame = document.createElement("iframe");
+                frame.className = "dynamic-frame shadow-2xl view-fade";
+                viewCont.innerHTML = ""; 
+                viewCont.appendChild(frame);
+                
+                const doc = frame.contentWindow.document;
+                doc.open();
+                // script etiketi ayrımı SyntaxError'ı önlemek içindir.
+                doc.write('<!DOCTYPE html><html><head><meta charset="utf-8"><script src="https://cdn.tailwindcss.com"></' + 'script><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet"><style>body { margin: 0; padding: 20px; font-family: sans-serif; }</style></head><body>' + data.html_content + '</body></html>');
+                doc.close();
             } else {
-                viewCont.innerHTML = '<div class="py-32 text-center text-slate-300 font-black text-xs italic uppercase">Henüz kodlama yapılmamış.</div>';
+                viewCont.innerHTML = '<div class="py-32 text-center text-slate-300 font-black text-xs italic uppercase tracking-[0.2em]">Ali Hoca henüz bu alanı programlamadı.</div>';
             }
         }
 
-        async function saveDynamicCode(type) {
-            const html = document.getElementById(`code-${type}`).value;
-            const { error } = await supabaseClient.from('dynamic_content').upsert({ type, html_content: html });
-            if (!error) alert("Başarıyla kaydedildi.");
-        }
-
-        async function deleteItem(table, id, cb) { if(confirm("Emin misin Ali Hoca?")) { await supabaseClient.from(table).delete().eq('id', id); cb(); } }
+        async function saveDynamicCode(type) { const html = document.getElementById('code-' + type).value; const { error } = await supabaseClient.from('dynamic_content').upsert({ type, html_content: html }); if (!error) alert("Sistem rasyonalist bir şekilde güncellendi!"); }
+        async function deleteItem(table, id, cb) { if(confirm("Ali Hoca, emin misin?")) { await supabaseClient.from(table).delete().eq('id', id); cb(); } }
 
         window.onload = initAuth;
     </script>
