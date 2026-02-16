@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MATOTA | Profesyonel Eğitim Ekosistemi</title>
+    <title>MATOTA | Modern Eğitim Ekosistemi</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
@@ -42,6 +42,18 @@
         .logo-img { height: 45px; width: auto; object-fit: contain; }
         .dynamic-frame { width: 100%; min-height: 80vh; border: none; border-radius: 1.5rem; background: white; }
         .hero-gradient { background: radial-gradient(circle at top right, rgba(37, 99, 235, 0.1), transparent); }
+        
+        /* Şık Seçimi Görsel Feedback */
+        .q-opt-btn.selected {
+            background-color: #ea580c !important;
+            color: white !important;
+            border-color: transparent !important;
+            box-shadow: 0 4px 12px rgba(234, 88, 12, 0.3);
+        }
+        .theme-blue .q-opt-btn.selected {
+            background-color: #2563eb !important;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+        }
     </style>
 </head>
 <body class="text-slate-800 dark:text-slate-100 dark:bg-darkBg theme-blue overflow-x-hidden" id="main-body">
@@ -57,42 +69,86 @@
                 <img src="" alt="MATOTA" id="nav-logo" class="logo-img">
                 <div class="flex items-center gap-4">
                     <a href="#about" class="hidden md:block text-sm font-bold text-slate-500 hover:text-blue-600 transition">MATOTA Nedir?</a>
+                    <a href="#contact" class="hidden md:block text-sm font-bold text-slate-500 hover:text-blue-600 transition">İletişim</a>
                     <button onclick="toggleDarkMode()" class="p-2 text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg transition">
                         <i class="fa-solid fa-moon dark:hidden"></i><i class="fa-solid fa-sun hidden dark:block"></i>
                     </button>
-                    <!-- Ali Hoca, butonlar buraya rasyonel bir şekilde iade edildi -->
                     <button onclick="showAuthScreen('student')" class="px-5 py-2.5 bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl font-bold text-sm transition hover:scale-105">Öğrenci Girişi</button>
                     <button onclick="showAuthScreen('teacher')" class="px-5 py-2.5 bg-blue-600 text-white rounded-xl font-bold shadow-lg text-sm transition hover:scale-105">Eğitmen Girişi</button>
                 </div>
             </div>
         </nav>
 
+        <!-- Hero Section -->
         <section class="pt-48 pb-32 px-6">
             <div class="max-w-5xl mx-auto text-center">
                 <div class="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-full text-xs font-black uppercase tracking-widest mb-8 view-fade">
                     <i class="fa-solid fa-bolt"></i> Geleceğin Eğitim Standartı
                 </div>
                 <h1 class="text-6xl md:text-8xl font-black tracking-tighter mb-8 leading-tight dark:text-white view-fade">
-                    Eğitimde <span class="text-blue-600 italic">Rasyonalist</span><br>Dönüşüm.
+                    Eğitimde <span class="text-blue-600 italic">Rasyonalist</span><br>Dönüşüm Başladı.
                 </h1>
-                <p class="text-xl text-slate-500 dark:text-slate-400 max-w-2xl mx-auto mb-12 view-fade">Dijital takip ve birebir rehberlik ile başarıyı rasyonelleştirin.</p>
-                <div class="flex justify-center gap-4 view-fade"><button onclick="showAuthScreen('student')" class="px-10 py-5 bg-blue-600 text-white rounded-[2rem] font-black text-lg shadow-2xl transition hover:scale-105">Hemen Başla</button></div>
+                <p class="text-xl text-slate-500 dark:text-slate-400 max-w-2xl mx-auto mb-12 view-fade">
+                    Ali ŞENGÜL tarafından tasarlanan MATOTA, LGS hazırlık sürecini dijital takip, analitik veri ve birebir rehberlik ile yeniden tanımlıyor.
+                </p>
+                <div class="flex justify-center gap-4 view-fade">
+                    <button onclick="showAuthScreen('student')" class="px-10 py-5 bg-blue-600 text-white rounded-[2rem] font-black text-lg shadow-2xl transition hover:scale-105">Hemen Başla</button>
+                    <a href="#about" class="px-10 py-5 bg-white dark:bg-slate-800 border dark:border-slate-700 rounded-[2rem] font-black text-lg transition hover:bg-slate-50 flex items-center justify-center">MATOTA Nedir?</a>
+                </div>
             </div>
         </section>
 
+        <!-- "MATOTA Nedir?" Bilgi Kartları -->
+        <section id="about" class="py-32 bg-slate-50/50 dark:bg-slate-900/50">
+            <div class="max-w-7xl mx-auto px-6">
+                <div class="text-center mb-20">
+                    <h2 class="text-4xl font-black italic tracking-tighter mb-4">Eğitimde Yeni Bir Çağ: MATOTA</h2>
+                    <p class="text-slate-500 dark:text-slate-400 max-w-xl mx-auto">Ali Hoca ile LGS serüveni artık tamamen rasyonel verilere ve dijital takibe dayanıyor.</p>
+                </div>
+                <div class="grid md:grid-cols-3 gap-8">
+                    <!-- Kart 1 -->
+                    <div class="bg-white dark:bg-darkCard p-10 rounded-[3rem] border border-slate-100 dark:border-slate-800 shadow-sm transition hover:-translate-y-2 hover:shadow-xl group">
+                        <div class="w-16 h-16 bg-blue-50 dark:bg-blue-900/30 text-blue-600 rounded-2xl flex items-center justify-center mb-8 text-2xl transition group-hover:scale-110"><i class="fa-solid fa-brain"></i></div>
+                        <h3 class="text-2xl font-black mb-4 italic dark:text-white uppercase tracking-tighter">Analitik Yaklaşım</h3>
+                        <p class="text-slate-500 dark:text-slate-400 leading-relaxed text-sm">MATOTA, ezberden uzak, mantığa dayalı bir öğrenme sürecini hedefler. Her ders, her soru rasyonalist bir temele dayanır.</p>
+                    </div>
+                    <!-- Kart 2 -->
+                    <div class="bg-white dark:bg-darkCard p-10 rounded-[3rem] border border-slate-100 dark:border-slate-800 shadow-sm transition hover:-translate-y-2 hover:shadow-xl group">
+                        <div class="w-16 h-16 bg-orange-50 dark:bg-orange-900/30 text-orange-600 rounded-2xl flex items-center justify-center mb-8 text-2xl transition group-hover:scale-110"><i class="fa-solid fa-chart-line"></i></div>
+                        <h3 class="text-2xl font-black mb-4 italic dark:text-white uppercase tracking-tighter">Dijital İzleme</h3>
+                        <p class="text-slate-500 dark:text-slate-400 leading-relaxed text-sm">Öğrencilerin ödev, sınav ve çalışma performansları dijital veri havuzunda toplanır. Eksikler anlık olarak rasyonel biçimde tespit edilir.</p>
+                    </div>
+                    <!-- Kart 3 -->
+                    <div class="bg-white dark:bg-darkCard p-10 rounded-[3rem] border border-slate-100 dark:border-slate-800 shadow-sm transition hover:-translate-y-2 hover:shadow-xl group">
+                        <div class="w-16 h-16 bg-green-50 dark:bg-green-900/30 text-green-600 rounded-2xl flex items-center justify-center mb-8 text-2xl transition group-hover:scale-110"><i class="fa-solid fa-bolt"></i></div>
+                        <h3 class="text-2xl font-black mb-4 italic dark:text-white uppercase tracking-tighter">Hızlı Geri Bildirim</h3>
+                        <p class="text-slate-500 dark:text-slate-400 leading-relaxed text-sm">Ali ŞENGÜL ile kurulan doğrudan iletişim ve sistem üzerinden iletilen mühürlenmiş ödevler, öğrencinin sınav sürecini rasyonelleştirir.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Contact Form -->
         <section id="contact" class="py-32 px-6">
-            <div class="max-w-4xl mx-auto bg-slate-900 text-white rounded-[4rem] p-12 shadow-2xl relative overflow-hidden">
+            <div class="max-w-4xl mx-auto bg-slate-900 text-white rounded-[4rem] p-12 md:p-20 shadow-2xl relative overflow-hidden">
+                <i class="fa-solid fa-paper-plane absolute -right-10 -bottom-10 text-[20rem] opacity-5"></i>
                 <div class="relative z-10 grid md:grid-cols-2 gap-12 items-center">
-                    <div><h2 class="text-4xl font-black mb-6 italic">İletişime Geç.</h2><p class="text-slate-400 mb-8">Sorularını rasyonel bir dille iletebilirsin.</p></div>
+                    <div>
+                        <h2 class="text-4xl font-black mb-6 italic tracking-tighter">İletişime Geç.</h2>
+                        <p class="text-slate-400 font-medium mb-8">MATOTA ekosistemi hakkında sorularını rasyonel bir dille iletebilirsin.</p>
+                        <div class="text-sm font-bold text-slate-300"><i class="fa-solid fa-envelope text-blue-500 mr-2"></i> alisengulidu@gmail.com</div>
+                    </div>
                     <form id="contact-form" class="space-y-4">
                         <input type="text" id="c-name" placeholder="Ad Soyad" required class="w-full px-6 py-4 bg-white/10 border border-white/10 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 transition">
                         <input type="email" id="c-email" placeholder="E-posta" required class="w-full px-6 py-4 bg-white/10 border border-white/10 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 transition">
                         <textarea id="c-msg" placeholder="Mesajınız..." required class="w-full px-6 py-4 bg-white/10 border border-white/10 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 h-32 transition"></textarea>
-                        <button type="submit" id="c-btn" class="w-full bg-blue-600 py-4 rounded-2xl font-black">GÖNDER</button>
+                        <button type="submit" id="c-btn" class="w-full bg-blue-600 py-4 rounded-2xl font-black transition hover:brightness-110 shadow-xl">GÖNDER</button>
                     </form>
                 </div>
             </div>
         </section>
+
+        <footer class="py-12 text-center text-xs font-black text-slate-400 uppercase tracking-widest italic">&copy; 2026 MATOTA - Ali ŞENGÜL Rasyonalist Eğitim Modeli</footer>
     </div>
 
     <!-- Login Overlay -->
@@ -101,12 +157,12 @@
             <button onclick="hideAuthScreen()" class="absolute top-8 right-8 text-slate-400 hover:text-slate-600 transition"><i class="fa-solid fa-xmark text-2xl"></i></button>
             <div class="text-center mb-8">
                 <span id="login-role-badge" class="px-3 py-1 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full text-[10px] font-black uppercase mb-4 inline-block italic tracking-widest">GİRİŞ</span>
-                <h2 class="text-3xl font-black dark:text-white">Hoş Geldiniz</h2>
+                <h2 class="text-3xl font-black dark:text-white text-slate-800">Hoş Geldiniz</h2>
             </div>
             <form id="login-form" class="space-y-4">
                 <input type="email" id="login-email" required class="w-full px-6 py-4 rounded-2xl border bg-slate-50 dark:bg-slate-900 outline-none focus:ring-2 focus:ring-blue-500 transition font-medium" placeholder="E-posta">
                 <input type="password" id="login-password" required class="w-full px-6 py-4 rounded-2xl border bg-slate-50 dark:bg-slate-900 outline-none focus:ring-2 focus:ring-blue-500 transition font-medium" placeholder="Şifre">
-                <button type="submit" id="login-btn" class="w-full brand-bg text-white py-4 rounded-2xl font-black uppercase shadow-lg">Giriş Yap</button>
+                <button type="submit" id="login-btn" class="w-full brand-bg text-white py-4 rounded-2xl font-black uppercase shadow-lg transition">Giriş Yap</button>
             </form>
             <div id="login-error-container" class="mt-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-100 rounded-2xl hidden text-center text-red-600 text-xs font-bold"></div>
         </div>
@@ -273,6 +329,7 @@
                     Hoş Geldin, ${userProfile.full_name}! <i class="fa-solid fa-rocket absolute -right-4 -bottom-4 text-9xl opacity-20"></i></div>`;
         }
 
+        // --- TEACHER MODÜLLERİ ---
         async function renderTeacherMessages() {
             document.getElementById('page-title').innerText = 'Gelen Mesajlar';
             const { data: msgs } = await supabaseClient.from('contact_messages').select('*').order('created_at', { ascending: false });
@@ -361,6 +418,13 @@
             renderQPreview();
         }
 
+        function selCorrect(o) { 
+            document.querySelectorAll('.q-opt-btn').forEach(b => b.classList.remove('selected'));
+            const targetBtn = document.getElementById('btn-q-' + o);
+            if (targetBtn) targetBtn.classList.add('selected');
+            document.getElementById('q-correct').value = o; 
+        }
+
         async function addQToTemp() {
             const file = document.getElementById('q-file').files[0];
             const cor = document.getElementById('q-correct').value;
@@ -370,7 +434,10 @@
                 const imgUrl = await uploadFile(file, 'exam-questions');
                 tempQuestions.push({ image: imgUrl, correct: cor });
                 localStorage.setItem('exam_draft', JSON.stringify({ title: document.getElementById('ex-title').value, duration: document.getElementById('ex-duration').value, student_id: document.getElementById('ex-student').value, questions: tempQuestions }));
-                document.getElementById('q-file').value = ''; renderQPreview();
+                document.getElementById('q-file').value = ''; 
+                document.querySelectorAll('.q-opt-btn').forEach(b => b.classList.remove('selected'));
+                document.getElementById('q-correct').value = '';
+                renderQPreview();
             } catch(err) { alert(err.message); } finally { btn.disabled = false; btn.innerText = "Soruyu Havuza Ekle"; }
         }
 
@@ -386,7 +453,7 @@
             if(!error) { localStorage.removeItem('exam_draft'); tempQuestions = []; alert("Sınav mühürlendi!"); renderTeacherExams(); } else alert(error.message);
         }
 
-        // --- STUDENT: ÖDEVLERİM & ÇOKLU DOSYA ---
+        // --- STUDENT MODÜLLERİ ---
         async function renderStudentHomeworks() {
             document.getElementById('page-title').innerText = 'Ödevlerim';
             const { data: hws } = await supabaseClient.from('homeworks').select('*').eq('student_id', userProfile.id);
@@ -422,16 +489,20 @@
             }
         });
 
-        // --- DİĞER STANDART FONKSİYONLAR ---
-        async function renderTeacherSettings() { document.getElementById('page-title').innerText = 'Sistem Kodları'; const types = ['study', 'sordur', 'lgs']; let html = '<div class="grid gap-10 view-fade">'; for(let t of types) { const { data } = await supabaseClient.from('dynamic_content').select('html_content').eq('type', t).maybeSingle(); html += '<div class="bg-white dark:bg-darkCard p-10 rounded-[3rem] border shadow-sm transition hover:shadow-xl"><h4 class="font-black mb-4 uppercase brand-text text-[10px] tracking-widest italic">' + t + ' Modülü</h4><textarea id="code-' + t + '" class="w-full h-80 p-6 font-mono text-xs bg-slate-900 text-green-400 rounded-[2rem] outline-none border-8 border-slate-800 dark:border-slate-950 mb-6">' + (data?.html_content || '') + '</textarea><button onclick="saveDynamicCode(\'' + t + '\')" class="brand-bg text-white px-10 py-4 rounded-2xl font-black text-xs uppercase shadow-xl transition hover:scale-105">GÜNCELLE</button></div>'; } document.getElementById('view-content').innerHTML = html + '</div>'; }
-        async function renderStudentLessons() { document.getElementById('page-title').innerText = 'Derslerim'; const { data: lessons } = await supabaseClient.from('lessons').select('*').eq('student_id', userProfile.id); const now = new Date(); let html = lessons?.map(l => { const date = new Date(l.scheduled_at); const isLive = now >= date; return '<div class="bg-white dark:bg-darkCard p-10 rounded-[3rem] border relative group transition shadow-sm mb-4"><h4 class="text-2xl font-black mb-2 italic uppercase">' + l.title + '</h4><p class="text-slate-400 font-black text-[10px] mb-8 uppercase tracking-widest">' + date.toLocaleString('tr-TR') + '</p>' + (isLive ? '<a href="' + l.link + '" target="_blank" class="w-full brand-bg text-white py-5 rounded-2xl font-black block text-center uppercase shadow-xl tracking-[0.2em] transition hover:brightness-110">DERSE KATIL</a>' : '<button disabled class="w-full bg-slate-100 dark:bg-slate-800 text-slate-400 py-5 rounded-2xl font-black uppercase cursor-not-allowed text-[10px] tracking-widest italic">Ders Saati Bekleniyor</button>') + '</div>'; }).join('') || '<p class="py-20 text-center text-slate-300 font-black italic">Planlı dersin yok.</p>'; document.getElementById('view-content').innerHTML = '<div class="grid md:grid-cols-2 gap-8 view-fade">' + html + '</div>'; }
-        async function renderStudentExams() { document.getElementById('page-title').innerText = 'Sınavlarım'; const { data: exams } = await supabaseClient.from('exams').select('*').eq('student_id', userProfile.id); let html = exams?.map(e => '<div class="bg-white dark:bg-darkCard p-10 rounded-[3rem] border shadow-sm flex flex-col justify-between mb-4"><div><h4 class="text-2xl font-black italic uppercase mb-4">' + e.title + '</h4><div class="flex gap-4 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-10"><span>' + e.duration + ' DK</span><span>' + e.questions.length + ' SORU</span></div></div><button onclick="startStudentExam(\'' + e.id + '\')" class="w-full brand-bg text-white py-4 rounded-2xl font-black shadow-lg uppercase text-xs transition hover:scale-105">BAŞLA</button></div>').join('') || '<p class="col-span-3 text-center text-slate-300 p-20 font-black">Sınav yok.</p>'; document.getElementById('view-content').innerHTML = '<div class="grid md:grid-cols-3 gap-8 view-fade">' + html + '</div>'; }
-        async function startStudentExam(eid) { const { data: exam } = await supabaseClient.from('exams').select('*').eq('id', eid).single(); activeExamData = exam; currentQuestionIndex = 0; studentAnswers = new Array(exam.questions.length).fill(null); document.getElementById('active-exam-title').innerText = exam.title; document.getElementById('exam-overlay').classList.remove('hidden'); let timeLeft = exam.duration * 60; updateExamUI(); examTimerInterval = setInterval(() => { timeLeft--; const mins = Math.floor(timeLeft / 60); const secs = timeLeft % 60; document.getElementById('exam-timer').innerText = (mins < 10 ? '0' : '') + mins + ':' + (secs < 10 ? '0' : '') + secs; if(timeLeft <= 0) finishExam(); }, 1000); }
-        function updateExamUI() { const q = activeExamData.questions[currentQuestionIndex]; const optionsHTML = ['A','B','C','D'].map(o => '<button onclick="pickAns(\'' + o + '\')" class="ans-btn w-full p-5 rounded-2xl border-2 dark:border-slate-800 font-black text-xl flex justify-between items-center transition ' + (studentAnswers[currentQuestionIndex] === o ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/30 text-blue-600 shadow-lg' : 'bg-white dark:bg-darkCard hover:bg-slate-50') + '"><span>SEÇENEK ' + o + '</span>' + (studentAnswers[currentQuestionIndex] === o ? '<i class="fa-solid fa-circle-check"></i>' : '') + '</button>').join(''); document.getElementById('exam-question-area').innerHTML = '<div class="md:w-3/5 bg-slate-50 dark:bg-slate-900 rounded-[3rem] p-4 flex items-center justify-center border dark:border-slate-800 shadow-inner"><img src="' + q.image + '" class="max-w-full h-auto rounded-2xl shadow-xl"></div><div class="md:w-2/5 flex flex-col justify-center space-y-4"><p class="text-[10px] font-black text-slate-400 uppercase tracking-widest italic">Soru ' + (currentQuestionIndex+1) + ' / ' + activeExamData.questions.length + '</p><div class="grid gap-3">' + optionsHTML + '</div></div>'; document.getElementById('exam-pagination').innerHTML = activeExamData.questions.map((_, i) => '<button onclick="currentQuestionIndex = ' + i + ';updateExamUI();" class="w-10 h-10 rounded-xl font-black text-[10px] transition border dark:border-slate-800 ' + (i === currentQuestionIndex ? 'brand-bg text-white shadow-lg' : (studentAnswers[i] !== null ? 'bg-green-100 text-green-700' : 'bg-white dark:bg-darkCard')) + '">' + (i+1) + '</button>').join(''); }
-        function pickAns(o) { studentAnswers[currentQuestionIndex] = o; updateExamUI(); }
-        function finishExamPrompt() { if(confirm("Bitiriyor muyuz?")) finishExam(); }
-        async function finishExam() { clearInterval(examTimerInterval); let score = 0; activeExamData.questions.forEach((q, i) => { if(q.correct === studentAnswers[i]) score++; }); await supabaseClient.from('submissions').insert([{ exam_id: activeExamData.id, student_id: userProfile.id, answers: studentAnswers, score: (score / activeExamData.questions.length) * 100 }]); document.getElementById('exam-overlay').classList.add('hidden'); navigate('dashboard'); }
-        async function renderDynamicView(type) { const { data } = await supabaseClient.from('dynamic_content').select('html_content').eq('type', type).maybeSingle(); const viewCont = document.getElementById('view-content'); if (data?.html_content) { const frame = document.createElement("iframe"); frame.className = "dynamic-frame shadow-2xl view-fade"; viewCont.innerHTML = ""; viewCont.appendChild(frame); const doc = frame.contentWindow.document; doc.open(); doc.write('<!DOCTYPE html><html><head><meta charset="utf-8"><script src="https://cdn.tailwindcss.com"></' + 'script><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet"><style>body { margin: 0; padding: 20px; font-family: sans-serif; }</style></head><body>' + data.html_content + '</body></html>'); doc.close(); } else { viewCont.innerHTML = '<div class="py-32 text-center text-slate-300 font-black text-xs italic uppercase tracking-[0.2em]">Programlanmadı.</div>'; } }
+        // --- DİĞER FONKSİYONLAR ---
+        async function renderDynamicView(type) {
+            const { data } = await supabaseClient.from('dynamic_content').select('html_content').eq('type', type).maybeSingle();
+            const viewCont = document.getElementById('view-content');
+            if (data?.html_content) {
+                const frame = document.createElement("iframe");
+                frame.className = "dynamic-frame shadow-2xl view-fade";
+                viewCont.innerHTML = ""; viewCont.appendChild(frame);
+                const doc = frame.contentWindow.document; doc.open();
+                doc.write('<!DOCTYPE html><html><head><meta charset="utf-8"><script src="https://cdn.tailwindcss.com"></' + 'script><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet"><style>body { margin: 0; padding: 20px; font-family: sans-serif; }</style></head><body>' + data.html_content + '</body></html>');
+                doc.close();
+            } else { viewCont.innerHTML = '<div class="py-32 text-center text-slate-300 font-black text-xs italic uppercase tracking-[0.2em]">Programlanmadı.</div>'; }
+        }
+
         async function saveDynamicCode(type) { const html = document.getElementById('code-' + type).value; const { error } = await supabaseClient.from('dynamic_content').upsert({ type, html_content: html }); if (!error) alert("Sistem güncellendi!"); }
         async function deleteItem(table, id, cb) { if(confirm("Kaydı silmek istediğine emin misin?")) { const { error } = await supabaseClient.from(table).delete().eq('id', id); if(!error) cb(); else alert("Hata: " + error.message); } }
 
