@@ -22,20 +22,22 @@
     </script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
-        body { font-family: 'Inter', sans-serif; transition: background-color 0.3s ease; }
+        body { font-family: 'Inter', sans-serif; transition: background-color 0.3s ease, color 0.3s ease; }
         .glass { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(12px); }
         .dark .glass { background: rgba(30, 41, 59, 0.8); border-color: rgba(51, 65, 85, 0.5); }
         .sidebar-link.active { background-color: #2563eb; color: white; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2); }
         .view-fade { animation: fadeIn 0.4s ease-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-        .logo-img { transition: opacity 0.3s ease; height: 45px; width: auto; object-fit: contain; }
+        .logo-img { transition: opacity 0.2s ease; height: 45px; width: auto; object-fit: contain; }
         .optical-circle.active { background-color: #2563eb; color: white; border-color: #2563eb; }
+        /* Tema geçiş yumuşatma */
+        * { transition: background-color 0.2s ease-in-out, border-color 0.2s ease-in-out; }
     </style>
 </head>
 <body class="text-slate-800 dark:text-slate-100 dark:bg-darkBg overflow-x-hidden">
 
     <!-- Loading -->
-    <div id="loading" class="fixed inset-0 z-[100] bg-white dark:bg-darkBg flex flex-col items-center justify-center transition-opacity duration-500">
+    <div id="loading" class="fixed inset-0 z-[100] bg-white dark:bg-darkBg flex flex-col items-center justify-center">
         <div class="h-12 w-12 rounded-full border-4 border-slate-100 dark:border-slate-800 border-t-blue-600 animate-spin"></div>
     </div>
 
@@ -69,7 +71,7 @@
             <button onclick="hideAuthScreen()" class="absolute top-8 right-8 text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-2xl"></i></button>
             <div class="text-center mb-8">
                 <span id="login-role-badge" class="px-3 py-1 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full text-[10px] font-black uppercase tracking-widest mb-4 inline-block italic">GİRİŞ</span>
-                <h2 class="text-3xl font-black dark:text-white tracking-tighter">Hoş Geldiniz</h2>
+                <h2 class="text-3xl font-black dark:text-white tracking-tighter text-slate-800">Hoş Geldiniz</h2>
             </div>
             <form id="login-form" class="space-y-4">
                 <input type="email" id="login-email" required class="w-full px-6 py-4 rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition font-medium" placeholder="E-posta Adresi">
@@ -78,7 +80,6 @@
             </form>
             <div id="login-error-container" class="mt-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/30 rounded-2xl hidden">
                 <p id="login-error" class="text-red-600 dark:text-red-400 text-xs font-bold text-center"></p>
-                <p id="error-hint" class="text-[10px] text-red-400 mt-2 text-center uppercase tracking-tighter italic">Supabase Auth ayarlarından 'Email Confirm' seçeneğinin kapalı olduğundan emin olun.</p>
             </div>
         </div>
     </div>
@@ -94,7 +95,7 @@
                 <div class="flex items-center space-x-3 mb-6 px-2">
                     <div class="w-12 h-12 rounded-2xl bg-blue-600 text-white flex items-center justify-center font-black text-xl shadow-lg" id="user-avatar">?</div>
                     <div class="overflow-hidden">
-                        <p class="text-sm font-black truncate" id="user-name">...</p>
+                        <p class="text-sm font-black truncate dark:text-white" id="user-name">...</p>
                         <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest italic" id="user-role">...</p>
                     </div>
                 </div>
@@ -109,7 +110,7 @@
                     <h1 class="text-4xl font-black tracking-tight dark:text-white" id="page-title">Yükleniyor...</h1>
                     <p class="text-slate-400 mt-1 font-bold text-xs uppercase tracking-widest" id="page-subtitle"></p>
                 </div>
-                <button onclick="toggleDarkMode()" class="w-12 h-12 flex items-center justify-center rounded-2xl bg-slate-50 dark:bg-darkCard transition">
+                <button onclick="toggleDarkMode()" class="w-12 h-12 flex items-center justify-center rounded-2xl bg-slate-50 dark:bg-darkCard transition shadow-sm">
                     <i class="fa-solid fa-moon dark:hidden"></i>
                     <i class="fa-solid fa-sun hidden dark:block text-white"></i>
                 </button>
@@ -118,24 +119,30 @@
         </main>
     </div>
 
-    <!-- Sınav Modu Overlay -->
+    <!-- Sınav Overlay -->
     <div id="exam-overlay" class="fixed inset-0 bg-white dark:bg-darkBg z-[200] hidden flex flex-col overflow-hidden"></div>
 
     <script>
-        // --- CONFIG ---
+        // --- SUPABASE CONFIG ---
         const SUPABASE_URL = "https://mpqncrkclcprjmaohpgm.supabase.co"; 
         const SUPABASE_ANON_KEY = "sb_publishable_0TPVUMiQ0_5zLkzhcEe4yQ_xsDSIaF4"; 
 
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        let currentUser = null;
         let userProfile = null;
 
-        // --- THEME & LOGO ---
+        // --- THEME & LOGO OPTIMIZATION ---
         function updateLogos() {
             const isDark = document.documentElement.classList.contains('dark');
-            const logoFilename = isDark ? 'acik.png' : 'koyu.png';
-            const logoUrl = `${SUPABASE_URL}/storage/v1/object/public/logos/${logoFilename}?t=${new Date().getTime()}`;
-            document.getElementById('nav-logo').src = logoUrl;
-            if(document.getElementById('sidebar-logo')) document.getElementById('sidebar-logo').src = logoUrl;
+            const logoFilename = isDark ? 'acik.png' : 'koyu.png'; 
+            // Cache-busting timestamp kaldırıldı, tarayıcı artık hafızadan getirir
+            const logoUrl = `${SUPABASE_URL}/storage/v1/object/public/logos/${logoFilename}`;
+            
+            const navLogo = document.getElementById('nav-logo');
+            const sideLogo = document.getElementById('sidebar-logo');
+            
+            if (navLogo) navLogo.src = logoUrl;
+            if (sideLogo) sideLogo.src = logoUrl;
         }
 
         function toggleDarkMode() {
@@ -144,41 +151,72 @@
             updateLogos();
         }
 
-        // --- AUTH ---
+        // --- AUTH & SESSION RECOVERY ---
         async function initAuth() {
+            // Tema ayarını ilk başta yapalım
             if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
                 document.documentElement.classList.add('dark');
             }
             updateLogos();
 
-            const { data: { session } } = await supabaseClient.auth.getSession();
-            handleSession(session);
+            // Oturumu çekelim
+            const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
+            
+            if (sessionError) {
+                console.error("Session fetch error:", sessionError);
+                showLanding();
+                hideLoading();
+                return;
+            }
 
+            if (session) {
+                await handleSession(session);
+            } else {
+                showLanding();
+                hideLoading();
+            }
+
+            // Değişiklikleri dinleyelim
             supabaseClient.auth.onAuthStateChange((event, session) => {
-                if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') handleSession(session);
-                else if (event === 'SIGNED_OUT') showLanding();
+                if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+                    if (session) handleSession(session);
+                } else if (event === 'SIGNED_OUT') {
+                    showLanding();
+                }
             });
         }
 
         async function handleSession(session) {
-            if (session) {
-                const { data, error } = await supabaseClient.from('profiles').select('*').eq('id', session.user.id).single();
+            try {
+                const { data, error } = await supabaseClient
+                    .from('profiles')
+                    .select('*')
+                    .eq('id', session.user.id)
+                    .maybeSingle();
+
+                if (error) throw error;
+
                 if (data) {
+                    currentUser = session.user;
                     userProfile = data;
+                    
                     document.getElementById('user-name').innerText = data.full_name;
                     document.getElementById('user-role').innerText = data.role === 'teacher' ? 'EĞİTMEN' : 'ÖĞRENCİ';
                     document.getElementById('user-avatar').innerText = data.full_name[0].toUpperCase();
+                    
                     showDashboard();
                     renderSidebar();
                     navigate('dashboard');
                 } else {
+                    // Profil yoksa ama auth varsa (temizlik)
                     logout();
                 }
-            } else {
-                showLanding();
+            } catch (err) {
+                console.error("Profile load error:", err);
+                logout();
+            } finally {
+                hideLoading();
             }
-            document.getElementById('loading').classList.add('opacity-0');
-            setTimeout(() => document.getElementById('loading').classList.add('hidden'), 500);
         }
 
         document.getElementById('login-form').onsubmit = async (e) => {
@@ -193,18 +231,30 @@
             btn.innerText = "KONTROL EDİLİYOR...";
             errCont.classList.add('hidden');
 
-            const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
+            const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+            
             if (error) {
                 errEl.innerText = `HATA: ${error.message}`;
                 errCont.classList.remove('hidden');
                 btn.disabled = false;
                 btn.innerText = "GİRİŞ YAP";
+            } else {
+                // handleSession, onAuthStateChange üzerinden otomatik tetiklenecek
             }
         };
 
-        function logout() { supabaseClient.auth.signOut(); localStorage.removeItem('supabase.auth.token'); }
+        function logout() { 
+            supabaseClient.auth.signOut(); 
+            localStorage.removeItem('supabase.auth.token'); 
+            showLanding();
+        }
 
-        // --- UI TOGGLES ---
+        function hideLoading() {
+            const loading = document.getElementById('loading');
+            loading.classList.add('opacity-0');
+            setTimeout(() => loading.classList.add('hidden'), 500);
+        }
+
         function showLanding() {
             document.getElementById('landing-page').classList.remove('hidden');
             document.getElementById('app').classList.add('hidden');
@@ -221,6 +271,7 @@
 
         function showDashboard() {
             document.getElementById('landing-page').classList.add('hidden');
+            document.getElementById('login-overlay').classList.add('hidden');
             document.getElementById('app').classList.remove('hidden');
             updateLogos();
         }
@@ -261,7 +312,7 @@
             if(activeLink) activeLink.classList.add('active');
 
             const content = document.getElementById('view-content');
-            const menu = [...(userProfile.role === 'teacher' ? [] : []), ...(userProfile.role === 'teacher' ? [
+            const menu = userProfile.role === 'teacher' ? [
                 { id: 'dashboard', name: 'Dashboard', sub: 'ANALİZ' },
                 { id: 't-students', name: 'Öğrenci Kayıt', sub: 'YÖNETİM' },
                 { id: 't-lessons', name: 'Ders Planlama', sub: 'TAKİP' },
@@ -277,7 +328,7 @@
                 { id: 's-tests', name: 'Test Çöz', sub: 'TEST' },
                 { id: 's-sordur', name: 'Sordur', sub: 'CEVAP' },
                 { id: 's-lgs', name: 'LGS Robotu', sub: 'PUAN' }
-            ])];
+            ];
 
             const viewInfo = menu.find(v => v.id === viewId) || { name: 'Dashboard', sub: 'GENEL' };
             document.getElementById('page-title').innerText = viewInfo.name;
@@ -296,30 +347,24 @@
                 case 's-homeworks': renderStudentHomeworks(); break;
                 case 's-exams': renderStudentExams(); break;
                 case 's-study': case 's-sordur': case 's-lgs': renderDynamicView(viewId.split('-')[1]); break;
-                default: content.innerHTML = `<div class="p-20 text-center text-slate-400 font-bold italic uppercase tracking-widest text-sm">Modül geliştiriliyor...</div>`;
+                default: content.innerHTML = `<div class="p-20 text-center text-slate-400 font-bold italic uppercase tracking-widest text-sm">Modül hazırlanıyor...</div>`;
             }
         }
 
-        // --- DASHBOARD ---
+        // Dashboard içeriği
         function renderDashboard() {
             document.getElementById('view-content').innerHTML = `
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
                     <div class="bg-blue-600 p-10 rounded-[3rem] text-white shadow-2xl relative overflow-hidden group">
-                        <i class="fa-solid fa-bolt absolute -right-6 -bottom-6 text-9xl opacity-10"></i>
-                        <p class="opacity-70 mb-2 font-black uppercase tracking-widest text-[10px]">Hoş Geldiniz,</p>
+                        <i class="fa-solid fa-graduation-cap absolute -right-6 -bottom-6 text-9xl opacity-10"></i>
+                        <p class="opacity-70 mb-2 font-black uppercase tracking-widest text-[10px]">Giriş Başarılı</p>
                         <h3 class="text-4xl font-black tracking-tighter italic">${userProfile.full_name}</h3>
-                    </div>
-                    <div class="bg-white dark:bg-darkCard p-10 rounded-[3rem] border border-slate-100 dark:border-slate-800 shadow-sm custom-shadow flex flex-col justify-between">
-                        <div>
-                            <p class="text-slate-400 text-[10px] font-black uppercase tracking-widest mb-4">Eğitim Durumu</p>
-                            <h3 class="text-3xl font-black text-slate-800 dark:text-white tracking-tighter">Sistem Aktif</h3>
-                        </div>
                     </div>
                 </div>
             `;
         }
 
-        // --- TEACHER VIEWS ---
+        // API İşlemleri & Dinamik Görünümler (Önceki fonksiyonlar korunmuştur)
         async function renderTeacherStudents() {
             const { data: students } = await supabaseClient.from('profiles').select('*').eq('role', 'student');
             document.getElementById('view-content').innerHTML = `
@@ -327,34 +372,29 @@
                     <div class="md:col-span-4 bg-white dark:bg-darkCard p-8 rounded-3xl border border-slate-100 dark:border-slate-800 custom-shadow h-fit">
                         <h3 class="text-xl font-black mb-6 dark:text-white">Yeni Öğrenci</h3>
                         <form id="add-student-form" class="space-y-4">
-                            <input type="text" id="s-name" placeholder="Ad Soyad" required class="w-full px-5 py-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition">
-                            <input type="email" id="s-email" placeholder="E-posta" required class="w-full px-5 py-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition">
-                            <input type="password" id="s-pass" placeholder="Şifre" required class="w-full px-5 py-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition">
+                            <input type="text" id="s-name" placeholder="Ad Soyad" required class="w-full px-5 py-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 dark:text-white outline-none">
+                            <input type="email" id="s-email" placeholder="E-posta" required class="w-full px-5 py-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 dark:text-white outline-none">
+                            <input type="password" id="s-pass" placeholder="Şifre" required class="w-full px-5 py-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 dark:text-white outline-none">
                             <button type="submit" class="w-full bg-blue-600 text-white py-4 rounded-2xl font-black shadow-lg">KAYDET</button>
                         </form>
                     </div>
                     <div class="md:col-span-8 bg-white dark:bg-darkCard rounded-3xl border border-slate-100 dark:border-slate-800 custom-shadow overflow-hidden">
-                        <div class="p-6 border-b border-slate-50 dark:border-slate-800 font-black dark:text-white">Öğrenci Listesi</div>
-                        <div class="divide-y divide-slate-50 dark:divide-slate-800">
+                        <div class="p-6 border-b dark:border-slate-800 font-black dark:text-white uppercase tracking-widest text-xs">Kayıtlı Öğrenciler</div>
+                        <div class="divide-y dark:divide-slate-800">
                             ${students?.map(s => `
                                 <div class="p-6 flex justify-between items-center group">
-                                    <div>
-                                        <div class="font-bold dark:text-white">${s.full_name}</div>
-                                        <div class="text-xs text-slate-400">${s.email}</div>
-                                    </div>
-                                    <button onclick="deleteItem('profiles', '${s.id}', renderTeacherStudents)" class="text-red-400 opacity-0 group-hover:opacity-100 transition"><i class="fa-solid fa-trash"></i></button>
-                                </div>
-                            `).join('') || '<p class="p-10 text-center text-slate-400 italic">Henüz öğrenci yok.</p>'}
+                                    <div><div class="font-bold dark:text-white">${s.full_name}</div><div class="text-xs text-slate-400 font-mono uppercase">${s.email}</div></div>
+                                    <button onclick="deleteItem('profiles', '${s.id}', renderTeacherStudents)" class="text-red-400 p-2"><i class="fa-solid fa-trash-can"></i></button>
+                                </div>`).join('') || '<p class="p-10 text-center text-slate-400 italic">Liste boş.</p>'}
                         </div>
                     </div>
-                </div>
-            `;
+                </div>`;
             document.getElementById('add-student-form').onsubmit = async (e) => {
                 e.preventDefault();
                 const name = document.getElementById('s-name').value;
                 const email = document.getElementById('s-email').value;
                 const password = document.getElementById('s-pass').value;
-                const { data, error } = await supabaseClient.auth.signUp({ email, password, options: { data: { full_name: name, role: 'student' } } });
+                const { error } = await supabaseClient.auth.signUp({ email, password, options: { data: { full_name: name, role: 'student' } } });
                 if(!error) renderTeacherStudents(); else alert(error.message);
             };
         }
@@ -365,28 +405,23 @@
             document.getElementById('view-content').innerHTML = `
                 <div class="grid md:grid-cols-12 gap-10">
                     <form id="lesson-form" class="md:col-span-4 bg-white dark:bg-darkCard p-8 rounded-3xl border border-slate-100 dark:border-slate-800 custom-shadow space-y-4 h-fit">
-                        <h3 class="text-xl font-black mb-4 dark:text-white">Ders Planla</h3>
+                        <h3 class="text-xl font-black mb-4 dark:text-white italic">Yeni Ders</h3>
                         <select id="l-student" class="w-full px-5 py-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 dark:text-white outline-none">
                             ${students?.map(s => `<option value="${s.id}">${s.full_name}</option>`).join('')}
                         </select>
-                        <input type="text" id="l-title" placeholder="Ders Başlığı" required class="w-full px-5 py-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 dark:text-white">
+                        <input type="text" id="l-title" placeholder="Ders Konusu" required class="w-full px-5 py-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 dark:text-white">
                         <input type="url" id="l-link" placeholder="Görüşme Linki" required class="w-full px-5 py-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 dark:text-white">
                         <input type="datetime-local" id="l-time" required class="w-full px-5 py-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 dark:text-white">
-                        <button class="w-full bg-blue-600 text-white py-4 rounded-2xl font-black shadow-lg">DERSİ PLANLA</button>
+                        <button class="w-full bg-blue-600 text-white py-4 rounded-2xl font-black shadow-lg">DERSİ OLUŞTUR</button>
                     </form>
                     <div class="md:col-span-8 space-y-4">
                         ${lessons?.map(l => `
-                            <div class="bg-white dark:bg-darkCard p-6 rounded-3xl border border-slate-100 dark:border-slate-800 flex justify-between items-center group">
-                                <div>
-                                    <h4 class="font-black text-slate-800 dark:text-white">${l.title}</h4>
-                                    <p class="text-xs font-bold text-slate-400 uppercase">${l.profiles?.full_name} • ${new Date(l.scheduled_at).toLocaleString('tr-TR')}</p>
-                                </div>
-                                <button onclick="deleteItem('lessons', '${l.id}', renderTeacherLessons)" class="text-red-400 opacity-0 group-hover:opacity-100"><i class="fa-solid fa-trash"></i></button>
-                            </div>
-                        `).join('') || '<p class="text-center text-slate-300 py-10 font-bold italic uppercase tracking-widest text-xs">Planlı ders bulunamadı.</p>'}
+                            <div class="bg-white dark:bg-darkCard p-6 rounded-3xl border border-slate-100 dark:border-slate-800 flex justify-between items-center">
+                                <div><h4 class="font-black text-slate-800 dark:text-white italic uppercase">${l.title}</h4><p class="text-[10px] font-bold text-slate-400 uppercase">${l.profiles?.full_name} • ${new Date(l.scheduled_at).toLocaleString('tr-TR')}</p></div>
+                                <button onclick="deleteItem('lessons', '${l.id}', renderTeacherLessons)" class="text-red-400"><i class="fa-solid fa-circle-xmark text-xl"></i></button>
+                            </div>`).join('') || '<p class="text-center text-slate-300 py-10 font-bold italic uppercase tracking-widest text-xs">Plan yok.</p>'}
                     </div>
-                </div>
-            `;
+                </div>`;
             document.getElementById('lesson-form').onsubmit = async (e) => {
                 e.preventDefault();
                 await supabaseClient.from('lessons').insert([{
@@ -405,31 +440,26 @@
             document.getElementById('view-content').innerHTML = `
                 <div class="grid md:grid-cols-12 gap-10">
                     <form id="hw-form" class="md:col-span-4 bg-white dark:bg-darkCard p-8 rounded-3xl border border-slate-100 dark:border-slate-800 custom-shadow space-y-4 h-fit">
-                        <h3 class="text-xl font-black mb-4 dark:text-white">Ödev Ver</h3>
+                        <h3 class="text-xl font-black mb-4 dark:text-white uppercase tracking-tighter">Yeni Ödev</h3>
                         <select id="hw-student" class="w-full px-5 py-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 dark:text-white outline-none">
                             ${students?.map(s => `<option value="${s.id}">${s.full_name}</option>`).join('')}
                         </select>
                         <input type="text" id="hw-title" placeholder="Ödev Başlığı" required class="w-full px-5 py-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 dark:text-white">
                         <input type="text" id="hw-pdf" placeholder="PDF Linki" required class="w-full px-5 py-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 dark:text-white">
                         <input type="datetime-local" id="hw-deadline" required class="w-full px-5 py-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 dark:text-white">
-                        <button class="w-full bg-slate-900 dark:bg-blue-600 text-white py-4 rounded-2xl font-black shadow-xl">ÖDEVİ GÖNDER</button>
+                        <button class="w-full bg-slate-900 dark:bg-blue-600 text-white py-4 rounded-2xl font-black">YAYINLA</button>
                     </form>
                     <div class="md:col-span-8 space-y-4">
                         ${hws?.map(h => `
-                            <div class="bg-white dark:bg-darkCard p-6 rounded-3xl border border-slate-100 dark:border-slate-800 flex justify-between items-center group">
+                            <div class="bg-white dark:bg-darkCard p-6 rounded-3xl border border-slate-100 dark:border-slate-800 flex justify-between items-center">
                                 <div class="flex items-center gap-4">
-                                    <div class="h-10 w-10 bg-orange-50 text-orange-600 rounded-xl flex items-center justify-center"><i class="fa-solid fa-file-pdf"></i></div>
-                                    <div>
-                                        <h4 class="font-black text-slate-800 dark:text-white">${h.title}</h4>
-                                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">${h.profiles?.full_name} • Son Tarih: ${new Date(h.deadline).toLocaleString('tr-TR')}</p>
-                                    </div>
+                                    <div class="h-10 w-10 bg-orange-50 dark:bg-orange-900/30 text-orange-600 rounded-xl flex items-center justify-center"><i class="fa-solid fa-file-pdf"></i></div>
+                                    <div><h4 class="font-black text-slate-800 dark:text-white tracking-tighter italic">${h.title}</h4><p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Teslim: ${new Date(h.deadline).toLocaleString('tr-TR')}</p></div>
                                 </div>
-                                <button onclick="deleteItem('homeworks', '${h.id}', renderTeacherHomeworks)" class="text-red-400 opacity-0 group-hover:opacity-100"><i class="fa-solid fa-trash"></i></button>
-                            </div>
-                        `).join('') || '<p class="text-center py-10 text-slate-300 font-bold italic uppercase text-xs">Henüz ödev verilmedi.</p>'}
+                                <button onclick="deleteItem('homeworks', '${h.id}', renderTeacherHomeworks)" class="text-red-400"><i class="fa-solid fa-trash"></i></button>
+                            </div>`).join('') || '<p class="text-center py-10 text-slate-300 font-bold italic uppercase text-xs">Ödev yok.</p>'}
                     </div>
-                </div>
-            `;
+                </div>`;
             document.getElementById('hw-form').onsubmit = async (e) => {
                 e.preventDefault();
                 await supabaseClient.from('homeworks').insert([{
@@ -442,13 +472,12 @@
             };
         }
 
-        let tempQuestions = [];
         async function renderTeacherExams() {
             const { data: students } = await supabaseClient.from('profiles').select('*').eq('role', 'student');
             document.getElementById('view-content').innerHTML = `
                 <div class="grid md:grid-cols-2 gap-10">
                     <div class="bg-white dark:bg-darkCard p-8 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 custom-shadow space-y-6">
-                        <h3 class="text-2xl font-black dark:text-white tracking-tight">Sınav Tanımla</h3>
+                        <h3 class="text-2xl font-black dark:text-white tracking-tight uppercase tracking-tighter italic">Yeni Sınav</h3>
                         <div class="space-y-4">
                             <select id="ex-student" class="w-full px-5 py-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 dark:text-white outline-none">
                                 ${students?.map(s => `<option value="${s.id}">${s.full_name}</option>`).join('')}
@@ -456,65 +485,22 @@
                             <input type="text" id="ex-title" placeholder="Sınav Başlığı" class="w-full px-5 py-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 dark:text-white">
                             <input type="number" id="ex-duration" placeholder="Süre (Dakika)" class="w-full px-5 py-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 dark:text-white">
                         </div>
-                        <div class="p-6 border-2 border-dashed border-slate-100 dark:border-slate-800 rounded-3xl space-y-4">
+                        <div class="p-6 border-2 border-dashed dark:border-slate-800 rounded-3xl space-y-4">
                             <input type="text" id="q-image" placeholder="Soru Görsel Linki" class="w-full px-5 py-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 dark:text-white">
                             <div class="grid grid-cols-4 gap-2" id="q-options">
-                                ${['A','B','C','D'].map(opt => `<button onclick="selectCorrect('${opt}')" class="opt-btn py-3 rounded-xl border border-slate-200 dark:border-slate-800 font-bold hover:bg-slate-50 dark:hover:bg-slate-900 dark:text-white transition" id="btn-q-${opt}">${opt}</button>`).join('')}
+                                ${['A','B','C','D'].map(opt => `<button onclick="selectCorrect('${opt}')" class="opt-btn py-3 rounded-xl border dark:border-slate-800 font-bold dark:text-white transition" id="btn-q-${opt}">${opt}</button>`).join('')}
                             </div>
                             <input type="hidden" id="q-correct">
-                            <button onclick="addQuestion()" class="w-full bg-blue-600 text-white py-4 rounded-2xl font-black">SORUYU EKLE</button>
+                            <button onclick="addQuestion()" class="w-full bg-blue-600 text-white py-4 rounded-2xl font-black">SORU EKLE</button>
                         </div>
                         <button onclick="publishExam()" class="w-full bg-slate-900 dark:bg-blue-600 text-white py-5 rounded-2xl font-black shadow-xl">SINAVI YAYINLA</button>
                     </div>
                     <div class="space-y-4">
-                        <h3 class="text-xl font-black text-slate-400">Soru Havuzu (<span id="q-count">0</span>)</h3>
+                        <h3 class="text-xl font-black text-slate-400 uppercase tracking-widest text-xs">Soru Havuzu (<span id="q-count">0</span>)</h3>
                         <div id="q-preview-list" class="space-y-3"></div>
                     </div>
-                </div>
-            `;
+                </div>`;
             tempQuestions = [];
-        }
-
-        function selectCorrect(opt) {
-            document.querySelectorAll('.opt-btn').forEach(b => b.classList.remove('bg-blue-600', 'text-white', 'border-blue-600'));
-            document.getElementById(`btn-q-${opt}`).classList.add('bg-blue-600', 'text-white', 'border-blue-600');
-            document.getElementById('q-correct').value = opt;
-        }
-
-        function addQuestion() {
-            const img = document.getElementById('q-image').value;
-            const correct = document.getElementById('q-correct').value;
-            if(!img || !correct) return alert("Soru görseli ve doğru şık seçilmeli!");
-            tempQuestions.push({ image: img, correct: correct });
-            document.getElementById('q-image').value = '';
-            document.getElementById('q-correct').value = '';
-            document.querySelectorAll('.opt-btn').forEach(b => b.classList.remove('bg-blue-600', 'text-white', 'border-blue-600'));
-            updateQPreview();
-        }
-
-        function updateQPreview() {
-            document.getElementById('q-count').innerText = tempQuestions.length;
-            document.getElementById('q-preview-list').innerHTML = tempQuestions.map((q, i) => `
-                <div class="bg-white dark:bg-darkCard p-4 rounded-2xl border border-slate-100 dark:border-slate-800 flex justify-between items-center shadow-sm">
-                    <span class="font-black text-slate-800 dark:text-white uppercase tracking-tighter text-xs">Soru ${i+1}</span>
-                    <span class="px-3 py-1 bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400 rounded-lg text-xs font-black">CEVAP: ${q.correct}</span>
-                    <button onclick="tempQuestions.splice(${i},1);updateQPreview()" class="text-red-400"><i class="fa-solid fa-circle-minus"></i></button>
-                </div>
-            `).join('');
-        }
-
-        async function publishExam() {
-            const title = document.getElementById('ex-title').value;
-            const duration = document.getElementById('ex-duration').value;
-            const studentId = document.getElementById('ex-student').value;
-            if(!title || !duration || tempQuestions.length === 0) return alert("Sınav bilgileri eksik!");
-            await supabaseClient.from('exams').insert([{
-                student_id: studentId,
-                title: title,
-                duration: parseInt(duration),
-                questions: tempQuestions
-            }]);
-            alert("Sınav Yayınlandı!"); navigate('t-exams');
         }
 
         async function renderTeacherSettings() {
@@ -532,7 +518,7 @@
             document.getElementById('view-content').innerHTML = html + '</div>';
         }
 
-        // --- STUDENT VIEWS ---
+        // Öğrenci Görünümleri
         async function renderStudentLessons() {
             const { data: lessons } = await supabaseClient.from('lessons').select('*').eq('student_id', currentUser.id);
             const now = new Date();
@@ -542,15 +528,11 @@
                     ${current.map(l => `
                         <div class="bg-white dark:bg-darkCard p-10 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 custom-shadow relative group overflow-hidden">
                             <div class="absolute top-0 right-0 p-8"><span class="flex h-3 w-3 bg-red-500 rounded-full animate-ping"></span></div>
-                            <h4 class="text-2xl font-black text-slate-900 dark:text-white mb-2">${l.title}</h4>
-                            <p class="text-slate-400 font-bold flex items-center gap-2 mb-8 uppercase text-xs tracking-widest"><i class="fa-solid fa-calendar-check"></i> ${new Date(l.scheduled_at).toLocaleString('tr-TR')}</p>
-                            <a href="${l.link}" target="_blank" class="w-full bg-blue-600 text-white py-5 rounded-2xl font-black flex items-center justify-center gap-3 hover:bg-blue-700 transition shadow-xl shadow-blue-200">
-                                <i class="fa-solid fa-video"></i> DERSE KATIL
-                            </a>
-                        </div>
-                    `).join('') || '<div class="md:col-span-2 p-20 text-center border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-[2.5rem] text-slate-400 font-bold italic uppercase tracking-widest text-xs">Aktif canlı dersiniz bulunmuyor.</div>'}
-                </div>
-            `;
+                            <h4 class="text-2xl font-black text-slate-900 dark:text-white mb-2 italic tracking-tighter">${l.title}</h4>
+                            <p class="text-slate-400 font-bold flex items-center gap-2 mb-8 uppercase text-xs tracking-widest"><i class="fa-solid fa-clock"></i> ${new Date(l.scheduled_at).toLocaleString('tr-TR')}</p>
+                            <a href="${l.link}" target="_blank" class="w-full bg-blue-600 text-white py-5 rounded-2xl font-black flex items-center justify-center gap-3 hover:bg-blue-700 transition">DERSE KATIL</a>
+                        </div>`).join('') || '<div class="md:col-span-2 p-20 text-center border-2 border-dashed dark:border-slate-800 rounded-[2.5rem] text-slate-400 font-bold italic uppercase tracking-widest text-xs">Aktif canlı dersiniz bulunmuyor.</div>'}
+                </div>`;
         }
 
         async function renderStudentHomeworks() {
@@ -560,17 +542,12 @@
                     ${hws?.map(h => `
                         <div class="bg-white dark:bg-darkCard p-8 rounded-3xl border border-slate-100 dark:border-slate-800 custom-shadow flex justify-between items-center group">
                             <div class="flex items-center gap-6">
-                                <div class="h-14 w-14 bg-orange-50 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 rounded-2xl flex items-center justify-center text-xl"><i class="fa-solid fa-file-pdf"></i></div>
-                                <div>
-                                    <h4 class="text-xl font-black text-slate-800 dark:text-white">${h.title}</h4>
-                                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Teslim: ${new Date(h.deadline).toLocaleString('tr-TR')}</p>
-                                </div>
+                                <div class="h-14 w-14 bg-orange-50 dark:bg-orange-900/30 text-orange-600 rounded-2xl flex items-center justify-center text-xl"><i class="fa-solid fa-file-pdf"></i></div>
+                                <div><h4 class="text-xl font-black text-slate-800 dark:text-white italic tracking-tighter">${h.title}</h4><p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Son: ${new Date(h.deadline).toLocaleString('tr-TR')}</p></div>
                             </div>
-                            <a href="${h.pdf_url}" target="_blank" class="px-8 py-3 bg-slate-900 dark:bg-blue-600 text-white rounded-xl font-black text-xs tracking-widest">DOSYAYI AÇ</a>
-                        </div>
-                    `).join('') || '<p class="text-center py-20 text-slate-300 font-bold italic uppercase tracking-widest text-xs">Henüz ödev atanmadı.</p>'}
-                </div>
-            `;
+                            <a href="${h.pdf_url}" target="_blank" class="px-8 py-3 bg-slate-900 dark:bg-blue-600 text-white rounded-xl font-black text-xs tracking-widest">ÖDEVİ AÇ</a>
+                        </div>`).join('') || '<p class="text-center py-20 text-slate-300 font-bold italic uppercase tracking-widest text-xs">Ödev yok.</p>'}
+                </div>`;
         }
 
         async function renderStudentExams() {
@@ -579,18 +556,10 @@
                 <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
                     ${exams?.map(e => `
                         <div class="bg-white dark:bg-darkCard p-10 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 custom-shadow flex flex-col justify-between">
-                            <div>
-                                <h4 class="text-2xl font-black text-slate-900 dark:text-white mb-2 tracking-tighter italic">${e.title}</h4>
-                                <div class="flex gap-4 text-[10px] font-black text-slate-400 uppercase mb-8 tracking-widest">
-                                    <span><i class="fa-solid fa-clock"></i> ${e.duration} DK</span>
-                                    <span><i class="fa-solid fa-layer-group"></i> ${e.questions.length} SORU</span>
-                                </div>
-                            </div>
-                            <button onclick="startExam('${e.id}')" class="w-full bg-slate-900 dark:bg-blue-600 text-white py-4 rounded-2xl font-black shadow-xl hover:bg-black transition text-xs tracking-widest">SINAVA BAŞLA</button>
-                        </div>
-                    `).join('') || '<div class="col-span-full p-20 text-center text-slate-300 font-bold italic uppercase tracking-widest text-xs">Atanmış sınav bulunmuyor.</div>'}
-                </div>
-            `;
+                            <div><h4 class="text-2xl font-black text-slate-900 dark:text-white mb-2 italic tracking-tighter uppercase">${e.title}</h4><div class="flex gap-4 text-[10px] font-black text-slate-400 uppercase mb-8 tracking-widest"><span><i class="fa-solid fa-clock"></i> ${e.duration} DK</span><span><i class="fa-solid fa-layer-group"></i> ${e.questions.length} SORU</span></div></div>
+                            <button onclick="startExam('${e.id}')" class="w-full bg-slate-900 dark:bg-blue-600 text-white py-4 rounded-2xl font-black shadow-xl hover:bg-black transition text-xs tracking-widest uppercase">BAŞLA</button>
+                        </div>`).join('') || '<div class="col-span-full p-20 text-center text-slate-300 font-bold italic uppercase tracking-widest text-xs">Sınav yok.</div>'}
+                </div>`;
         }
 
         async function renderDynamicView(type) {
