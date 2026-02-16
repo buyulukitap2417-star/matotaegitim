@@ -124,9 +124,9 @@
                             </div>
                         </div>
                         <form id="contact-form" class="space-y-4">
-                            <input type="text" id="c-name" placeholder="Ad Soyad" required class="w-full px-6 py-4 bg-white/10 border border-white/10 rounded-2xl text-white outline-none focus:ring-2 focus:ring-blue-500 transition">
-                            <input type="email" id="c-email" placeholder="E-posta" required class="w-full px-6 py-4 bg-white/10 border border-white/10 rounded-2xl text-white outline-none focus:ring-2 focus:ring-blue-500 transition">
-                            <textarea id="c-msg" placeholder="Mesajınız..." required class="w-full px-6 py-4 bg-white/10 border border-white/10 rounded-2xl text-white outline-none focus:ring-2 focus:ring-blue-500 h-32 transition"></textarea>
+                            <input type="text" id="c-name" placeholder="Ad Soyad" required class="w-full px-6 py-4 bg-white/10 border border-white/10 rounded-2xl text-white outline-none focus:ring-2 focus:ring-blue-500 transition font-medium">
+                            <input type="email" id="c-email" placeholder="E-posta" required class="w-full px-6 py-4 bg-white/10 border border-white/10 rounded-2xl text-white outline-none focus:ring-2 focus:ring-blue-500 transition font-medium">
+                            <textarea id="c-msg" placeholder="Mesajınız..." required class="w-full px-6 py-4 bg-white/10 border border-white/10 rounded-2xl text-white outline-none focus:ring-2 focus:ring-blue-500 h-32 transition font-medium"></textarea>
                             <button type="submit" id="c-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-2xl font-black transition shadow-xl">GÖNDER</button>
                         </form>
                     </div>
@@ -143,7 +143,7 @@
             <button onclick="hideAuthScreen()" class="absolute top-8 right-8 text-slate-400 hover:text-slate-600 transition"><i class="fa-solid fa-xmark text-2xl"></i></button>
             <div class="text-center mb-8">
                 <span id="login-role-badge" class="px-3 py-1 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full text-[10px] font-black uppercase mb-4 inline-block italic tracking-widest">GİRİŞ</span>
-                <h2 class="text-3xl font-black dark:text-white tracking-tighter">Hoş Geldiniz</h2>
+                <h2 class="text-3xl font-black dark:text-white tracking-tighter text-slate-800">Hoş Geldiniz</h2>
             </div>
             <form id="login-form" class="space-y-4">
                 <input type="email" id="login-email" required class="w-full px-6 py-4 rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500 transition font-medium" placeholder="E-posta Adresi">
@@ -195,6 +195,7 @@
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         
         let currentUser = null, userProfile = null, activeExamData = null, currentQuestionIndex = 0, studentAnswers = [], examTimerInterval = null;
+        let editingLessonId = null; // Düzenlenen dersin ID'sini tutmak için rasyonalist değişken
 
         function updateTheme(role) {
             const body = document.getElementById('main-body');
@@ -347,7 +348,6 @@
                     'Hoş Geldin, ' + userProfile.full_name + '! <i class="fa-solid fa-rocket absolute -right-4 -bottom-4 text-9xl opacity-20"></i></div>';
         }
 
-        // --- TEACHER MODÜLLERİ ---
         async function renderTeacherMessages() {
             document.getElementById('page-title').innerText = 'Gelen Mesajlar';
             const { data: msgs } = await supabaseClient.from('contact_messages').select('*').order('created_at', { ascending: false });
@@ -375,25 +375,86 @@
             document.getElementById('page-title').innerText = 'Ders Planlama';
             const { data: students } = await supabaseClient.from('profiles').select('*').eq('role', 'student');
             const { data: lessons } = await supabaseClient.from('lessons').select('*, profiles(full_name)');
+            
             let lessonsHTML = lessons?.map(l => {
-                return '<div class="p-6 bg-white dark:bg-darkCard border dark:border-slate-800 rounded-2xl flex justify-between items-center shadow-sm"><div><h5 class="font-black italic uppercase text-sm">' + l.title + '</h5><p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">' + (l.profiles?.full_name || 'Bilinmiyor') + ' • ' + new Date(l.scheduled_at).toLocaleString('tr-TR') + '</p></div><button onclick="deleteItem(\'lessons\', \'' + l.id + '\', renderTeacherLessons)" class="text-red-400 transition hover:scale-110"><i class="fa-solid fa-trash"></i></button></div>';
+                return '<div class="p-6 bg-white dark:bg-darkCard border dark:border-slate-800 rounded-2xl flex justify-between items-center shadow-sm">' +
+                    '<div><h5 class="font-black italic uppercase text-sm">' + l.title + '</h5><p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">' + (l.profiles?.full_name || 'Bilinmiyor') + ' • ' + new Date(l.scheduled_at).toLocaleString('tr-TR') + '</p></div>' +
+                    '<div class="flex gap-2">' +
+                        '<button onclick="startEditLesson(\'' + l.id + '\')" class="p-2 text-blue-500 transition hover:scale-110"><i class="fa-solid fa-pencil"></i></button>' +
+                        '<button onclick="deleteItem(\'lessons\', \'' + l.id + '\', renderTeacherLessons)" class="p-2 text-red-400 transition hover:scale-110"><i class="fa-solid fa-trash"></i></button>' +
+                    '</div></div>';
             }).join('') || '<p class="text-center text-slate-300 font-bold uppercase text-xs">Atanmış ders yok.</p>';
             
-            document.getElementById('view-content').innerHTML = '<div class="grid md:grid-cols-2 gap-10 view-fade"><form id="lesson-form" class="bg-white dark:bg-darkCard p-8 rounded-3xl border dark:border-slate-800 space-y-4 h-fit"><h4 class="font-black text-lg mb-2">Canlı Ders Tanımla</h4><select id="l-student" class="w-full p-4 rounded-xl border dark:bg-darkBg dark:border-slate-800 outline-none">' + (students?.map(s => '<option value="' + s.id + '">' + s.full_name + '</option>').join('') || '') + '</select><input type="text" id="l-title" placeholder="Ders Başlığı" required class="w-full p-4 rounded-xl border dark:bg-darkBg dark:border-slate-800"><input type="url" id="l-link" placeholder="Meet Linki" required class="w-full p-4 rounded-xl border dark:bg-darkBg dark:border-slate-800"><input type="datetime-local" id="l-time" required class="w-full p-4 rounded-xl border dark:bg-darkBg dark:border-slate-800"><button type="submit" class="w-full brand-bg text-white py-4 rounded-xl font-black shadow-lg">Yayınla</button></form><div class="space-y-4">' + lessonsHTML + '</div></div>';
+            document.getElementById('view-content').innerHTML = '<div class="grid md:grid-cols-2 gap-10 view-fade">' +
+                '<form id="lesson-form" class="bg-white dark:bg-darkCard p-8 rounded-3xl border dark:border-slate-800 space-y-4 h-fit">' +
+                '<h4 class="font-black text-lg mb-2" id="lesson-form-title">Canlı Ders Tanımla</h4>' +
+                '<select id="l-student" class="w-full p-4 rounded-xl border dark:bg-darkBg dark:border-slate-800 outline-none">' + (students?.map(s => '<option value="' + s.id + '">' + s.full_name + '</option>').join('') || '') + '</select>' +
+                '<input type="text" id="l-title" placeholder="Ders Başlığı" required class="w-full p-4 rounded-xl border dark:bg-darkBg dark:border-slate-800">' +
+                '<input type="url" id="l-link" placeholder="Meet Linki" required class="w-full p-4 rounded-xl border dark:bg-darkBg dark:border-slate-800">' +
+                '<input type="datetime-local" id="l-time" required class="w-full p-4 rounded-xl border dark:bg-darkBg dark:border-slate-800">' +
+                '<div class="flex gap-2">' +
+                    '<button type="submit" id="lesson-form-btn" class="flex-1 brand-bg text-white py-4 rounded-xl font-black shadow-lg">Yayınla</button>' +
+                    '<button type="button" id="lesson-cancel-btn" onclick="cancelEditLesson()" class="hidden px-6 bg-slate-100 dark:bg-slate-800 text-slate-400 rounded-xl font-bold">İptal</button>' +
+                '</div></form>' +
+                '<div class="space-y-4">' + lessonsHTML + '</div></div>';
             
             document.getElementById('lesson-form').onsubmit = async (e) => {
                 e.preventDefault();
-                const btn = e.target.querySelector('button');
-                btn.disabled = true; btn.innerText = "KAYDEDİLİYOR...";
-                const { error } = await supabaseClient.from('lessons').insert([{
+                const btn = document.getElementById('lesson-form-btn');
+                btn.disabled = true; btn.innerText = "İŞLENİYOR...";
+                
+                const lessonData = {
                     student_id: document.getElementById('l-student').value,
                     title: document.getElementById('l-title').value,
                     link: document.getElementById('l-link').value,
                     scheduled_at: document.getElementById('l-time').value
-                }]);
-                if(!error) { alert("Ders planlandı!"); renderTeacherLessons(); }
-                else { alert("Hata: " + error.message); btn.disabled = false; btn.innerText = "Yayınla"; }
+                };
+
+                let error;
+                if (editingLessonId) {
+                    const result = await supabaseClient.from('lessons').update(lessonData).eq('id', editingLessonId);
+                    error = result.error;
+                } else {
+                    const result = await supabaseClient.from('lessons').insert([lessonData]);
+                    error = result.error;
+                }
+                
+                if(!error) { 
+                    alert(editingLessonId ? "Ders güncellendi!" : "Ders planlandı!"); 
+                    editingLessonId = null;
+                    renderTeacherLessons(); 
+                } else { 
+                    alert("Hata: " + error.message); 
+                    btn.disabled = false; 
+                    btn.innerText = editingLessonId ? "Güncelle" : "Yayınla"; 
+                }
             };
+        }
+
+        async function startEditLesson(id) {
+            editingLessonId = id;
+            const { data: lesson } = await supabaseClient.from('lessons').select('*').eq('id', id).single();
+            if (lesson) {
+                document.getElementById('lesson-form-title').innerText = "Dersi Düzenle";
+                document.getElementById('lesson-form-btn').innerText = "Güncelle";
+                document.getElementById('lesson-cancel-btn').classList.remove('hidden');
+                
+                document.getElementById('l-student').value = lesson.student_id;
+                document.getElementById('l-title').value = lesson.title;
+                document.getElementById('l-link').value = lesson.link;
+                
+                // DateTime-local input formatına çevirme (YYYY-MM-DDThh:mm)
+                const date = new Date(lesson.scheduled_at);
+                const isoString = new Date(date.getTime() - (date.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
+                document.getElementById('l-time').value = isoString;
+                
+                document.getElementById('lesson-form').scrollIntoView({ behavior: 'smooth' });
+            }
+        }
+
+        function cancelEditLesson() {
+            editingLessonId = null;
+            renderTeacherLessons();
         }
 
         async function renderTeacherHomeworks() {
@@ -403,7 +464,7 @@
             let subsHTML = subs?.map(s => {
                 return '<div class="p-6 bg-white dark:bg-darkCard border-2 brand-border rounded-2xl shadow-sm"><p class="font-black text-[10px] brand-text uppercase mb-1 tracking-widest">' + (s.homeworks?.title || 'Ödev') + '</p><p class="font-bold text-sm mb-3">' + (s.profiles?.full_name || 'Öğrenci') + '</p><a href="' + s.submission_url + '" target="_blank" class="px-4 py-2 bg-blue-50 dark:bg-blue-900/30 text-blue-600 rounded-lg font-black text-[10px] uppercase tracking-widest">Linke Git</a><p class="text-slate-400 text-[10px] mt-3 italic bg-slate-50 dark:bg-slate-900 p-2 rounded-lg">Not: ' + (s.note || '-') + '</p></div>';
             }).join('') || '<p class="text-center text-slate-300 italic text-xs uppercase font-black">Henüz çözüm gelmedi.</p>';
-            document.getElementById('view-content').innerHTML = '<div class="grid md:grid-cols-2 gap-10 view-fade"><form id="hw-form" class="bg-white dark:bg-darkCard p-8 rounded-3xl border dark:border-slate-800 space-y-4 h-fit"><h4 class="font-black text-lg mb-2">Yeni Ödev Ataması</h4><select id="hw-student" class="w-full p-4 rounded-xl border dark:bg-darkBg dark:border-slate-800">' + students?.map(s => '<option value="' + s.id + '">' + s.full_name + '</option>').join('') + '</select><input type="text" id="hw-title" placeholder="Ödev Konusu" required class="w-full p-4 rounded-xl border dark:bg-darkBg dark:border-slate-800"><input type="text" id="hw-pdf" placeholder="PDF/Drive Linki" required class="w-full p-4 rounded-xl border dark:bg-darkBg dark:border-slate-800"><input type="datetime-local" id="hw-deadline" required class="w-full p-4 rounded-xl border dark:bg-darkBg dark:border-slate-800"><button type="submit" class="w-full brand-bg text-white py-4 rounded-xl font-black shadow-lg">Yayınla</button></form><div class="space-y-6"><h4 class="font-black text-[10px] uppercase tracking-[0.2em] text-slate-400 mb-2 italic">Gelen Çözümler</h4>' + subsHTML + '</div></div>';
+            document.getElementById('view-content').innerHTML = '<div class="grid md:grid-cols-2 gap-10 view-fade"><form id="hw-form" class="bg-white dark:bg-darkCard p-8 rounded-3xl border dark:border-slate-800 space-y-4 h-fit"><h4 class="font-black text-lg mb-2">Yeni Ödev Ataması</h4><select id="hw-student" class="w-full p-4 rounded-xl border dark:bg-darkBg dark:border-slate-800">' + (students?.map(s => '<option value="' + s.id + '">' + s.full_name + '</option>').join('') || '') + '</select><input type="text" id="hw-title" placeholder="Ödev Konusu" required class="w-full p-4 rounded-xl border dark:bg-darkBg dark:border-slate-800"><input type="text" id="hw-pdf" placeholder="PDF/Drive Linki" required class="w-full p-4 rounded-xl border dark:bg-darkBg dark:border-slate-800"><input type="datetime-local" id="hw-deadline" required class="w-full p-4 rounded-xl border dark:bg-darkBg dark:border-slate-800"><button type="submit" class="w-full brand-bg text-white py-4 rounded-xl font-black shadow-lg">Yayınla</button></form><div class="space-y-6"><h4 class="font-black text-[10px] uppercase tracking-[0.2em] text-slate-400 mb-2 italic">Gelen Çözümler</h4>' + subsHTML + '</div></div>';
             document.getElementById('hw-form').onsubmit = async (e) => { e.preventDefault(); await supabaseClient.from('homeworks').insert([{ student_id: document.getElementById('hw-student').value, title: document.getElementById('hw-title').value, pdf_url: document.getElementById('hw-pdf').value, deadline: document.getElementById('hw-deadline').value }]); renderTeacherHomeworks(); };
         }
 
@@ -434,7 +495,6 @@
             document.getElementById('view-content').innerHTML = html + '</div>';
         }
 
-        // --- ÖĞRENCİ MODÜLLERİ ---
         async function renderStudentLessons() {
             document.getElementById('page-title').innerText = 'Derslerim';
             const { data: lessons } = await supabaseClient.from('lessons').select('*').eq('student_id', userProfile.id);
