@@ -1,82 +1,363 @@
--- Önce her şeyi temizleyelim (Hatalı kalıntı kalmasın)
-DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
-DROP FUNCTION IF EXISTS public.handle_new_user();
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MATOTA | Eğitim Platformu</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: { darkBg: '#0f172a', darkCard: '#1e293b' }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+        body { font-family: 'Inter', sans-serif; transition: background-color 0.3s ease; }
+        .glass { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(12px); }
+        .dark .glass { background: rgba(30, 41, 59, 0.8); border-color: rgba(51, 65, 85, 0.5); }
+        .sidebar-link.active { background-color: #2563eb; color: white; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2); }
+        .view-fade { animation: fadeIn 0.4s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        .logo-img { height: 45px; width: auto; object-fit: contain; }
+    </style>
+</head>
+<body class="text-slate-800 dark:text-slate-100 dark:bg-darkBg overflow-x-hidden">
 
--- 1. PROFILLER TABLOSU
-CREATE TABLE IF NOT EXISTS public.profiles (
-  id uuid REFERENCES auth.users ON DELETE CASCADE PRIMARY KEY,
-  full_name text,
-  email text,
-  role text CHECK (role IN ('teacher', 'student')),
-  created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
-);
+    <!-- Loading Screen -->
+    <div id="loading" class="fixed inset-0 z-[100] bg-white dark:bg-darkBg flex items-center justify-center transition-opacity duration-500">
+        <div class="h-12 w-12 rounded-full border-4 border-slate-100 dark:border-slate-800 border-t-blue-600 animate-spin"></div>
+    </div>
 
--- 2. DERSLER TABLOSU
-CREATE TABLE IF NOT EXISTS public.lessons (
-  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-  student_id uuid REFERENCES public.profiles(id) ON DELETE CASCADE,
-  title text NOT NULL,
-  link text NOT NULL,
-  scheduled_at timestamp with time zone NOT NULL,
-  created_at timestamp with time zone DEFAULT timezone('utc'::text, now())
-);
+    <!-- 1. LANDING PAGE -->
+    <div id="landing-page" class="min-h-screen flex flex-col hidden bg-slate-50 dark:bg-darkBg">
+        <nav class="fixed top-0 w-full z-50 glass border-b border-slate-100 dark:border-slate-800">
+            <div class="max-w-7xl mx-auto px-6 h-20 flex justify-between items-center">
+                <img src="" alt="MATOTA Logo" id="nav-logo" class="logo-img">
+                <div class="flex items-center gap-4">
+                    <button onclick="toggleDarkMode()" class="p-2.5 rounded-xl text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800">
+                        <i class="fa-solid fa-moon dark:hidden"></i><i class="fa-solid fa-sun hidden dark:block"></i>
+                    </button>
+                    <button onclick="showAuthScreen('student')" class="px-5 py-2.5 font-bold text-slate-600 dark:text-slate-300">Öğrenci Girişi</button>
+                    <button onclick="showAuthScreen('teacher')" class="px-6 py-2.5 bg-blue-600 text-white rounded-xl font-bold">Öğretmen Girişi</button>
+                </div>
+            </div>
+        </nav>
+        <main class="flex-1 flex flex-col items-center justify-center pt-32 text-center px-6">
+            <h1 class="text-6xl md:text-8xl font-black tracking-tighter mb-8 leading-none">Eğitimde <span class="text-blue-600 italic">MATOTA</span> Çağı.</h1>
+            <p class="text-slate-500 max-w-xl mb-12 text-lg">Ali Hoca ile LGS Hazırlık Süreci Tamamen Dijital ve Rasyonalist.</p>
+            <button onclick="showAuthScreen('student')" class="px-12 py-5 bg-slate-900 dark:bg-blue-600 text-white rounded-full font-bold text-lg hover:scale-105 transition">Hemen Başla</button>
+        </main>
+    </div>
 
--- 3. ODEVLER TABLOSU
-CREATE TABLE IF NOT EXISTS public.homeworks (
-  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-  student_id uuid REFERENCES public.profiles(id) ON DELETE CASCADE,
-  title text NOT NULL,
-  pdf_url text,
-  deadline timestamp with time zone NOT NULL,
-  created_at timestamp with time zone DEFAULT timezone('utc'::text, now())
-);
+    <!-- 2. LOGIN OVERLAY -->
+    <div id="login-overlay" class="fixed inset-0 z-[60] bg-slate-900/60 backdrop-blur-md hidden flex items-center justify-center p-4">
+        <div class="max-w-md w-full bg-white dark:bg-darkCard p-10 rounded-[3rem] shadow-2xl relative view-fade">
+            <button onclick="hideAuthScreen()" class="absolute top-8 right-8 text-slate-400"><i class="fa-solid fa-xmark text-2xl"></i></button>
+            <div class="text-center mb-8">
+                <span id="login-role-badge" class="px-3 py-1 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full text-[10px] font-black uppercase mb-4 inline-block italic tracking-widest">GİRİŞ</span>
+                <h2 class="text-3xl font-black dark:text-white tracking-tighter">Hoş Geldiniz</h2>
+            </div>
+            <form id="login-form" class="space-y-4">
+                <input type="email" id="login-email" required class="w-full px-6 py-4 rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500 transition" placeholder="E-posta Adresi">
+                <input type="password" id="login-password" required class="w-full px-6 py-4 rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500 transition" placeholder="Şifre">
+                <button type="submit" id="login-btn" class="w-full bg-blue-600 text-white py-4 rounded-2xl font-black hover:bg-blue-700 transition shadow-xl">GİRİŞ YAP</button>
+            </form>
+            <div id="login-error-container" class="mt-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/30 rounded-2xl hidden">
+                <p id="login-error" class="text-red-600 dark:text-red-400 text-xs font-bold text-center"></p>
+            </div>
+        </div>
+    </div>
 
--- 4. SINAVLAR TABLOSU
-CREATE TABLE IF NOT EXISTS public.exams (
-  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-  student_id uuid REFERENCES public.profiles(id) ON DELETE CASCADE,
-  title text NOT NULL,
-  duration integer NOT NULL,
-  questions jsonb NOT NULL,
-  created_at timestamp with time zone DEFAULT timezone('utc'::text, now())
-);
+    <!-- 3. MAIN APP -->
+    <div id="app" class="hidden min-h-screen flex flex-col md:flex-row">
+        <aside class="w-full md:w-72 glass border-r border-slate-100 dark:border-slate-800 flex flex-col sticky top-0 h-screen z-50 overflow-hidden">
+            <div class="p-8">
+                <img src="" alt="MATOTA Logo" id="sidebar-logo" class="logo-img cursor-pointer" onclick="location.reload()">
+            </div>
+            <nav class="flex-1 px-4 space-y-1 overflow-y-auto" id="sidebar-nav"></nav>
+            <div class="p-6 border-t border-slate-50 dark:border-slate-800">
+                <div class="flex items-center space-x-3 mb-6 px-2">
+                    <div class="w-12 h-12 rounded-2xl bg-blue-600 text-white flex items-center justify-center font-black text-xl shadow-lg shadow-blue-200" id="user-avatar">?</div>
+                    <div class="overflow-hidden">
+                        <p class="text-sm font-black dark:text-white truncate" id="user-name">...</p>
+                        <p class="text-[9px] text-slate-400 font-bold uppercase tracking-[0.15em]" id="user-role">...</p>
+                    </div>
+                </div>
+                <button onclick="logout()" class="w-full py-3 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 rounded-2xl transition font-black text-[11px] uppercase tracking-widest">
+                    <i class="fa-solid fa-power-off"></i> <span>Çıkış Yap</span>
+                </button>
+            </div>
+        </aside>
 
--- 5. SINAV SONUCLARI TABLOSU
-CREATE TABLE IF NOT EXISTS public.submissions (
-  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-  exam_id uuid REFERENCES public.exams(id) ON DELETE CASCADE,
-  student_id uuid REFERENCES public.profiles(id) ON DELETE CASCADE,
-  answers jsonb,
-  score float,
-  completed_at timestamp with time zone DEFAULT timezone('utc'::text, now())
-);
+        <main class="flex-1 p-6 md:p-12 bg-white dark:bg-darkBg min-h-screen overflow-y-auto">
+            <header class="mb-12 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                    <h1 class="text-4xl font-black text-slate-900 dark:text-white tracking-tight" id="page-title">Yükleniyor...</h1>
+                    <p class="text-slate-400 mt-1 font-bold text-sm uppercase tracking-widest" id="page-subtitle"></p>
+                </div>
+                <div id="header-extra"></div>
+            </header>
+            <div id="view-content" class="max-w-7xl mx-auto view-fade"></div>
+        </main>
+    </div>
 
--- 6. DINAMIK ICERIK TABLOSU
-CREATE TABLE IF NOT EXISTS public.dynamic_content (
-  type text PRIMARY KEY,
-  html_content text,
-  updated_at timestamp with time zone DEFAULT timezone('utc'::text, now())
-);
+    <script>
+        // --- SUPABASE CONFIG ---
+        const SUPABASE_URL = "https://mpqncrkclcprjmaohpgm.supabase.co"; 
+        const SUPABASE_ANON_KEY = "sb_publishable_0TPVUMiQ0_5zLkzhcEe4yQ_xsDSIaF4"; 
 
--- 7. OTOMATIK PROFIL OLUSTURMA FONKSIYONU
-CREATE OR REPLACE FUNCTION public.handle_new_user()
-RETURNS trigger
-LANGUAGE plpgsql
-SECURITY DEFINER SET search_path = public
-AS $$
-BEGIN
-  INSERT INTO public.profiles (id, full_name, role, email)
-  VALUES (
-    new.id,
-    coalesce(new.raw_user_meta_data->>'full_name', 'Yeni Kullanıcı'),
-    coalesce(lower(new.raw_user_meta_data->>'role'), 'student'),
-    new.email
-  );
-  RETURN new;
-END;
-$$;
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        let userProfile = null;
 
--- 8. TETIKLEYICI (TRIGGER) - BOSLUKLARA DIKKAT EDEREK OLUSTURUYORUZ
-CREATE TRIGGER on_auth_user_created
-  AFTER INSERT ON auth.users
-  FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
+        // --- LOGO & THEME LOGIC ---
+        function updateLogos() {
+            const isDark = document.documentElement.classList.contains('dark');
+            const logoFilename = isDark ? 'acik.png' : 'koyu.png'; // Ali Hoca: Açıkta Koyu, Koyuda Açık logo
+            const logoUrl = `${SUPABASE_URL}/storage/v1/object/public/logos/${logoFilename}`;
+            
+            const navLogo = document.getElementById('nav-logo');
+            const sideLogo = document.getElementById('sidebar-logo');
+            
+            if (navLogo) navLogo.src = logoUrl;
+            if (sideLogo) sideLogo.src = logoUrl;
+        }
+
+        function toggleDarkMode() {
+            document.documentElement.classList.toggle('dark');
+            localStorage.theme = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
+            updateLogos();
+        }
+
+        // --- AUTH & SESSION ---
+        async function initAuth() {
+            if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+            }
+            updateLogos();
+
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (session) {
+                await handleSession(session);
+            } else {
+                showLanding();
+                hideLoading();
+            }
+
+            supabaseClient.auth.onAuthStateChange((event, session) => {
+                if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+                    if(session) handleSession(session);
+                } else if (event === 'SIGNED_OUT') {
+                    showLanding();
+                }
+            });
+        }
+
+        async function handleSession(session) {
+            try {
+                // Rasyonalist Profil Çekme - Hata durumunda takılmaması için timeout veya try-catch
+                const { data, error } = await supabaseClient.from('profiles').select('*').eq('id', session.user.id).single();
+                
+                if (error || !data) {
+                    console.error("Profil bulunamadı:", error);
+                    alert("Hesap profiliniz oluşturulamamış. Lütfen yönetici ile iletişime geçin.");
+                    logout();
+                    return;
+                }
+
+                userProfile = data;
+                document.getElementById('user-name').innerText = data.full_name;
+                document.getElementById('user-role').innerText = data.role === 'teacher' ? 'EĞİTMEN' : 'ÖĞRENCİ';
+                document.getElementById('user-avatar').innerText = data.full_name[0].toUpperCase();
+                
+                showDashboard();
+                renderSidebar();
+                navigate('dashboard');
+            } catch (err) {
+                console.error("Beklenmedik hata:", err);
+                logout();
+            } finally {
+                hideLoading();
+            }
+        }
+
+        document.getElementById('login-form').onsubmit = async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            const errCont = document.getElementById('login-error-container');
+            const errEl = document.getElementById('login-error');
+            const btn = document.getElementById('login-btn');
+            
+            btn.disabled = true;
+            btn.innerText = "KONTROL EDİLİYOR...";
+            errCont.classList.add('hidden');
+
+            const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
+            
+            if (error) {
+                errEl.innerText = `HATA: ${error.message}`;
+                errCont.classList.remove('hidden');
+                btn.disabled = false;
+                btn.innerText = "GİRİŞ YAP";
+            }
+            // Başarılı girişte handleSession tetiklenecek.
+        };
+
+        function logout() { 
+            supabaseClient.auth.signOut(); 
+            localStorage.removeItem('supabase.auth.token'); 
+            showLanding();
+        }
+
+        function hideLoading() {
+            document.getElementById('loading').classList.add('opacity-0');
+            setTimeout(() => document.getElementById('loading').classList.add('hidden'), 500);
+        }
+
+        // --- UI TOGGLES ---
+        function showLanding() {
+            document.getElementById('landing-page').classList.remove('hidden');
+            document.getElementById('app').classList.add('hidden');
+            document.getElementById('login-overlay').classList.add('hidden');
+            updateLogos();
+        }
+
+        function showAuthScreen(role) {
+            document.getElementById('login-role-badge').innerText = role === 'teacher' ? 'EĞİTMEN GİRİŞİ' : 'ÖĞRENCİ GİRİŞİ';
+            document.getElementById('login-overlay').classList.remove('hidden');
+        }
+
+        function hideAuthScreen() { document.getElementById('login-overlay').classList.add('hidden'); }
+
+        function showDashboard() {
+            document.getElementById('landing-page').classList.add('hidden');
+            document.getElementById('login-overlay').classList.add('hidden');
+            document.getElementById('app').classList.remove('hidden');
+            updateLogos();
+        }
+
+        // --- NAVIGATION ---
+        function renderSidebar() {
+            const nav = document.getElementById('sidebar-nav');
+            const teacherViews = [
+                { id: 'dashboard', name: 'Dashboard', icon: 'fa-chart-pie', sub: 'ANALİZ' },
+                { id: 't-students', name: 'Öğrenci Kayıt', icon: 'fa-user-plus', sub: 'YÖNETİM' },
+                { id: 't-lessons', name: 'Ders Planlama', icon: 'fa-calendar-check', sub: 'TAKİP' },
+                { id: 't-homeworks', name: 'Ödevlendirme', icon: 'fa-book-open', sub: 'GÖREV' },
+                { id: 't-exams', name: 'Sınav Yönetimi', icon: 'fa-file-signature', sub: 'TEST' },
+                { id: 't-settings', name: 'Sistem Kodları', icon: 'fa-code', sub: 'HTML' }
+            ];
+            const studentViews = [
+                { id: 'dashboard', name: 'Panelim', icon: 'fa-house', sub: 'GÜNLÜK' },
+                { id: 's-lessons', name: 'Derslerim', icon: 'fa-video', sub: 'CANLI' },
+                { id: 's-homeworks', name: 'Ödevlerim', icon: 'fa-pencil-ruler', sub: 'LİSTE' },
+                { id: 's-study', name: 'Ders Çalışma', icon: 'fa-graduation-cap', sub: 'KUTUP' },
+                { id: 's-exams', name: 'Sınavlarım', icon: 'fa-file-lines', sub: 'SINAV' },
+                { id: 's-tests', name: 'Test Çöz', icon: 'fa-check-double', sub: 'TEST' },
+                { id: 's-sordur', name: 'Sordur', icon: 'fa-comment-dots', sub: 'CEVAP' },
+                { id: 's-lgs', name: 'LGS Robotu', icon: 'fa-calculator', sub: 'PUAN' }
+            ];
+            const menu = userProfile.role === 'teacher' ? teacherViews : studentViews;
+            nav.innerHTML = menu.map(item => `
+                <button onclick="navigate('${item.id}')" id="nav-${item.id}" class="sidebar-link w-full flex items-center space-x-4 px-6 py-4 rounded-2xl transition text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 group font-bold text-xs uppercase tracking-widest">
+                    <i class="fa-solid ${item.icon} text-lg"></i>
+                    <span>${item.name}</span>
+                </button>
+            `).join('');
+        }
+
+        async function navigate(viewId) {
+            document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('active'));
+            document.getElementById(`nav-${viewId}`)?.classList.add('active');
+            const content = document.getElementById('view-content');
+            
+            if(viewId === 'dashboard') {
+                content.innerHTML = `<div class="bg-blue-600 p-12 rounded-[3rem] text-white shadow-2xl relative overflow-hidden italic font-black text-4xl">Hoş Geldin, ${userProfile.full_name}!</div>`;
+                document.getElementById('page-title').innerText = 'Dashboard';
+                document.getElementById('page-subtitle').innerText = 'GENEL ANALİZ';
+            } else if(viewId === 't-students') {
+                renderTeacherStudents();
+            } else if(viewId === 't-lessons') {
+                renderTeacherLessons();
+            } else if(viewId === 't-homeworks') {
+                renderTeacherHomeworks();
+            } else if(viewId === 't-exams') {
+                renderTeacherExams();
+            } else if(viewId === 't-settings') {
+                renderTeacherSettings();
+            } else {
+                renderDynamicView(viewId.split('-')[1]);
+            }
+        }
+
+        // --- RENDER FUNCTIONS (SADECELESTIRILDI) ---
+        async function renderTeacherStudents() {
+            const { data: students } = await supabaseClient.from('profiles').select('*').eq('role', 'student');
+            document.getElementById('view-content').innerHTML = `<div class="p-8 bg-white dark:bg-darkCard rounded-3xl border dark:border-slate-800">
+                <h3 class="text-xl font-bold mb-6">Öğrenci Kayıt ve Listesi</h3>
+                <form id="add-student-form" class="grid md:grid-cols-4 gap-4 mb-10">
+                    <input type="text" id="s-name" placeholder="Ad Soyad" required class="p-4 rounded-xl border dark:bg-darkBg dark:border-slate-800">
+                    <input type="email" id="s-email" placeholder="E-posta" required class="p-4 rounded-xl border dark:bg-darkBg dark:border-slate-800">
+                    <input type="password" id="s-pass" placeholder="Şifre" required class="p-4 rounded-xl border dark:bg-darkBg dark:border-slate-800">
+                    <button type="submit" class="bg-blue-600 text-white rounded-xl font-bold">KAYDET</button>
+                </form>
+                <div class="space-y-4">
+                    ${students?.map(s => `<div class="flex justify-between p-4 bg-slate-50 dark:bg-darkBg rounded-xl">
+                        <span>${s.full_name} (${s.email})</span>
+                        <button onclick="deleteItem('profiles', '${s.id}', renderTeacherStudents)" class="text-red-500 font-bold">SIL</button>
+                    </div>`).join('') || 'Öğrenci yok.'}
+                </div>
+            </div>`;
+            document.getElementById('add-student-form').onsubmit = async (e) => {
+                e.preventDefault();
+                const name = document.getElementById('s-name').value;
+                const email = document.getElementById('s-email').value;
+                const pass = document.getElementById('s-pass').value;
+                const { error } = await supabaseClient.auth.signUp({ email, password: pass, options: { data: { full_name: name, role: 'student' } } });
+                if(!error) renderTeacherStudents(); else alert(error.message);
+            };
+        }
+
+        async function renderTeacherSettings() {
+            const types = ['study', 'sordur', 'lgs'];
+            let html = '<div class="grid gap-10">';
+            for(let t of types) {
+                const { data } = await supabaseClient.from('dynamic_content').select('html_content').eq('type', t).maybeSingle();
+                html += `<div class="bg-white dark:bg-darkCard p-8 rounded-3xl border dark:border-slate-800">
+                    <h3 class="font-bold mb-4 uppercase text-blue-600">${t} MODÜLÜ KODU</h3>
+                    <textarea id="code-${t}" class="w-full h-64 p-4 font-mono text-sm bg-slate-900 text-green-400 rounded-2xl outline-none mb-4">${data?.html_content || ''}</textarea>
+                    <button onclick="saveDynamicCode('${t}')" class="bg-blue-600 text-white px-8 py-3 rounded-xl font-bold">GÜNCELLE</button>
+                </div>`;
+            }
+            document.getElementById('view-content').innerHTML = html + '</div>';
+        }
+
+        async function renderDynamicView(type) {
+            const { data } = await supabaseClient.from('dynamic_content').select('html_content').eq('type', type).maybeSingle();
+            document.getElementById('view-content').innerHTML = data?.html_content || '<div class="p-20 text-center text-slate-400">İçerik yapılandırılmadı.</div>';
+        }
+
+        async function deleteItem(table, id, callback) {
+            if(confirm("Silmek istediğinize emin misiniz?")) {
+                await supabaseClient.from(table).delete().eq('id', id);
+                callback();
+            }
+        }
+
+        async function saveDynamicCode(type) {
+            const html = document.getElementById(`code-${type}`).value;
+            await supabaseClient.from('dynamic_content').upsert({ type, html_content: html });
+            alert("Sistem Güncellendi!");
+        }
+
+        window.onload = initAuth;
+    </script>
+</body>
+</html>
