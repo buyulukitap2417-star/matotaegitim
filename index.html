@@ -34,15 +34,16 @@
         .theme-blue .brand-bg { background-color: #2563eb; }
         .theme-blue .brand-text { color: #2563eb; }
         .theme-blue .sidebar-link.active { background-color: #2563eb; color: white; }
+        .theme-blue .brand-border { border-color: #2563eb; }
         
         .theme-orange .brand-bg { background-color: #ea580c; }
         .theme-orange .brand-text { color: #ea580c; }
         .theme-orange .sidebar-link.active { background-color: #ea580c; color: white; }
+        .theme-orange .brand-border { border-color: #ea580c; }
 
         .view-fade { animation: fadeIn 0.4s ease-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-        .logo-img { height: 45px; width: auto; object-fit: contain; transition: opacity 0.3s; }
-        .opt-circle.active { background-color: currentColor; color: white; border-color: transparent; }
+        .logo-img { height: 45px; width: auto; object-fit: contain; }
     </style>
 </head>
 <body class="text-slate-800 dark:text-slate-100 dark:bg-darkBg overflow-x-hidden theme-blue" id="main-body">
@@ -129,7 +130,7 @@
         </main>
     </div>
 
-    <!-- 4. EXAM OVERLAY (Sınav Modu) -->
+    <!-- 4. EXAM OVERLAY -->
     <div id="exam-overlay" class="fixed inset-0 z-[200] bg-white dark:bg-darkBg hidden flex flex-col">
         <div class="h-20 glass border-b border-slate-100 dark:border-slate-800 px-8 flex justify-between items-center">
             <h3 class="font-black text-xl italic tracking-tighter" id="active-exam-title">SINAV</h3>
@@ -306,8 +307,8 @@
                 <div class="grid md:grid-cols-3 gap-8">
                     <div class="brand-bg p-10 rounded-[3rem] text-white shadow-2xl relative overflow-hidden group">
                         <i class="fa-solid fa-graduation-cap absolute -right-6 -bottom-6 text-9xl opacity-10"></i>
-                        <h3 class="text-3xl font-black italic tracking-tighter mb-2">Hoş Geldin, Ali Hoca!</h3>
-                        <p class="opacity-70 text-sm font-bold uppercase tracking-widest">Rasyonalist Eğitim Paneli Aktif.</p>
+                        <h3 class="text-3xl font-black italic tracking-tighter mb-2">Hoş Geldin, ${userProfile.full_name}!</h3>
+                        <p class="opacity-70 text-sm font-bold uppercase tracking-widest">Sistem Rasyonalist Olarak Çalışıyor.</p>
                     </div>
                 </div>
             `;
@@ -510,6 +511,7 @@
         // --- STUDENT: DERSLERIM ---
         async function renderStudentLessons() {
             document.getElementById('page-title').innerText = 'Canlı Derslerim';
+            // Rasyonalist Fix: userProfile.id kullanıyoruz (Auth id değil, profiles PK)
             const { data: lessons } = await supabaseClient.from('lessons').select('*').eq('student_id', userProfile.id);
             const now = new Date();
             const filtered = lessons?.filter(l => new Date(l.scheduled_at) > new Date(now.getTime() - 3600000));
@@ -524,6 +526,23 @@
                                 <i class="fa-solid fa-video"></i> DERSE KATIL
                             </a>
                         </div>`).join('') || '<div class="col-span-2 py-32 text-center text-slate-300 font-black italic uppercase text-xs tracking-widest">Aktif bir dersin bulunmuyor.</div>'}
+                </div>`;
+        }
+
+        // --- STUDENT: ÖDEVLERİM ---
+        async function renderStudentHomeworks() {
+            document.getElementById('page-title').innerText = 'Ödevlerim';
+            const { data: hws } = await supabaseClient.from('homeworks').select('*').eq('student_id', userProfile.id);
+            document.getElementById('view-content').innerHTML = `
+                <div class="grid gap-6">
+                    ${hws?.map(h => `
+                        <div class="bg-white dark:bg-darkCard p-8 rounded-3xl border dark:border-slate-800 flex justify-between items-center group">
+                            <div class="flex items-center gap-6">
+                                <div class="h-14 w-14 bg-orange-50 dark:bg-orange-900/30 text-orange-600 rounded-2xl flex items-center justify-center text-xl"><i class="fa-solid fa-file-pdf"></i></div>
+                                <div><h4 class="text-xl font-black text-slate-800 dark:text-white italic tracking-tighter">${h.title}</h4><p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Son: ${new Date(h.deadline).toLocaleString('tr-TR')}</p></div>
+                            </div>
+                            <a href="${h.pdf_url}" target="_blank" class="px-8 py-3 brand-bg text-white rounded-xl font-black text-xs tracking-widest shadow-lg">ÖDEVİ AÇ</a>
+                        </div>`).join('') || '<p class="text-center py-20 text-slate-300 font-black text-xs uppercase italic">Henüz ödev atanmadı.</p>'}
                 </div>`;
         }
 
@@ -542,28 +561,24 @@
                                     <span><i class="fa-solid fa-layer-group"></i> ${e.questions.length} SORU</span>
                                 </div>
                             </div>
-                            <button onclick="startStudentExam('${e.id}')" class="w-full brand-bg text-white py-4 rounded-2xl font-black hover:bg-slate-900 transition">SINAVA BAŞLA</button>
-                        </div>`).join('') || '<p class="col-span-3 text-center py-20 text-slate-300 uppercase font-black text-xs">Atanmış sınav bulunamadı.</p>'}
+                            <button onclick="startStudentExam('${e.id}')" class="w-full brand-bg text-white py-4 rounded-2xl font-black hover:bg-slate-900 transition shadow-lg">SINAVA BAŞLA</button>
+                        </div>`).join('') || '<p class="col-span-3 text-center py-20 text-slate-300 uppercase font-black text-xs italic">Atanmış sınav bulunamadı.</p>'}
                 </div>`;
         }
 
-        // --- SINAV MODU (START EXAM) ---
+        // --- SINAV MODU ---
         async function startStudentExam(eid) {
             const { data: exam } = await supabaseClient.from('exams').select('*').eq('id', eid).single();
             activeExamData = exam;
             currentQuestionIndex = 0;
             studentAnswers = new Array(exam.questions.length).fill(null);
-            
             document.getElementById('active-exam-title').innerText = exam.title;
             document.getElementById('exam-overlay').classList.remove('hidden');
-            
             let timeLeft = exam.duration * 60;
             updateExamUI();
-            
             examTimerInterval = setInterval(() => {
                 timeLeft--;
-                const mins = Math.floor(timeLeft / 60);
-                const secs = timeLeft % 60;
+                const mins = Math.floor(timeLeft / 60); const secs = timeLeft % 60;
                 document.getElementById('exam-timer').innerText = `${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}`;
                 if(timeLeft <= 0) finishExam();
             }, 1000);
@@ -573,7 +588,6 @@
             const q = activeExamData.questions[currentQuestionIndex];
             const area = document.getElementById('exam-question-area');
             const pag = document.getElementById('exam-pagination');
-            
             area.innerHTML = `
                 <div class="md:w-3/5 bg-slate-50 dark:bg-slate-900 rounded-[3rem] p-4 flex items-center justify-center border dark:border-slate-800">
                     <img src="${q.image}" class="max-w-full h-auto rounded-2xl shadow-xl">
@@ -590,48 +604,53 @@
                         `).join('')}
                     </div>
                 </div>`;
-                
             pag.innerHTML = activeExamData.questions.map((_, i) => `
                 <button onclick="currentQuestionIndex = ${i};updateExamUI();" class="w-10 h-10 rounded-xl font-black text-xs transition border dark:border-slate-800
-                    ${i === currentQuestionIndex ? 'brand-bg text-white shadow-lg' : studentAnswers[i] ? 'bg-green-100 text-green-700' : 'bg-white dark:bg-darkCard'}">${i+1}</button>
+                    ${i === currentQuestionIndex ? 'brand-bg text-white shadow-lg' : studentAnswers[i] ? 'bg-green-100 dark:bg-green-900/20 text-green-700' : 'bg-white dark:bg-darkCard'}">${i+1}</button>
             `).join('');
         }
 
         function pickAns(o) { studentAnswers[currentQuestionIndex] = o; updateExamUI(); }
-
-        function finishExamPrompt() { if(confirm("Sınavı bitirmek istediğinden emin misin? Tüm cevapların kaydedilecek.")) finishExam(); }
-
+        function finishExamPrompt() { if(confirm("Bitiriyoruz Ali Hoca? Tüm cevaplar kaydedilecek.")) finishExam(); }
         async function finishExam() {
             clearInterval(examTimerInterval);
             let score = 0;
             activeExamData.questions.forEach((q, i) => { if(q.correct === studentAnswers[i]) score++; });
-            const finalScore = (score / activeExamData.questions.length) * 100;
-            
-            await supabaseClient.from('submissions').insert([{
-                exam_id: activeExamData.id,
-                student_id: userProfile.id,
-                answers: studentAnswers,
-                score: finalScore
-            }]);
-            
-            alert(`Sınav Bitti! Puanın: ${finalScore.toFixed(2)}`);
+            await supabaseClient.from('submissions').insert([{ exam_id: activeExamData.id, student_id: userProfile.id, answers: studentAnswers, score: (score / activeExamData.questions.length) * 100 }]);
             document.getElementById('exam-overlay').classList.add('hidden');
             navigate('dashboard');
         }
 
-        // --- DINAMIK ICERIKLER ---
+        // --- DİNAMİK İÇERİKLER (Sordur vs.) ---
         async function renderDynamicView(type) {
             const { data } = await supabaseClient.from('dynamic_content').select('html_content').eq('type', type).maybeSingle();
-            document.getElementById('view-content').innerHTML = data?.html_content || '<div class="py-32 text-center text-slate-300 font-black text-xs italic">Ali Hoca henüz bu alanı kodlamadı.</div>';
+            const viewCont = document.getElementById('view-content');
+            
+            if (data?.html_content) {
+                // Rasyonalist Fix: InnerHTML bazen scriptleri tam yüklemez.
+                // İçeriği temizleyip yeniden enjekte ediyoruz.
+                viewCont.innerHTML = data.html_content;
+                
+                // Eğer enjekte edilen HTML içinde script etiketleri varsa onları manuel tetiklemek gerekebilir
+                const scripts = viewCont.querySelectorAll("script");
+                scripts.forEach(oldScript => {
+                    const newScript = document.createElement("script");
+                    Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+                    newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+                    oldScript.parentNode.replaceChild(newScript, oldScript);
+                });
+            } else {
+                viewCont.innerHTML = '<div class="py-32 text-center text-slate-300 font-black text-xs italic">Ali Hoca henüz bu alanı kodlamadı.</div>';
+            }
         }
 
         async function saveDynamicCode(type) {
             const html = document.getElementById(`code-${type}`).value;
-            await supabaseClient.from('dynamic_content').upsert({ type, html_content: html });
-            alert("Rasyonalist Bir Şekilde Güncellendi!");
+            const { error } = await supabaseClient.from('dynamic_content').upsert({ type, html_content: html });
+            if (!error) alert("Rasyonalist Bir Şekilde Güncellendi!");
         }
 
-        async function deleteItem(table, id, cb) { if(confirm("Silmek istediğine emin misin?")) { await supabaseClient.from(table).delete().eq('id', id); cb(); } }
+        async function deleteItem(table, id, cb) { if(confirm("Siliyor muyuz Ali Hoca?")) { await supabaseClient.from(table).delete().eq('id', id); cb(); } }
 
         window.onload = initAuth;
     </script>
