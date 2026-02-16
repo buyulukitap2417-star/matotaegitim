@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MATOTA | Geleceğin Eğitim Platformu</title>
+    <title>MATOTA | Eğitim Platformu</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
@@ -28,26 +28,18 @@
         .sidebar-link.active { background-color: #2563eb; color: white; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2); }
         .view-fade { animation: fadeIn 0.4s ease-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-        .hero-gradient { background: radial-gradient(circle at top right, #eff6ff 0%, #ffffff 50%); }
-        .dark .hero-gradient { background: radial-gradient(circle at top right, #1e293b 0%, #0f172a 50%); }
-        .custom-shadow { box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 10px 10px -5px rgba(0, 0, 0, 0.02); }
-        .dark .custom-shadow { box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3); }
-        .logo-img { transition: opacity 0.3s ease; height: 40px; width: auto; }
+        .logo-img { transition: opacity 0.3s ease; height: 45px; width: auto; object-fit: contain; }
     </style>
 </head>
 <body class="text-slate-800 dark:text-slate-100 dark:bg-darkBg overflow-x-hidden">
 
-    <!-- Loading Screen -->
+    <!-- Loading -->
     <div id="loading" class="fixed inset-0 z-[100] bg-white dark:bg-darkBg flex flex-col items-center justify-center transition-opacity duration-500">
-        <div class="relative">
-            <div class="h-20 w-20 rounded-full border-4 border-slate-100 dark:border-slate-800 border-t-blue-600 animate-spin"></div>
-            <div class="absolute inset-0 flex items-center justify-center font-bold text-blue-600 text-xs tracking-tighter italic">MATOTA</div>
-        </div>
+        <div class="h-12 w-12 rounded-full border-4 border-slate-100 dark:border-slate-800 border-t-blue-600 animate-spin"></div>
     </div>
 
-    <!-- 1. LANDING PAGE (ANA SAYFA) -->
-    <div id="landing-page" class="min-h-screen hero-gradient flex flex-col hidden">
-        <!-- Navbar -->
+    <!-- 1. LANDING PAGE -->
+    <div id="landing-page" class="min-h-screen flex flex-col hidden bg-slate-50 dark:bg-darkBg">
         <nav class="fixed top-0 w-full z-50 glass border-b border-slate-100 dark:border-slate-800">
             <div class="max-w-7xl mx-auto px-6 h-20 flex justify-between items-center">
                 <img src="" alt="MATOTA Logo" id="nav-logo" class="logo-img">
@@ -56,147 +48,108 @@
                         <i class="fa-solid fa-moon dark:hidden"></i>
                         <i class="fa-solid fa-sun hidden dark:block"></i>
                     </button>
-                    <button onclick="showAuthScreen('student')" class="px-5 py-2.5 rounded-xl font-bold text-slate-600 dark:text-slate-300 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-slate-800 transition">Öğrenci Girişi</button>
-                    <button onclick="showAuthScreen('teacher')" class="px-6 py-2.5 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition shadow-lg shadow-blue-100 dark:shadow-none">Öğretmen Girişi</button>
+                    <button onclick="showAuthScreen('student')" class="px-5 py-2.5 rounded-xl font-bold text-slate-600 dark:text-slate-300 hover:text-blue-600 transition">Öğrenci Girişi</button>
+                    <button onclick="showAuthScreen('teacher')" class="px-6 py-2.5 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition">Öğretmen Girişi</button>
                 </div>
             </div>
         </nav>
-
-        <!-- Hero Section -->
-        <main class="flex-1 flex flex-col items-center justify-center px-6 pt-32 pb-20 text-center">
-            <div class="max-w-4xl mx-auto">
-                <span class="px-4 py-1.5 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full text-xs font-black uppercase tracking-widest mb-6 inline-block">LGS 2026 Hazırlık Platformu</span>
-                <h1 class="text-6xl md:text-8xl font-black text-slate-900 dark:text-white tracking-tighter mb-8 leading-[0.9]">
-                    Eğitimde Yeni Nesil <br> <span class="text-blue-600">Dijital Dönüşüm.</span>
-                </h1>
-                <p class="text-lg md:text-xl text-slate-500 dark:text-slate-400 mb-12 max-w-2xl mx-auto font-medium">
-                    Online dersler, akıllı ödev takibi ve rasyonalist analiz raporları ile LGS yolculuğunda her zaman bir adım öndesiniz.
-                </p>
-                <div class="flex gap-6 justify-center">
-                    <button onclick="showAuthScreen('student')" class="px-10 py-5 bg-slate-900 dark:bg-blue-600 text-white rounded-[2rem] font-bold text-lg hover:bg-black dark:hover:bg-blue-700 transition shadow-2xl flex items-center justify-center gap-3">
-                        Hemen Başla <i class="fa-solid fa-arrow-right"></i>
-                    </button>
-                </div>
-            </div>
+        <main class="flex-1 flex flex-col items-center justify-center pt-32 text-center px-6">
+            <h1 class="text-6xl md:text-8xl font-black tracking-tighter mb-8 leading-none">
+                Eğitimde <span class="text-blue-600 italic">MATOTA</span> Çağı.
+            </h1>
+            <p class="text-slate-500 max-w-xl mb-12 text-lg">Ali Hoca ile LGS Hazırlık Süreci Artık Tamamen Dijital ve Rasyonalist.</p>
+            <button onclick="showAuthScreen('student')" class="px-12 py-5 bg-slate-900 dark:bg-blue-600 text-white rounded-full font-bold text-lg hover:scale-105 transition shadow-2xl">Hemen Başla</button>
         </main>
-        
-        <footer class="py-10 border-t border-slate-100 dark:border-slate-800 text-center text-slate-400 text-sm font-medium">
-            &copy; 2026 MATOTA Digital Education. Tüm hakları saklıdır.
-        </footer>
     </div>
 
     <!-- 2. LOGIN OVERLAY -->
     <div id="login-overlay" class="fixed inset-0 z-[60] bg-slate-900/60 backdrop-blur-md hidden flex items-center justify-center p-4">
-        <div class="max-w-md w-full bg-white dark:bg-darkCard p-10 rounded-[3rem] shadow-2xl relative overflow-hidden view-fade">
-            <button onclick="hideAuthScreen()" class="absolute top-8 right-8 text-slate-300 hover:text-slate-600 transition"><i class="fa-solid fa-xmark text-2xl"></i></button>
-            <div class="absolute top-0 left-0 w-full h-2 bg-blue-600"></div>
+        <div class="max-w-md w-full bg-white dark:bg-darkCard p-10 rounded-[3rem] shadow-2xl relative view-fade">
+            <button onclick="hideAuthScreen()" class="absolute top-8 right-8 text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-2xl"></i></button>
             <div class="text-center mb-8">
-                <span id="login-role-badge" class="px-3 py-1 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full text-[10px] font-black uppercase tracking-widest mb-4 inline-block">Öğrenci Girişi</span>
-                <h2 class="text-3xl font-black text-slate-900 dark:text-white tracking-tighter">Hoş Geldiniz</h2>
-                <p class="text-slate-400 mt-1 font-medium text-sm">Lütfen hesap bilgilerinizle giriş yapın.</p>
+                <span id="login-role-badge" class="px-3 py-1 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full text-[10px] font-black uppercase tracking-widest mb-4 inline-block italic">GİRİŞ</span>
+                <h2 class="text-3xl font-black dark:text-white tracking-tighter">Hoş Geldiniz</h2>
             </div>
             <form id="login-form" class="space-y-4">
-                <input type="email" id="login-email" required class="w-full px-6 py-4 rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 dark:text-white focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-blue-500 outline-none transition font-medium" placeholder="E-posta Adresi">
-                <input type="password" id="login-password" required class="w-full px-6 py-4 rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 dark:text-white focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-blue-500 outline-none transition font-medium" placeholder="Şifre">
-                <button type="submit" id="login-btn" class="w-full bg-blue-600 text-white py-4 rounded-2xl font-black hover:bg-blue-700 transition transform active:scale-[0.98] shadow-xl shadow-blue-100 dark:shadow-none">GİRİŞ YAP</button>
+                <input type="email" id="login-email" required class="w-full px-6 py-4 rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition font-medium" placeholder="E-posta Adresi">
+                <input type="password" id="login-password" required class="w-full px-6 py-4 rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition font-medium" placeholder="Şifre">
+                <button type="submit" id="login-btn" class="w-full bg-blue-600 text-white py-4 rounded-2xl font-black hover:bg-blue-700 transition shadow-xl">GİRİŞ YAP</button>
             </form>
-            <p id="login-error" class="text-red-500 text-xs mt-6 text-center hidden p-3 bg-red-50 dark:bg-red-900/20 rounded-xl font-bold"></p>
+            <div id="login-error-container" class="mt-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/30 rounded-2xl hidden">
+                <p id="login-error" class="text-red-600 dark:text-red-400 text-xs font-bold text-center"></p>
+                <p id="error-hint" class="text-[10px] text-red-400 mt-2 text-center uppercase tracking-tighter">Lütfen Supabase Auth ayarlarından 'Email Confirm' seçeneğini kapatın.</p>
+            </div>
         </div>
     </div>
 
-    <!-- 3. MAIN DASHBOARD -->
+    <!-- 3. MAIN APP -->
     <div id="app" class="hidden min-h-screen flex flex-col md:flex-row">
-        <!-- Sidebar -->
-        <aside class="w-full md:w-72 glass border-r border-slate-100 dark:border-slate-800 flex flex-col sticky top-0 h-screen z-50 overflow-hidden">
+        <aside class="w-full md:w-72 glass border-r border-slate-100 dark:border-slate-800 flex flex-col sticky top-0 h-screen z-50">
             <div class="p-8">
                 <img src="" alt="MATOTA Logo" id="sidebar-logo" class="logo-img cursor-pointer" onclick="location.reload()">
             </div>
             <nav class="flex-1 px-4 space-y-1 overflow-y-auto" id="sidebar-nav"></nav>
-            <div class="p-6 border-t border-slate-50 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/20">
+            <div class="p-6 border-t border-slate-50 dark:border-slate-800">
                 <div class="flex items-center space-x-3 mb-6 px-2">
-                    <div class="w-12 h-12 rounded-2xl bg-blue-600 text-white flex items-center justify-center font-black text-xl shadow-lg shadow-blue-200 dark:shadow-none" id="user-avatar">?</div>
+                    <div class="w-12 h-12 rounded-2xl bg-blue-600 text-white flex items-center justify-center font-black text-xl shadow-lg" id="user-avatar">?</div>
                     <div class="overflow-hidden">
-                        <p class="text-sm font-black text-slate-800 dark:text-white truncate" id="user-name">...</p>
-                        <p class="text-[9px] text-slate-400 font-black uppercase tracking-[0.15em]" id="user-role">...</p>
+                        <p class="text-sm font-black truncate" id="user-name">...</p>
+                        <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest italic" id="user-role">...</p>
                     </div>
                 </div>
-                <button onclick="logout()" class="w-full flex items-center justify-center space-x-2 px-4 py-3 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-2xl transition font-black text-[11px] uppercase tracking-widest">
-                    <i class="fa-solid fa-power-off"></i>
-                    <span>Güvenli Çıkış</span>
+                <button onclick="logout()" class="w-full py-3 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 rounded-2xl transition font-black text-[10px] uppercase tracking-widest">
+                    <i class="fa-solid fa-power-off"></i> ÇIKIŞ
                 </button>
             </div>
         </aside>
-
-        <!-- Main Content -->
-        <main class="flex-1 p-6 md:p-12 bg-[#fcfdfe] dark:bg-darkBg min-h-screen">
-            <header class="mb-12 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <main class="flex-1 p-6 md:p-12 bg-white dark:bg-darkBg min-h-screen">
+            <header class="mb-12 flex justify-between items-center">
                 <div>
-                    <h1 class="text-4xl font-black text-slate-900 dark:text-white tracking-tight" id="page-title">Yükleniyor...</h1>
-                    <p class="text-slate-400 mt-1 font-bold text-sm uppercase tracking-widest" id="page-subtitle"></p>
+                    <h1 class="text-4xl font-black tracking-tight" id="page-title">Yükleniyor...</h1>
+                    <p class="text-slate-400 mt-1 font-bold text-xs uppercase tracking-widest" id="page-subtitle"></p>
                 </div>
-                <div id="header-extra" class="flex items-center gap-3">
-                    <button onclick="toggleDarkMode()" class="hidden md:flex w-12 h-12 items-center justify-center rounded-2xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-darkCard text-slate-500 dark:text-slate-400 transition hover:bg-slate-50 dark:hover:bg-slate-800">
-                        <i class="fa-solid fa-moon dark:hidden"></i>
-                        <i class="fa-solid fa-sun hidden dark:block"></i>
-                    </button>
-                </div>
+                <button onclick="toggleDarkMode()" class="w-12 h-12 flex items-center justify-center rounded-2xl bg-slate-50 dark:bg-darkCard transition">
+                    <i class="fa-solid fa-moon dark:hidden"></i>
+                    <i class="fa-solid fa-sun hidden dark:block"></i>
+                </button>
             </header>
             <div id="view-content" class="max-w-7xl mx-auto view-fade"></div>
         </main>
     </div>
 
-    <!-- Sınav Modu Overlay -->
-    <div id="exam-overlay" class="fixed inset-0 bg-white dark:bg-darkBg z-[200] hidden flex flex-col overflow-hidden"></div>
-
     <script>
-        // --- SUPABASE CONFIG ---
+        // --- CONFIG ---
         const SUPABASE_URL = "https://mpqncrkclcprjmaohpgm.supabase.co"; 
         const SUPABASE_ANON_KEY = "sb_secret_oIDZdOdQGA0KTG51K4g2Bw_4HDDTnmN"; 
 
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-        let currentUser = null;
         let userProfile = null;
 
-        // --- LOGO LOGIC ---
+        // --- LOGO & THEME ---
         function updateLogos() {
             const isDark = document.documentElement.classList.contains('dark');
-            // Ali Hoca: "Açıkta koyu logo Koyuda açık logo" (Ters kullanım mantığı)
-            const logoFilename = isDark ? 'acik.png' : 'koyu.png';
-            const logoUrl = `${SUPABASE_URL}/storage/v1/object/public/logos/${logoFilename}`;
-            
-            const navLogo = document.getElementById('nav-logo');
-            const sideLogo = document.getElementById('sidebar-logo');
-            
-            if (navLogo) navLogo.src = logoUrl;
-            if (sideLogo) sideLogo.src = logoUrl;
-        }
-
-        // --- THEME LOGIC ---
-        function applyInitialTheme() {
-            if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-                document.documentElement.classList.add('dark');
-            } else {
-                document.documentElement.classList.remove('dark');
-            }
-            updateLogos();
+            const logoFilename = isDark ? 'acik.png' : 'koyu.png'; // Rasyonel: Açıkta koyu, koyuda açık logo
+            const logoUrl = `${SUPABASE_URL}/storage/v1/object/public/logos/${logoFilename}?t=${new Date().getTime()}`;
+            document.getElementById('nav-logo').src = logoUrl;
+            if(document.getElementById('sidebar-logo')) document.getElementById('sidebar-logo').src = logoUrl;
         }
 
         function toggleDarkMode() {
-            if (document.documentElement.classList.contains('dark')) {
-                document.documentElement.classList.remove('dark');
-                localStorage.theme = 'light';
-            } else {
-                document.documentElement.classList.add('dark');
-                localStorage.theme = 'dark';
-            }
+            document.documentElement.classList.toggle('dark');
+            localStorage.theme = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
             updateLogos();
         }
 
-        // --- AUTH FLOW & PERSISTENCE ---
+        // --- AUTH ---
         async function initAuth() {
-            applyInitialTheme();
+            if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+            }
+            updateLogos();
+
             const { data: { session } } = await supabaseClient.auth.getSession();
             handleSession(session);
+
             supabaseClient.auth.onAuthStateChange((event, session) => {
                 if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') handleSession(session);
                 else if (event === 'SIGNED_OUT') showLanding();
@@ -204,30 +157,52 @@
         }
 
         async function handleSession(session) {
-            if (session) await loadProfile(session.user);
-            else showLanding();
-            hideLoading();
-        }
-
-        async function loadProfile(user) {
-            const { data, error } = await supabaseClient.from('profiles').select('*').eq('id', user.id).single();
-            if (data) {
-                currentUser = user;
-                userProfile = data;
-                document.getElementById('user-name').innerText = data.full_name;
-                document.getElementById('user-role').innerText = data.role === 'teacher' ? 'EĞİTMEN' : 'ÖĞRENCİ';
-                document.getElementById('user-avatar').innerText = data.full_name[0].toUpperCase();
-                showDashboard();
-                renderSidebar();
-                navigate('dashboard');
-            } else logout();
-        }
-
-        function hideLoading() {
+            if (session) {
+                const { data, error } = await supabaseClient.from('profiles').select('*').eq('id', session.user.id).single();
+                if (data) {
+                    userProfile = data;
+                    document.getElementById('user-name').innerText = data.full_name;
+                    document.getElementById('user-role').innerText = data.role === 'teacher' ? 'EĞİTMEN' : 'ÖĞRENCİ';
+                    document.getElementById('user-avatar').innerText = data.full_name[0].toUpperCase();
+                    showDashboard();
+                    renderSidebar();
+                    navigate('dashboard');
+                } else {
+                    console.error("Profil bulunamadı:", error);
+                    logout();
+                }
+            } else {
+                showLanding();
+            }
             document.getElementById('loading').classList.add('opacity-0');
             setTimeout(() => document.getElementById('loading').classList.add('hidden'), 500);
         }
 
+        document.getElementById('login-form').onsubmit = async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            const errCont = document.getElementById('login-error-container');
+            const errEl = document.getElementById('login-error');
+            const btn = document.getElementById('login-btn');
+            
+            btn.disabled = true;
+            btn.innerText = "KONTROL EDİLİYOR...";
+            errCont.classList.add('hidden');
+
+            const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+            
+            if (error) {
+                errEl.innerText = `HATA: ${error.message}`;
+                errCont.classList.remove('hidden');
+                btn.disabled = false;
+                btn.innerText = "GİRİŞ YAP";
+            }
+        };
+
+        function logout() { supabaseClient.auth.signOut(); localStorage.removeItem('supabase.auth.token'); }
+
+        // --- UI ---
         function showLanding() {
             document.getElementById('landing-page').classList.remove('hidden');
             document.getElementById('app').classList.add('hidden');
@@ -236,10 +211,8 @@
         }
 
         function showAuthScreen(role) {
-            const overlay = document.getElementById('login-overlay');
-            const badge = document.getElementById('login-role-badge');
-            badge.innerText = role === 'teacher' ? 'Öğretmen Girişi' : 'Öğrenci Girişi';
-            overlay.classList.remove('hidden');
+            document.getElementById('login-role-badge').innerText = role === 'teacher' ? 'EĞİTMEN GİRİŞİ' : 'ÖĞRENCİ GİRİŞİ';
+            document.getElementById('login-overlay').classList.remove('hidden');
         }
 
         function hideAuthScreen() { document.getElementById('login-overlay').classList.add('hidden'); }
@@ -249,50 +222,20 @@
             updateLogos();
         }
 
-        document.getElementById('login-form').onsubmit = async (e) => {
-            e.preventDefault();
-            const email = document.getElementById('login-email').value;
-            const password = document.getElementById('login-password').value;
-            const errorEl = document.getElementById('login-error');
-            const btn = document.getElementById('login-btn');
-            btn.disabled = true;
-            btn.innerText = "GİRİŞ YAPILIYOR...";
-            const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
-            if (error) {
-                errorEl.innerText = "HATA: Bilgilerinizi kontrol edin.";
-                errorEl.classList.remove('hidden');
-                btn.disabled = false;
-                btn.innerText = "GİRİŞ YAP";
-            }
-        };
-
-        function logout() { supabaseClient.auth.signOut(); localStorage.removeItem('supabase.auth.token'); }
-
-        // --- NAVIGATION ---
-        const views = {
-            teacher: [
-                { id: 'dashboard', name: 'Dashboard', icon: 'fa-chart-pie', sub: 'GENEL ANALİZ' },
-                { id: 't-students', name: 'Öğrenci Kayıt', icon: 'fa-user-plus', sub: 'ÖĞRENCİ YÖNETİMİ' },
-                { id: 't-lessons', name: 'Ders Planlama', icon: 'fa-calendar-day', sub: 'CANLI DERS TAKVİMİ' },
-                { id: 't-homeworks', name: 'Ödevlendirme', icon: 'fa-book-reader', sub: 'GÖREV ATAMA' },
-                { id: 't-exams', name: 'Sınav Yönetimi', icon: 'fa-file-signature', sub: 'DENEME SINAVLARI' },
-                { id: 't-settings', name: 'Sistem Kodları', icon: 'fa-code', sub: 'DİNAMİK İÇERİK' }
-            ],
-            student: [
-                { id: 'dashboard', name: 'Panelim', icon: 'fa-house', sub: 'GÜNLÜK ÖZET' },
-                { id: 's-lessons', name: 'Derslerim', icon: 'fa-video', sub: 'CANLI DERSLERİM' },
-                { id: 's-homeworks', name: 'Ödevlerim', icon: 'fa-pencil-ruler', sub: 'GÖREV LİSTEM' },
-                { id: 's-study', name: 'Ders Çalışma', icon: 'fa-graduation-cap', sub: 'BİLGİ BANKASI' },
-                { id: 's-exams', name: 'Sınavlarım', icon: 'fa-file-lines', sub: 'DENEME MERKEZİ' },
-                { id: 's-tests', name: 'Test Çöz', icon: 'fa-check-double', sub: 'KONU TARAMA' },
-                { id: 's-sordur', name: 'Sordur', icon: 'fa-comment-dots', sub: 'SORU-CEVAP' },
-                { id: 's-lgs', name: 'LGS Robotu', icon: 'fa-calculator', sub: 'PUAN HESAPLAMA' }
-            ]
-        };
-
         function renderSidebar() {
             const nav = document.getElementById('sidebar-nav');
-            const menu = userProfile.role === 'teacher' ? views.teacher : views.student;
+            const teacherViews = [
+                { id: 'dashboard', name: 'Dashboard', icon: 'fa-chart-pie', sub: 'ANALİZ' },
+                { id: 't-students', name: 'Öğrenci Kayıt', icon: 'fa-user-plus', sub: 'YÖNETİM' },
+                { id: 't-settings', name: 'Sistem Kodları', icon: 'fa-code', sub: 'HTML' }
+            ];
+            const studentViews = [
+                { id: 'dashboard', name: 'Panelim', icon: 'fa-house', sub: 'GÜNLÜK' },
+                { id: 's-study', name: 'Ders Çalışma', icon: 'fa-graduation-cap', sub: 'KÜTÜPHANE' },
+                { id: 's-sordur', name: 'Sordur', icon: 'fa-comment-dots', sub: 'SORU-CEVAP' },
+                { id: 's-lgs', name: 'LGS Robotu', icon: 'fa-calculator', sub: 'PUAN' }
+            ];
+            const menu = userProfile.role === 'teacher' ? teacherViews : studentViews;
             nav.innerHTML = menu.map(item => `
                 <button onclick="navigate('${item.id}')" id="nav-${item.id}" class="sidebar-link w-full flex items-center space-x-4 px-6 py-4 rounded-2xl transition text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 group font-bold text-xs uppercase tracking-widest">
                     <i class="fa-solid ${item.icon} text-lg"></i>
@@ -305,61 +248,47 @@
             document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('active'));
             document.getElementById(`nav-${viewId}`)?.classList.add('active');
             const content = document.getElementById('view-content');
-            const menu = userProfile.role === 'teacher' ? views.teacher : views.student;
-            const viewInfo = menu.find(v => v.id === viewId);
+            const menu = [...views.teacher, ...views.student]; // Basitleştirilmiş navigasyon için
+            const viewInfo = menu.find(v => v.id === viewId) || { name: 'Dashboard', sub: 'GENEL' };
+            
             document.getElementById('page-title').innerText = viewInfo.name;
             document.getElementById('page-subtitle').innerText = viewInfo.sub;
-            content.innerHTML = `<div class="flex justify-center py-24"><div class="h-10 w-10 border-4 border-blue-600 border-t-transparent animate-spin rounded-full"></div></div>`;
-            switch(viewId) {
-                case 'dashboard': renderDashboard(); break;
-                case 't-settings': renderTeacherSettings(); break;
-                case 's-study': case 's-sordur': case 's-lgs': renderDynamicView(viewId.split('-')[1]); break;
-                default: content.innerHTML = `<div class="p-20 text-center text-slate-300 dark:text-slate-600 font-bold italic uppercase tracking-widest text-sm">Yapılandırılıyor...</div>`;
+            
+            if(viewId === 'dashboard') {
+                content.innerHTML = `<div class="bg-blue-600 p-12 rounded-[3rem] text-white shadow-2xl relative overflow-hidden italic font-black text-4xl">Hoş Geldin, Ali Hoca!</div>`;
+            } else if(viewId === 't-settings') {
+                renderTeacherSettings();
+            } else {
+                renderDynamicView(viewId.split('-')[1]);
             }
         }
 
-        function renderDashboard() {
-            const content = document.getElementById('view-content');
-            content.innerHTML = `
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-                    <div class="bg-blue-600 p-10 rounded-[3rem] text-white shadow-2xl relative overflow-hidden group">
-                        <i class="fa-solid fa-bolt absolute -right-6 -bottom-6 text-9xl opacity-10"></i>
-                        <p class="opacity-70 mb-2 font-black uppercase tracking-widest text-[10px]">Hoş Geldiniz,</p>
-                        <h3 class="text-4xl font-black tracking-tighter italic">${userProfile.full_name}</h3>
-                    </div>
-                </div>
-            `;
-        }
+        const views = { teacher: [{id: 't-settings', name: 'Kodlar', sub: 'HTML'}], student: [{id: 's-study', name: 'Ders', sub: 'KUTUP'}, {id: 's-sordur', name: 'Sor', sub: 'CEVAP'}, {id: 's-lgs', name: 'LGS', sub: 'ROBOT'}] };
 
         async function renderDynamicView(type) {
             const { data } = await supabaseClient.from('dynamic_content').select('html_content').eq('type', type).maybeSingle();
-            const content = document.getElementById('view-content');
-            if(data?.html_content) {
-                content.innerHTML = `<div class="bg-white dark:bg-darkCard p-12 rounded-[3rem] shadow-sm border border-slate-100 dark:border-slate-800 min-h-[60vh]">${data.html_content}</div>`;
-            } else {
-                content.innerHTML = `<div class="py-40 text-center"><p class="text-slate-300 dark:text-slate-700 font-black uppercase tracking-widest text-xs">Henüz İçerik Eklenmedi</p></div>`;
-            }
+            document.getElementById('view-content').innerHTML = data?.html_content || '<p class="text-center py-20 text-slate-400">İçerik henüz eklenmedi.</p>';
         }
 
         async function renderTeacherSettings() {
             const types = ['study', 'sordur', 'lgs'];
-            const content = document.getElementById('view-content');
-            content.innerHTML = `<div class="grid gap-10" id="settings-grid"></div>`;
+            let html = '<div class="grid gap-10">';
             for(let t of types) {
                 const { data } = await supabaseClient.from('dynamic_content').select('html_content').eq('type', t).maybeSingle();
-                document.getElementById('settings-grid').innerHTML += `
+                html += `
                     <div class="bg-white dark:bg-darkCard p-10 rounded-[3rem] border border-slate-100 dark:border-slate-800 custom-shadow">
-                        <h3 class="font-black mb-6 uppercase text-blue-600 tracking-widest text-xs italic">${t} MODÜLÜ</h3>
+                        <h3 class="font-black mb-6 uppercase text-blue-600 tracking-widest text-xs italic">${t} MODÜLÜ KODU</h3>
                         <textarea id="code-${t}" class="w-full h-80 p-6 font-mono text-sm bg-slate-900 text-green-400 rounded-[2rem] outline-none ring-8 ring-slate-800 dark:ring-slate-950 mb-6">${data?.html_content || ''}</textarea>
                         <button onclick="saveDynamicCode('${t}')" class="bg-slate-900 dark:bg-blue-600 text-white px-10 py-4 rounded-2xl font-black text-xs uppercase">GÜNCELLE</button>
                     </div>`;
             }
+            document.getElementById('view-content').innerHTML = html + '</div>';
         }
 
         async function saveDynamicCode(type) {
             const html = document.getElementById(`code-${type}`).value;
-            const { error } = await supabaseClient.from('dynamic_content').upsert({ type, html_content: html });
-            if(!error) alert("Modül Başarıyla Güncellendi!");
+            await supabaseClient.from('dynamic_content').upsert({ type, html_content: html });
+            alert("Güncellendi!");
         }
 
         window.onload = initAuth;
