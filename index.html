@@ -219,7 +219,6 @@
             updateLogos();
         }
 
-        // --- CONTACT LOGIC ---
         document.getElementById('contact-form').onsubmit = async (e) => {
             e.preventDefault();
             const btn = document.getElementById('c-btn');
@@ -234,7 +233,6 @@
             btn.disabled = false; btn.innerText = "GÖNDER";
         };
 
-        // --- AUTH ---
         async function initAuth() {
             if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
                 document.documentElement.classList.add('dark');
@@ -292,7 +290,6 @@
         function showAuthScreen(role) { document.getElementById('login-role-badge').innerText = role === 'teacher' ? 'EĞİTMEN GİRİŞİ' : 'ÖĞRENCİ GİRİŞİ'; document.getElementById('login-overlay').classList.remove('hidden'); }
         function hideAuthScreen() { document.getElementById('login-overlay').classList.add('hidden'); }
 
-        // --- NAVIGATION ---
         function renderSidebar() {
             const nav = document.getElementById('sidebar-nav');
             const teacherViews = [
@@ -378,7 +375,6 @@
             document.getElementById('page-title').innerText = 'Ders Planlama';
             const { data: students } = await supabaseClient.from('profiles').select('*').eq('role', 'student');
             const { data: lessons } = await supabaseClient.from('lessons').select('*, profiles(full_name)');
-            
             let lessonsHTML = lessons?.map(l => {
                 return '<div class="p-6 bg-white dark:bg-darkCard border dark:border-slate-800 rounded-2xl flex justify-between items-center shadow-sm"><div><h5 class="font-black italic uppercase text-sm">' + l.title + '</h5><p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">' + (l.profiles?.full_name || 'Bilinmiyor') + ' • ' + new Date(l.scheduled_at).toLocaleString('tr-TR') + '</p></div><button onclick="deleteItem(\'lessons\', \'' + l.id + '\', renderTeacherLessons)" class="text-red-400 transition hover:scale-110"><i class="fa-solid fa-trash"></i></button></div>';
             }).join('') || '<p class="text-center text-slate-300 font-bold uppercase text-xs">Atanmış ders yok.</p>';
@@ -389,15 +385,13 @@
                 e.preventDefault();
                 const btn = e.target.querySelector('button');
                 btn.disabled = true; btn.innerText = "KAYDEDİLİYOR...";
-                
                 const { error } = await supabaseClient.from('lessons').insert([{
                     student_id: document.getElementById('l-student').value,
                     title: document.getElementById('l-title').value,
-                    link: document.getElementById('l-link').value, // Sütun adı SQL ile eşleşiyor
+                    link: document.getElementById('l-link').value,
                     scheduled_at: document.getElementById('l-time').value
                 }]);
-                
-                if(!error) { alert("Ders başarıyla planlandı!"); renderTeacherLessons(); }
+                if(!error) { alert("Ders planlandı!"); renderTeacherLessons(); }
                 else { alert("Hata: " + error.message); btn.disabled = false; btn.innerText = "Yayınla"; }
             };
         }
@@ -440,16 +434,25 @@
             document.getElementById('view-content').innerHTML = html + '</div>';
         }
 
+        // --- ÖĞRENCİ MODÜLLERİ ---
         async function renderStudentLessons() {
             document.getElementById('page-title').innerText = 'Derslerim';
             const { data: lessons } = await supabaseClient.from('lessons').select('*').eq('student_id', userProfile.id);
+            const now = new Date();
+            
             let lessonsHTML = lessons?.map(l => {
-                return '<div class="bg-white dark:bg-darkCard p-10 rounded-[2.5rem] border dark:border-slate-800 relative group transition hover:scale-[1.02]">' +
+                const lessonDate = new Date(l.scheduled_at);
+                const isLive = now >= lessonDate;
+                
+                return '<div class="bg-white dark:bg-darkCard p-10 rounded-[2.5rem] border dark:border-slate-800 relative group transition hover:scale-[1.02] shadow-sm">' +
                     '<h4 class="text-2xl font-black mb-2 italic uppercase tracking-tighter">' + l.title + '</h4>' +
-                    '<p class="text-slate-400 font-bold text-[10px] uppercase mb-8 tracking-[0.2em]"><i class="fa-solid fa-clock"></i> ' + new Date(l.scheduled_at).toLocaleString('tr-TR') + '</p>' +
-                    '<a href="' + l.link + '" target="_blank" class="w-full brand-bg text-white py-5 rounded-2xl font-black flex items-center justify-center gap-3 shadow-xl uppercase text-xs tracking-widest">Derse Katıl</a>' +
+                    '<p class="text-slate-400 font-bold text-[10px] uppercase mb-8 tracking-[0.2em]"><i class="fa-solid fa-clock"></i> ' + lessonDate.toLocaleString('tr-TR') + '</p>' +
+                    (isLive 
+                        ? '<a href="' + l.link + '" target="_blank" class="w-full brand-bg text-white py-5 rounded-2xl font-black flex items-center justify-center gap-3 shadow-xl uppercase text-xs tracking-widest transition hover:brightness-110">DERSE KATIL</a>'
+                        : '<button disabled class="w-full bg-slate-100 dark:bg-slate-800 text-slate-400 py-5 rounded-2xl font-black flex items-center justify-center gap-3 uppercase text-xs tracking-widest cursor-not-allowed">Ders Saati Bekleniyor</button>') +
                 '</div>';
             }).join('') || '<p class="py-32 text-center text-slate-300 uppercase font-black text-xs italic tracking-widest">Şu an planlı dersin yok.</p>';
+            
             document.getElementById('view-content').innerHTML = '<div class="grid md:grid-cols-2 gap-8 view-fade">' + lessonsHTML + '</div>';
         }
 
