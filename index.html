@@ -142,7 +142,7 @@
 
     <!-- Geniş Detaylı Analiz Modalı (Hata Korumalı) -->
     <div id="analysis-detail-modal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-md hidden items-center justify-center p-4" style="z-index: 99999;">
-        <div class="max-w-4xl w-full bg-white dark:bg-darkCard p-8 md:p-12 rounded-[3rem] shadow-2xl relative view-fade max-h-[90vh] overflow-y-auto" id="analysis-detail-content">
+        <div class="max-w-[95vw] lg:max-w-7xl w-full bg-white dark:bg-darkCard p-8 md:p-12 rounded-[3rem] shadow-2xl relative view-fade max-h-[90vh] overflow-y-auto" id="analysis-detail-content">
         </div>
     </div>
 
@@ -325,7 +325,10 @@
                 
                 let baseTitle = analyses[0].title ? analyses[0].title.toString() : 'Analiz Raporu';
                 if(baseTitle.includes('-')) baseTitle = baseTitle.split('-')[0].trim();
-                content += `<h3 class="text-3xl font-black mb-8 italic uppercase tracking-tighter text-slate-800 dark:text-white border-b pb-4 dark:border-slate-800">${baseTitle} - Detaylı Rapor</h3>`;
+                content += `<h3 class="text-3xl font-black mb-8 italic uppercase tracking-tighter text-slate-800 dark:text-white border-b pb-4 dark:border-slate-800 pr-12">${baseTitle} - Detaylı Rapor</h3>`;
+
+                // YENİ: Testleri yan yana dizmek için Grid Container açıyoruz
+                content += `<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">`;
 
                 analyses.forEach((a, index) => {
                     let qTable = '';
@@ -336,32 +339,35 @@
                     }
 
                     if (Array.isArray(qDetails) && qDetails.length > 0) {
-                        qTable = `<div class="grid grid-cols-5 font-black text-[10px] text-slate-400 uppercase mb-3 px-3"><span class="col-span-1">No</span><span class="col-span-2">Konu</span><span class="col-span-1 text-center">Doğru</span><span class="col-span-1 text-center">Öğrenci</span></div>`;
+                        qTable = `<div class="grid grid-cols-12 font-black text-[10px] text-slate-400 uppercase mb-3 px-2"><span class="col-span-2">No</span><span class="col-span-6">Konu</span><span class="col-span-2 text-center" title="Doğru">D</span><span class="col-span-2 text-center" title="Öğrenci">Ö</span></div>`;
                         qTable += qDetails.map(q => {
                             const isCorrect = q.correct === q.student;
                             const isEmpty = q.student === '-';
                             const color = isCorrect ? 'text-green-600 bg-green-50 dark:bg-green-900/20' : (isEmpty ? 'text-slate-500 bg-slate-50 dark:bg-slate-800' : 'text-red-600 bg-red-50 dark:bg-red-900/20');
                             const icon = isCorrect ? 'fa-check' : (isEmpty ? 'fa-minus' : 'fa-times');
-                            return `<div class="grid grid-cols-5 items-center p-3 mb-2 rounded-xl text-xs font-bold ${color} transition hover:brightness-95"><span class="col-span-1">${q.no}</span><span class="col-span-2 truncate" title="${q.topic}">${q.topic}</span><span class="col-span-1 text-center font-black">${q.correct}</span><span class="col-span-1 text-center"><i class="fa-solid ${icon} mr-1"></i> ${q.student}</span></div>`;
+                            return `<div class="grid grid-cols-12 items-center p-2 mb-2 rounded-xl text-xs font-bold ${color} transition hover:brightness-95"><span class="col-span-2 pl-1">${q.no}</span><span class="col-span-6 truncate pr-2" title="${q.topic}">${q.topic}</span><span class="col-span-2 text-center font-black">${q.correct}</span><span class="col-span-2 text-center"><i class="fa-solid ${icon}"></i> <span class="hidden sm:inline">${q.student}</span></span></div>`;
                         }).join('');
                     } else {
                         qTable = `<p class="text-xs italic text-slate-400 p-4 font-bold uppercase">Bu test için soru detayları girilmemiş (Eski Kayıt).</p>`;
                     }
 
+                    // YENİ: İçteki max-h-60 ve overflow kaydırması iptal edildi, kutular esnek yapıldı.
                     content += `
-                        <div class="mb-10 p-8 border-2 border-slate-100 dark:border-slate-800 rounded-[2rem] bg-white dark:bg-darkCard shadow-sm relative">
-                            <div class="flex flex-col md:flex-row justify-between items-center mb-6">
-                                <h4 class="text-xl font-black text-blue-600 italic uppercase">${a.title || 'İsimsiz Test'}</h4>
-                                <div class="flex gap-4 mt-2 md:mt-0">
-                                    <span class="px-4 py-2 bg-green-50 text-green-600 rounded-xl font-black text-xs shadow-sm">${a.correct_count} Doğru</span>
-                                    <span class="px-4 py-2 bg-red-50 text-red-600 rounded-xl font-black text-xs shadow-sm">${a.wrong_count} Yanlış</span>
-                                    <span class="px-4 py-2 bg-slate-100 text-slate-500 rounded-xl font-black text-xs shadow-sm">${a.empty_count} Boş</span>
+                        <div class="p-6 border-2 border-slate-100 dark:border-slate-800 rounded-[2rem] bg-white dark:bg-darkCard shadow-sm relative flex flex-col">
+                            <div class="flex flex-col xl:flex-row justify-between xl:items-center mb-6 gap-4">
+                                <h4 class="text-lg font-black text-blue-600 italic uppercase">${a.title || 'İsimsiz Test'}</h4>
+                                <div class="flex flex-wrap gap-2">
+                                    <span class="px-3 py-1.5 bg-green-50 text-green-600 rounded-lg font-black text-[10px] shadow-sm">${a.correct_count} Doğru</span>
+                                    <span class="px-3 py-1.5 bg-red-50 text-red-600 rounded-lg font-black text-[10px] shadow-sm">${a.wrong_count} Yanlış</span>
+                                    <span class="px-3 py-1.5 bg-slate-100 text-slate-500 rounded-lg font-black text-[10px] shadow-sm">${a.empty_count} Boş</span>
                                 </div>
                             </div>
-                            <div class="bg-slate-50 dark:bg-slate-900 p-4 rounded-2xl border dark:border-slate-800 max-h-60 overflow-y-auto">${qTable}</div>
+                            <div class="bg-slate-50 dark:bg-slate-900 p-4 rounded-2xl border dark:border-slate-800 flex-1">${qTable}</div>
                         </div>
                     `;
                 });
+
+                content += `</div>`; // Grid Container kapatıldı
 
                 document.getElementById('analysis-detail-content').innerHTML = content;
                 const modal = document.getElementById('analysis-detail-modal');
