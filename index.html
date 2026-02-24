@@ -150,20 +150,39 @@
 
     <!-- Exam Overlay -->
     <div id="exam-overlay" class="fixed inset-0 bg-white dark:bg-darkBg hidden flex flex-col" style="z-index: 99999;">
-        <div class="h-20 glass border-b px-8 flex justify-between items-center"><h3 class="font-black text-xl italic" id="active-exam-title">SINAV</h3><div class="flex items-center gap-6"><div class="font-black text-blue-600 bg-blue-50 px-5 py-2 rounded-xl"><i class="fa-solid fa-clock"></i> <span id="exam-timer">00:00</span></div><button type="button" onclick="showCustomModal('Sınavı Bitirmek İstediğinden Emin Misin?', window.finishExam)" class="bg-red-600 text-white px-6 py-2 rounded-xl font-bold uppercase text-xs shadow-lg">Sınavı Bitir</button></div></div>
-        <div class="flex-1 overflow-y-auto p-12"><div class="max-w-4xl mx-auto flex flex-col md:flex-row gap-12" id="exam-question-area"></div></div>
+        <div class="h-20 glass border-b px-8 flex justify-between items-center">
+            <h3 class="font-black text-xl italic" id="active-exam-title">SINAV</h3>
+            <div class="flex items-center gap-6">
+                <div class="font-black text-blue-600 bg-blue-50 px-5 py-2 rounded-xl">
+                    <i class="fa-solid fa-clock"></i> <span id="exam-timer">00:00</span>
+                </div>
+                <button type="button" onclick="showCustomModal('Sınavı Bitirmek İstediğinden Emin Misin?', window.finishExam)" class="bg-red-600 text-white px-6 py-2 rounded-xl font-bold uppercase text-xs shadow-lg">Sınavı Bitir</button>
+            </div>
+        </div>
+        <div class="flex-1 overflow-y-auto p-12">
+            <div class="max-w-4xl mx-auto flex flex-col md:flex-row gap-12" id="exam-question-area"></div>
+        </div>
         <div class="h-24 glass border-t p-4 flex justify-center gap-2" id="exam-pagination"></div>
     </div>
 
     <script>
+        // ==========================================
+        // SISTEM AYARLARI VE GLOBAL DEGISKENLER
+        // ==========================================
         const SUPABASE_URL = "https://tnhofdyonpbmozqzimzj.supabase.co"; 
         const SUPABASE_ANON_KEY = "sb_publishable_xVFfpA85IjnCqIjEJWvtvQ_VZCH_n60"; 
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         
-        let currentUser = null, userProfile = null, activeExamData = null, currentQuestionIndex = 0, studentAnswers = [], examTimerInterval = null;
-        let editingLessonId = null, tempQuestions = [], studentSelectedFiles = [];
+        let currentUser = null;
+        let userProfile = null;
+        let activeExamData = null;
+        let currentQuestionIndex = 0;
+        let studentAnswers = [];
+        let examTimerInterval = null;
+        let editingLessonId = null;
+        let tempQuestions = [];
+        let studentSelectedFiles = [];
         
-        // Konuları koda gömdük.
         const globalTopics = [
             'Çarpanlar ve Katlar', 'Üslü İfadeler', 'Kareköklü İfadeler', 'Veri Analizi', 
             'Basit Olayların Olma Olasılığı', 'Cebirsel İfadeler ve Özdeşlikler', 
@@ -171,23 +190,79 @@
             'Dönüşüm Geometrisi', 'Geometrik Cisimler'
         ];
 
-        // --- CORE UTILS ---
+        // ==========================================
+        // TEMEL FONKSIYONLAR
+        // ==========================================
         function updateLogos() {
             const isDark = document.documentElement.classList.contains('dark');
             const url = SUPABASE_URL + "/storage/v1/object/public/logos/" + (isDark ? "acik.png" : "koyu.png");
-            const nl = document.getElementById('nav-logo'), sl = document.getElementById('sidebar-logo');
-            if(nl) nl.src = url; if(sl) sl.src = url;
+            const nl = document.getElementById('nav-logo');
+            const sl = document.getElementById('sidebar-logo');
+            if(nl) nl.src = url; 
+            if(sl) sl.src = url;
         }
-        function updateTheme(role) { const body = document.getElementById('main-body'); if (body) { body.classList.remove('theme-blue', 'theme-orange'); body.classList.add(role === 'teacher' ? 'theme-orange' : 'theme-blue'); } updateLogos(); }
-        function toggleDarkMode() { document.documentElement.classList.toggle('dark'); localStorage.theme = document.documentElement.classList.contains('dark') ? 'dark' : 'light'; updateLogos(); }
-        function hideLoading() { const l = document.getElementById('loading'); if(l) { l.classList.add('opacity-0'); setTimeout(() => l.classList.add('hidden'), 500); } }
-        function showLanding() { document.getElementById('landing-page').classList.remove('hidden'); document.getElementById('app').classList.add('hidden'); updateLogos(); }
-        function showAuthScreen(role) { const b = document.getElementById('login-role-badge'); if(b) b.innerText = role === 'teacher' ? 'EĞİTMEN GİRİŞİ' : 'ÖĞRENCİ GİRİŞİ'; document.getElementById('login-overlay').classList.remove('hidden'); }
-        function hideAuthScreen() { document.getElementById('login-overlay').classList.add('hidden'); }
-        function showCustomModal(text, action) { document.getElementById('modal-text').innerText = text; document.getElementById('modal-confirm-btn').onclick = () => { action(); hideCustomModal(); }; document.getElementById('custom-modal').classList.add('active'); }
-        function hideCustomModal() { document.getElementById('custom-modal').classList.remove('active'); }
-        function logout() { localStorage.clear(); supabaseClient.auth.signOut(); location.reload(); }
-        function sanitizeFileName(str) { return str.replace(/[^a-z0-9.]/gi, '_').toLowerCase(); }
+
+        function updateTheme(role) { 
+            const body = document.getElementById('main-body'); 
+            if (body) { 
+                body.classList.remove('theme-blue', 'theme-orange'); 
+                body.classList.add(role === 'teacher' ? 'theme-orange' : 'theme-blue'); 
+            } 
+            updateLogos(); 
+        }
+
+        function toggleDarkMode() { 
+            document.documentElement.classList.toggle('dark'); 
+            localStorage.theme = document.documentElement.classList.contains('dark') ? 'dark' : 'light'; 
+            updateLogos(); 
+        }
+
+        function hideLoading() { 
+            const l = document.getElementById('loading'); 
+            if(l) { 
+                l.classList.add('opacity-0'); 
+                setTimeout(() => l.classList.add('hidden'), 500); 
+            } 
+        }
+
+        function showLanding() { 
+            document.getElementById('landing-page').classList.remove('hidden'); 
+            document.getElementById('app').classList.add('hidden'); 
+            updateLogos(); 
+        }
+
+        function showAuthScreen(role) { 
+            const b = document.getElementById('login-role-badge'); 
+            if(b) b.innerText = role === 'teacher' ? 'EĞİTMEN GİRİŞİ' : 'ÖĞRENCİ GİRİŞİ'; 
+            document.getElementById('login-overlay').classList.remove('hidden'); 
+        }
+
+        function hideAuthScreen() { 
+            document.getElementById('login-overlay').classList.add('hidden'); 
+        }
+
+        function showCustomModal(text, action) { 
+            document.getElementById('modal-text').innerText = text; 
+            document.getElementById('modal-confirm-btn').onclick = () => { 
+                action(); 
+                hideCustomModal(); 
+            }; 
+            document.getElementById('custom-modal').classList.add('active'); 
+        }
+
+        function hideCustomModal() { 
+            document.getElementById('custom-modal').classList.remove('active'); 
+        }
+
+        function logout() { 
+            localStorage.clear(); 
+            supabaseClient.auth.signOut(); 
+            location.reload(); 
+        }
+
+        function sanitizeFileName(str) { 
+            return str.replace(/[^a-z0-9.]/gi, '_').toLowerCase(); 
+        }
 
         window.closeAnalysisModal = function() {
             const modal = document.getElementById('analysis-detail-modal');
@@ -206,37 +281,66 @@
             return publicUrl;
         }
 
-        // --- AUTH ---
+        // ==========================================
+        // KIMLIK DOGRULAMA (AUTH)
+        // ==========================================
         async function initAuth() {
             if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
                 document.documentElement.classList.add('dark');
             }
             updateLogos();
             const { data: { session } } = await supabaseClient.auth.getSession();
-            if (session) await handleSession(session); else { showLanding(); hideLoading(); }
+            if (session) {
+                await handleSession(session); 
+            } else { 
+                showLanding(); 
+                hideLoading(); 
+            }
             
             supabaseClient.auth.onAuthStateChange((event, session) => {
-                if (event === 'SIGNED_IN' && !userProfile) { if(session) handleSession(session); } 
-                else if (event === 'SIGNED_OUT') location.reload();
+                if (event === 'SIGNED_IN' && !userProfile) { 
+                    if(session) handleSession(session); 
+                } else if (event === 'SIGNED_OUT') {
+                    location.reload();
+                }
             });
         }
 
         async function handleSession(session) {
             try {
                 let { data, error } = await supabaseClient.from('profiles').select('*').eq('id', session.user.id).maybeSingle();
-                if (!data) { const { data: fb } = await supabaseClient.from('profiles').select('*').eq('email', session.user.email).maybeSingle(); data = fb; }
-                if (!data) { logout(); return; }
-                currentUser = session.user; userProfile = data; updateTheme(data.role);
+                
+                if (!data) { 
+                    const { data: fb } = await supabaseClient.from('profiles').select('*').eq('email', session.user.email).maybeSingle(); 
+                    data = fb; 
+                }
+                
+                if (!data) { 
+                    logout(); 
+                    return; 
+                }
+                
+                currentUser = session.user; 
+                userProfile = data; 
+                updateTheme(data.role);
+                
                 document.getElementById('user-name').innerText = data.full_name;
                 document.getElementById('user-role').innerText = data.role === 'teacher' ? 'EĞİTMEN' : 'ÖĞRENCİ';
                 document.getElementById('user-avatar').innerText = data.full_name ? data.full_name[0].toUpperCase() : '?';
+                
                 document.getElementById('landing-page').classList.add('hidden');
                 document.getElementById('app').classList.remove('hidden');
                 document.getElementById('login-overlay').classList.add('hidden');
+                
                 renderSidebar();
                 const lastView = localStorage.getItem('lastView') || 'dashboard';
                 navigate(lastView);
-            } catch (err) { console.error("Session Error", err); logout(); } finally { hideLoading(); }
+            } catch (err) { 
+                console.error("Session Error", err); 
+                logout(); 
+            } finally { 
+                hideLoading(); 
+            }
         }
 
         document.getElementById('login-form').onsubmit = async (e) => {
@@ -244,7 +348,12 @@
             const btn = document.getElementById('login-btn'); 
             btn.disabled = true; 
             btn.innerText = "KONTROL EDİLİYOR...";
-            const { error } = await supabaseClient.auth.signInWithPassword({ email: document.getElementById('login-email').value, password: document.getElementById('login-password').value });
+            
+            const { error } = await supabaseClient.auth.signInWithPassword({ 
+                email: document.getElementById('login-email').value, 
+                password: document.getElementById('login-password').value 
+            });
+            
             if (error) { 
                 document.getElementById('login-error-container').innerText = error.message; 
                 document.getElementById('login-error-container').classList.remove('hidden'); 
@@ -253,7 +362,9 @@
             }
         };
 
-        // --- NAVIGATION ---
+        // ==========================================
+        // MENU VE NAVIGASYON
+        // ==========================================
         function renderSidebar() {
             const nav = document.getElementById('sidebar-nav');
             const teacherViews = [ 
@@ -268,6 +379,7 @@
                 { id: 't-messages', name: 'Mesajlar', icon: 'fa-envelope-open-text' }, 
                 { id: 't-settings', name: 'Sistem Kodları', icon: 'fa-code' } 
             ];
+            
             const studentViews = [ 
                 { id: 'dashboard', name: 'Panelim', icon: 'fa-house' }, 
                 { id: 's-lessons', name: 'Derslerim', icon: 'fa-video' }, 
@@ -276,16 +388,25 @@
                 { id: 's-points', name: 'Puanlarım', icon: 'fa-trophy' },
                 { id: 's-analytics', name: 'Analizlerim', icon: 'fa-chart-pie' } 
             ];
+            
             const menu = userProfile.role === 'teacher' ? teacherViews : studentViews;
-            nav.innerHTML = (menu || []).map(item => `<button type="button" onclick="navigate('${item.id}')" id="nav-${item.id}" class="sidebar-link w-full flex items-center space-x-4 px-6 py-4 rounded-2xl font-bold text-xs uppercase tracking-widest transition hover:bg-slate-100 dark:hover:bg-slate-800/50"><i class="fa-solid ${item.icon} text-lg"></i><span>${item.name}</span></button>`).join('');
+            nav.innerHTML = (menu || []).map(item => `
+                <button type="button" onclick="navigate('${item.id}')" id="nav-${item.id}" class="sidebar-link w-full flex items-center space-x-4 px-6 py-4 rounded-2xl font-bold text-xs uppercase tracking-widest transition hover:bg-slate-100 dark:hover:bg-slate-800/50">
+                    <i class="fa-solid ${item.icon} text-lg"></i>
+                    <span>${item.name}</span>
+                </button>
+            `).join('');
         }
 
         async function navigate(viewId) {
             document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('active'));
-            const btn = document.getElementById('nav-' + viewId); if (btn) btn.classList.add('active');
+            const btn = document.getElementById('nav-' + viewId); 
+            if (btn) btn.classList.add('active');
+            
             localStorage.setItem('lastView', viewId);
             const content = document.getElementById('view-content');
             content.innerHTML = '<div class="p-20 flex justify-center"><div class="animate-spin h-10 w-10 border-4 border-slate-200 border-t-blue-600 rounded-full"></div></div>';
+            
             try {
                 switch(viewId) {
                     case 'dashboard': await renderDashboard(); break;
@@ -311,29 +432,83 @@
             }
         }
 
-        // --- DASHBOARD ---
+        // ==========================================
+        // ORTAK: DASHBOARD & ANALIZ MODALI
+        // ==========================================
         async function renderDashboard() {
             document.getElementById('page-title').innerText = 'Dashboard';
             const content = document.getElementById('view-content');
+            
             if (userProfile.role === 'teacher') {
                 const { data: subs } = await supabaseClient.from('homework_submissions').select('*, profiles(full_name), homeworks(title)').order('created_at', { ascending: false }).limit(3);
                 const { data: nextLessons } = await supabaseClient.from('lessons').select('*').neq('is_completed', true).gte('scheduled_at', new Date().toISOString()).order('scheduled_at', { ascending: true }).limit(3);
                 
-                let lList = (nextLessons || []).map(l => `<div class="p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl flex justify-between items-center shadow-inner"><span class="font-bold text-sm">${l.title}</span><span class="text-[10px] opacity-50">${new Date(l.scheduled_at).toLocaleString('tr-TR')}</span></div>`).join('') || 'Ders yok.';
-                let sList = (subs || []).map(s => `<div class="p-5 border-2 brand-border rounded-2xl bg-white dark:bg-slate-800 shadow-sm font-bold text-sm"><p class="text-[10px] brand-text uppercase mb-1">${s.homeworks?.title || 'Ödev'}</p>${s.profiles?.full_name || 'Öğrenci'}</div>`).join('') || 'Ödev yok.';
+                let lList = (nextLessons || []).map(l => `
+                    <div class="p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl flex justify-between items-center shadow-inner">
+                        <span class="font-bold text-sm">${l.title}</span>
+                        <span class="text-[10px] opacity-50">${new Date(l.scheduled_at).toLocaleString('tr-TR')}</span>
+                    </div>
+                `).join('') || 'Ders yok.';
                 
-                content.innerHTML = `<div class="grid md:grid-cols-2 gap-10 view-fade"><div class="brand-bg p-12 rounded-[4rem] text-white shadow-2xl relative overflow-hidden italic font-black text-4xl">Hoş Geldin Ali Hoca!<i class="fa-solid fa-rocket absolute -right-4 -bottom-4 text-[12rem] opacity-10"></i></div><div class="bg-white dark:bg-darkCard p-10 rounded-[3rem] border shadow-sm"><h4 class="font-black uppercase text-[10px] tracking-widest text-slate-400 mb-6 italic">Yaklaşan Aktif Dersler</h4><div class="space-y-4">${lList}</div></div><div class="md:col-span-2 bg-white dark:bg-darkCard p-10 rounded-[3rem] border shadow-sm"><h4 class="font-black uppercase text-[10px] tracking-widest text-slate-400 mb-8 italic">Son Ödev Hareketleri</h4><div class="grid md:grid-cols-3 gap-6">${sList}</div></div></div>`;
+                let sList = (subs || []).map(s => `
+                    <div class="p-5 border-2 brand-border rounded-2xl bg-white dark:bg-slate-800 shadow-sm font-bold text-sm">
+                        <p class="text-[10px] brand-text uppercase mb-1">${s.homeworks?.title || 'Ödev'}</p>
+                        ${s.profiles?.full_name || 'Öğrenci'}
+                    </div>
+                `).join('') || 'Ödev yok.';
+                
+                content.innerHTML = `
+                    <div class="grid md:grid-cols-2 gap-10 view-fade">
+                        <div class="brand-bg p-12 rounded-[4rem] text-white shadow-2xl relative overflow-hidden italic font-black text-4xl">
+                            Hoş Geldin Ali Hoca!
+                            <i class="fa-solid fa-rocket absolute -right-4 -bottom-4 text-[12rem] opacity-10"></i>
+                        </div>
+                        <div class="bg-white dark:bg-darkCard p-10 rounded-[3rem] border shadow-sm">
+                            <h4 class="font-black uppercase text-[10px] tracking-widest text-slate-400 mb-6 italic">Yaklaşan Aktif Dersler</h4>
+                            <div class="space-y-4">${lList}</div>
+                        </div>
+                        <div class="md:col-span-2 bg-white dark:bg-darkCard p-10 rounded-[3rem] border shadow-sm">
+                            <h4 class="font-black uppercase text-[10px] tracking-widest text-slate-400 mb-8 italic">Son Ödev Hareketleri</h4>
+                            <div class="grid md:grid-cols-3 gap-6">${sList}</div>
+                        </div>
+                    </div>`;
             } else {
                 const { data: p } = await supabaseClient.from('points').select('*').eq('student_id', userProfile.id);
                 const { data: l } = await supabaseClient.from('lessons').select('*').eq('student_id', userProfile.id).neq('is_completed', true).gte('scheduled_at', new Date().toISOString()).limit(2);
                 const { data: h } = await supabaseClient.from('homeworks').select('*').eq('student_id', userProfile.id).gte('deadline', new Date().toISOString()).limit(2);
+                
                 const total = (p || []).reduce((acc, curr) => acc + curr.amount, 0) || 0;
                 
-                content.innerHTML = `<div class="grid md:grid-cols-2 gap-10 view-fade"><div class="brand-bg p-12 rounded-[4rem] text-white shadow-2xl flex flex-col justify-center items-center italic font-black"><span class="text-sm uppercase opacity-50 mb-2">Başarı Puanın</span><span class="text-8xl">${total}</span></div><div class="space-y-6"><div class="bg-white dark:bg-darkCard p-8 rounded-[3rem] border shadow-sm"><h4 class="font-black text-[10px] text-slate-400 uppercase tracking-widest mb-4 italic">Sıradaki Aktif Dersler</h4>${(l || []).map(ls => `<p class="font-bold text-sm mb-1">${ls.title}</p><p class="text-[10px] opacity-50 mb-3">${new Date(ls.scheduled_at).toLocaleString('tr-TR')}</p>`).join('') || 'Ders yok.'}</div><div class="bg-white dark:bg-darkCard p-8 rounded-[3rem] border shadow-sm"><h4 class="font-black text-[10px] text-slate-400 uppercase tracking-widest mb-4 italic">Yaklaşan Ödevler</h4>${(h || []).map(hw => `<p class="font-bold text-sm mb-1">${hw.title}</p><p class="text-[10px] opacity-50 mb-3">Son: ${new Date(hw.deadline).toLocaleString('tr-TR')}</p>`).join('') || 'Ödev yok.'}</div></div></div>`;
+                let lessonHtml = (l || []).map(ls => `
+                    <p class="font-bold text-sm mb-1">${ls.title}</p>
+                    <p class="text-[10px] opacity-50 mb-3">${new Date(ls.scheduled_at).toLocaleString('tr-TR')}</p>
+                `).join('') || 'Ders yok.';
+
+                let hwHtml = (h || []).map(hw => `
+                    <p class="font-bold text-sm mb-1">${hw.title}</p>
+                    <p class="text-[10px] opacity-50 mb-3">Son: ${new Date(hw.deadline).toLocaleString('tr-TR')}</p>
+                `).join('') || 'Ödev yok.';
+
+                content.innerHTML = `
+                    <div class="grid md:grid-cols-2 gap-10 view-fade">
+                        <div class="brand-bg p-12 rounded-[4rem] text-white shadow-2xl flex flex-col justify-center items-center italic font-black">
+                            <span class="text-sm uppercase opacity-50 mb-2">Başarı Puanın</span>
+                            <span class="text-8xl">${total}</span>
+                        </div>
+                        <div class="space-y-6">
+                            <div class="bg-white dark:bg-darkCard p-8 rounded-[3rem] border shadow-sm">
+                                <h4 class="font-black text-[10px] text-slate-400 uppercase tracking-widest mb-4 italic">Sıradaki Aktif Dersler</h4>
+                                ${lessonHtml}
+                            </div>
+                            <div class="bg-white dark:bg-darkCard p-8 rounded-[3rem] border shadow-sm">
+                                <h4 class="font-black text-[10px] text-slate-400 uppercase tracking-widest mb-4 italic">Yaklaşan Ödevler</h4>
+                                ${hwHtml}
+                            </div>
+                        </div>
+                    </div>`;
             }
         }
 
-        // --- ORTAK KULLANIM: BÜYÜK ANALİZ MODALI ---
         window.showGroupedAnalysisModal = async function(taskId, studentId) {
             try {
                 if (!taskId || taskId === 'null' || taskId === 'undefined') {
@@ -342,15 +517,27 @@
 
                 const contentDiv = document.getElementById('analysis-detail-content');
                 contentDiv.innerHTML = '<div class="p-20 flex justify-center"><div class="animate-spin h-10 w-10 border-4 border-slate-200 border-t-orange-500 rounded-full"></div></div>';
+                
                 const modal = document.getElementById('analysis-detail-modal');
                 modal.classList.remove('hidden');
                 modal.classList.add('flex');
 
-                const { data: analyses, error } = await supabaseClient.from('detailed_analyses').select('*').eq('task_id', taskId).eq('student_id', studentId).order('created_at', { ascending: true });
+                const { data: analyses, error } = await supabaseClient
+                    .from('detailed_analyses')
+                    .select('*')
+                    .eq('task_id', taskId)
+                    .eq('student_id', studentId)
+                    .order('created_at', { ascending: true });
                 
                 if(error) throw error;
+                
                 if(!analyses || analyses.length === 0) {
-                    contentDiv.innerHTML = `<div class="text-center p-10"><h3 class="text-2xl font-black mb-4">Henüz Analiz Yok</h3><p class="text-slate-500 mb-8">Bu görev için sisteme henüz detaylı bir analiz girilmemiş.</p><button type="button" onclick="window.closeAnalysisModal()" class="px-8 py-4 bg-slate-100 dark:bg-slate-800 rounded-xl font-black transition hover:scale-105">Kapat</button></div>`;
+                    contentDiv.innerHTML = `
+                        <div class="text-center p-10">
+                            <h3 class="text-2xl font-black mb-4">Henüz Analiz Yok</h3>
+                            <p class="text-slate-500 mb-8">Bu görev için sisteme henüz detaylı bir analiz girilmemiş.</p>
+                            <button type="button" onclick="window.closeAnalysisModal()" class="px-8 py-4 bg-slate-100 dark:bg-slate-800 rounded-xl font-black transition hover:scale-105">Kapat</button>
+                        </div>`;
                     return;
                 }
 
@@ -358,8 +545,8 @@
                 
                 let baseTitle = analyses[0].title ? analyses[0].title.toString() : 'Analiz Raporu';
                 if(baseTitle.includes('-')) baseTitle = baseTitle.split('-')[0].trim();
+                
                 content += `<h3 class="text-3xl font-black mb-8 italic uppercase tracking-tighter text-slate-800 dark:text-white border-b pb-4 dark:border-slate-800 pr-12">${baseTitle} - Detaylı Rapor</h3>`;
-
                 content += `<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">`;
 
                 analyses.forEach((a, index) => {
@@ -377,7 +564,14 @@
                             const isEmpty = q.student === '-';
                             const color = isCorrect ? 'text-green-600 bg-green-50 dark:bg-green-900/20' : (isEmpty ? 'text-slate-500 bg-slate-50 dark:bg-slate-800' : 'text-red-600 bg-red-50 dark:bg-red-900/20');
                             const icon = isCorrect ? 'fa-check' : (isEmpty ? 'fa-minus' : 'fa-times');
-                            return `<div class="grid grid-cols-12 items-center p-2 mb-2 rounded-xl text-xs font-bold ${color} transition hover:brightness-95"><span class="col-span-2 pl-1">${q.no}</span><span class="col-span-6 truncate pr-2" title="${q.topic}">${q.topic}</span><span class="col-span-2 text-center font-black">${q.correct}</span><span class="col-span-2 text-center"><i class="fa-solid ${icon}"></i> <span class="hidden sm:inline">${q.student}</span></span></div>`;
+                            
+                            return `
+                                <div class="grid grid-cols-12 items-center p-2 mb-2 rounded-xl text-xs font-bold ${color} transition hover:brightness-95">
+                                    <span class="col-span-2 pl-1">${q.no}</span>
+                                    <span class="col-span-6 truncate pr-2" title="${q.topic}">${q.topic}</span>
+                                    <span class="col-span-2 text-center font-black">${q.correct}</span>
+                                    <span class="col-span-2 text-center"><i class="fa-solid ${icon}"></i> <span class="hidden sm:inline">${q.student}</span></span>
+                                </div>`;
                         }).join('');
                     } else {
                         qTable = `<p class="text-xs italic text-slate-400 p-4 font-bold uppercase">Bu test için soru detayları girilmemiş (Eski Kayıt).</p>`;
@@ -407,11 +601,318 @@
             }
         }
 
-        // ==============================================================================
-        // AŞAĞIDAKİ TÜM FONKSİYONLAR SATIRLARA BÖLÜNDÜ. (KOPYALAMA HATASINA KARŞI)
-        // ==============================================================================
+        // ==========================================
+        // ÖGRENCİ (STUDENT) MODÜLLERİ
+        // ==========================================
+        window.renderStudentHomeworks = async function() {
+            try {
+                document.getElementById('page-title').innerText = 'Ödevlerim';
+                const { data: hws } = await supabaseClient.from('homeworks').select('*').eq('student_id', userProfile.id);
+                const { data: mySubs } = await supabaseClient.from('homework_submissions').select('homework_id').eq('student_id', userProfile.id);
+                const { data: analyses } = await supabaseClient.from('detailed_analyses').select('task_id').eq('student_id', userProfile.id).eq('type', 'homework');
+                
+                const subIds = (mySubs || []).map(s => s.homework_id);
+                const analyzedTaskIds = new Set(analyses ? analyses.map(a => a.task_id) : []);
 
-        // --- TEACHER: ANALİZ MOTORU VE PUAN SİSTEMİ ---
+                let hHTML = (hws || []).map(h => {
+                    const isSent = subIds.includes(h.id);
+                    const hasAnalysis = analyzedTaskIds.has(h.id);
+                    
+                    let actionButtons = '';
+                    if (h.pdf_url) {
+                        actionButtons += `<a href="${h.pdf_url}" target="_blank" class="flex-1 text-center px-6 py-4 border-2 brand-border brand-text rounded-2xl font-black text-xs uppercase transition hover:scale-105">Ödevi Aç</a>`;
+                    }
+                    
+                    if (isSent) {
+                        actionButtons += `<span class="flex-1 justify-center px-6 py-4 bg-green-50 text-green-600 rounded-2xl font-black text-xs uppercase flex items-center gap-2 italic shadow-sm border border-green-200"><i class="fa-solid fa-check-circle"></i> Gönderildi</span>`;
+                    } else {
+                        actionButtons += `<button type="button" onclick="window.showSubmitForm('${h.id}')" class="flex-1 px-6 py-4 brand-bg text-white rounded-2xl font-black text-xs uppercase shadow-lg transition hover:scale-105">Çözüm Yükle</button>`;
+                    }
+
+                    if (hasAnalysis) {
+                        actionButtons += `<button type="button" onclick="window.showGroupedAnalysisModal('${h.id}', '${userProfile.id}')" class="flex-1 px-6 py-4 bg-orange-500 text-white rounded-2xl font-black text-xs uppercase shadow-lg transition hover:scale-105 border border-orange-600" title="Analizi Gör"><i class="fa-solid fa-chart-pie text-lg mr-2"></i> ANALİZİ GÖR</button>`;
+                    }
+
+                    return `
+                        <div class="bg-white dark:bg-darkCard p-8 rounded-[2.5rem] border flex flex-col justify-between gap-6 shadow-sm mb-4 transition hover:shadow-md">
+                            <div class="flex items-center gap-6">
+                                <div class="h-16 w-16 bg-orange-50 dark:bg-orange-900/30 text-orange-600 rounded-2xl flex items-center justify-center text-2xl shadow-inner">
+                                    <i class="fa-solid fa-file-pdf"></i>
+                                </div>
+                                <div>
+                                    <h4 class="text-xl font-black italic uppercase tracking-tighter">${h.title}</h4>
+                                    <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1 italic">Bitiş: ${new Date(h.deadline).toLocaleString('tr-TR')}</p>
+                                </div>
+                            </div>
+                            <div class="flex gap-3 flex-col md:flex-row w-full">${actionButtons}</div>
+                        </div>`;
+                }).join('') || '<p class="py-20 text-center italic text-slate-400 font-bold uppercase text-xs">Henüz ödev atanmadı.</p>';
+                
+                document.getElementById('view-content').innerHTML = `
+                    <div class="grid md:grid-cols-2 gap-8 view-fade">${hHTML}</div>
+                    <div id="submit-overlay" class="fixed inset-0 bg-slate-900/60 backdrop-blur-md hidden items-center justify-center p-6" style="z-index:99999;">
+                        <div class="max-w-lg w-full bg-white dark:bg-darkCard p-12 rounded-[4rem] shadow-2xl relative view-fade">
+                            <button type="button" onclick="document.getElementById('submit-overlay').classList.add('hidden'); document.getElementById('submit-overlay').classList.remove('flex');" class="absolute top-10 right-10 text-slate-400 transition hover:scale-110"><i class="fa-solid fa-xmark text-2xl"></i></button>
+                            <h3 class="text-2xl font-black mb-8 italic uppercase text-slate-800 dark:text-white">Çözüm Gönder</h3>
+                            <form id="hw-submit-form" class="space-y-6">
+                                <input type="hidden" id="submit-hw-id">
+                                <div id="file-list-container" class="space-y-2 mb-4"></div>
+                                <button type="button" onclick="document.getElementById('file-input-multi').click()" class="w-full p-6 border-2 border-dashed rounded-[2rem] text-slate-400 text-[10px] font-black uppercase"><i class="fa-solid fa-plus-circle text-2xl mb-2 block"></i> Fotoğraf Ekle</button>
+                                <input type="file" id="file-input-multi" class="hidden" multiple onchange="window.addFilesToSubmission(this)">
+                                <textarea id="submit-note" placeholder="Ali Hoca'ya notun..." class="w-full p-5 rounded-2xl border dark:bg-darkBg h-32 outline-none font-medium focus:ring-2 focus:ring-blue-500"></textarea>
+                                <button type="submit" id="submit-btn-final" class="w-full brand-bg text-white py-5 rounded-[2rem] font-black uppercase text-xs shadow-lg">Bitir ve Gönder</button>
+                            </form>
+                        </div>
+                    </div>`;
+            } catch(e) { console.error(e); }
+        }
+
+        window.renderStudentExams = async function() {
+            document.getElementById('page-title').innerText = 'Sınavlarım';
+            try {
+                const { data: exams } = await supabaseClient.from('exams').select('*').eq('student_id', userProfile.id);
+                const { data: mySubs } = await supabaseClient.from('submissions').select('exam_id, score').eq('student_id', userProfile.id);
+                const { data: analyses } = await supabaseClient.from('detailed_analyses').select('task_id').eq('student_id', userProfile.id).eq('type', 'exam');
+                
+                const subMap = {}; 
+                if(mySubs) mySubs.forEach(s => { subMap[s.exam_id] = s; });
+                const analyzedTaskIds = new Set(analyses ? analyses.map(a => a.task_id) : []);
+
+                let html = (exams || []).map(e => {
+                    const submission = subMap[e.id]; 
+                    const hasAnalysis = analyzedTaskIds.has(e.id);
+                    
+                    let buttonsHTML = '';
+                    if(submission) {
+                        buttonsHTML += `<span class="flex-1 text-center py-4 bg-green-50 text-green-600 rounded-2xl font-black uppercase text-xs italic border border-green-200 shadow-sm flex items-center justify-center"><i class="fa-solid fa-lock mr-2"></i> Puan: ${Math.round(submission.score)}</span>`;
+                    } else {
+                        buttonsHTML += `<button type="button" onclick="window.startStudentExam('${e.id}')" class="flex-1 brand-bg text-white py-4 rounded-2xl font-black shadow-lg uppercase text-xs transition hover:scale-105">BAŞLA</button>`;
+                    }
+
+                    if(hasAnalysis) {
+                        buttonsHTML += `<button type="button" onclick="window.showGroupedAnalysisModal('${e.id}', '${userProfile.id}')" class="flex-1 px-6 py-4 bg-orange-500 text-white rounded-2xl font-black text-xs uppercase shadow-lg transition hover:scale-105 border border-orange-600" title="Analizi Gör"><i class="fa-solid fa-chart-pie text-lg mr-2"></i> ANALİZİ GÖR</button>`;
+                    }
+
+                    return `
+                        <div class="bg-white dark:bg-darkCard p-10 rounded-[3rem] border shadow-sm flex flex-col justify-between transition hover:shadow-lg mb-4">
+                            <div>
+                                <h4 class="text-2xl font-black italic uppercase mb-4 tracking-tighter">${e.title}</h4>
+                                <div class="flex gap-4 text-[10px] font-black uppercase tracking-widest mb-10 text-slate-400">
+                                    <span>${e.duration || 40} DK</span>
+                                    <span>${e.questions?.length || 0} SORU</span>
+                                </div>
+                            </div>
+                            <div class="flex gap-3 flex-col md:flex-row">${buttonsHTML}</div>
+                        </div>`;
+                }).join('') || '<p class="col-span-3 text-center text-slate-300 p-20 font-black italic uppercase">Atanmış sınavın yok.</p>';
+                
+                document.getElementById('view-content').innerHTML = `<div class="grid md:grid-cols-3 gap-8 view-fade">${html}</div>`;
+            } catch(e) { console.error(e); }
+        }
+
+        window.renderStudentAnalytics = async function() {
+            document.getElementById('page-title').innerText = 'Analizlerim';
+            const { data: analyses } = await supabaseClient.from('detailed_analyses').select('*').eq('student_id', userProfile.id).order('created_at', { ascending: false });
+
+            const grouped = {};
+            (analyses || []).forEach(a => {
+                if(!grouped[a.task_id]) {
+                    let baseTitle = a.title || 'İsimsiz Görev';
+                    if(baseTitle.includes('-')) baseTitle = baseTitle.split('-')[0].trim();
+                    grouped[a.task_id] = { task_id: a.task_id, title: baseTitle, type: a.type, tests: [] };
+                }
+                grouped[a.task_id].tests.push(a);
+            });
+
+            let html = Object.values(grouped).map(g => {
+                let totalQ = 0, totalC = 0, totalW = 0, totalE = 0;
+                g.tests.forEach(t => { totalQ+=t.total_questions; totalC+=t.correct_count; totalW+=t.wrong_count; totalE+=t.empty_count; });
+                const rate = Math.round((totalC/totalQ)*100)||0;
+                const rateColor = rate >= 50 ? 'text-green-500' : 'text-orange-500';
+
+                return `
+                    <div class="bg-white dark:bg-darkCard p-8 rounded-[3rem] border shadow-sm mb-6 transition hover:shadow-lg">
+                        <div class="flex justify-between items-center mb-6 pb-6 border-b dark:border-slate-800">
+                            <div>
+                                <h4 class="text-2xl font-black italic uppercase tracking-tighter">${g.title} <span class="text-[10px] bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-lg ml-2 not-italic">${g.type === 'exam' ? 'SINAV' : 'ÖDEV'}</span></h4>
+                                <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-2">${g.tests.length} Test İçeriyor</p>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-3xl font-black ${rateColor}">%${rate} Başarı</p>
+                                <p class="text-[10px] font-black uppercase opacity-50 mt-1">${totalC}D ${totalW}Y ${totalE}B</p>
+                            </div>
+                        </div>
+                        <button type="button" onclick="window.showGroupedAnalysisModal('${g.task_id}', '${userProfile.id}')" class="w-full py-4 bg-orange-500 text-white rounded-2xl font-black uppercase text-xs tracking-widest shadow-lg transition hover:scale-[1.02] border border-orange-600"><i class="fa-solid fa-chart-pie text-lg mr-2"></i> Detaylı Analizi Gör</button>
+                    </div>`;
+            }).join('') || '<p class="text-center italic text-slate-400 py-20 font-black uppercase text-xs">Henüz bir analiz kaydınız bulunmuyor.</p>';
+
+            document.getElementById('view-content').innerHTML = `<div class="max-w-4xl mx-auto view-fade">${html}</div>`;
+        }
+
+        window.renderStudentLessons = async function() { 
+            try { 
+                document.getElementById('page-title').innerText = 'Derslerim'; 
+                const { data: l } = await supabaseClient.from('lessons').select('*').eq('student_id', userProfile.id).order('scheduled_at', { ascending: true }); 
+                const now = new Date(); 
+                
+                const activeLessons = (l || []).filter(ls => !ls.is_completed);
+                const pastLessons = (l || []).filter(ls => ls.is_completed);
+
+                let activeHTML = activeLessons.map(ls => {
+                    const isLive = now >= new Date(ls.scheduled_at);
+                    return `
+                        <div class="bg-white dark:bg-darkCard p-10 rounded-[3rem] border relative transition shadow-sm mb-4">
+                            <h4 class="text-2xl font-black mb-2 italic uppercase">${ls.title}</h4>
+                            <p class="text-slate-400 font-black text-[10px] mb-8">${new Date(ls.scheduled_at).toLocaleString('tr-TR')}</p>
+                            ${isLive ? `<a href="${ls.link}" target="_blank" class="w-full brand-bg text-white py-5 rounded-2xl font-black block text-center shadow-xl transition hover:brightness-110"><i class="fa-solid fa-video mr-2"></i>DERSE KATIL</a>` : `<button disabled class="w-full bg-slate-100 dark:bg-slate-800 text-slate-400 py-5 rounded-2xl font-black uppercase cursor-not-allowed text-[10px] italic tracking-widest"><i class="fa-solid fa-clock mr-2"></i>Zamanı Bekleniyor</button>`}
+                        </div>`;
+                }).join('') || '<p class="py-10 col-span-full text-center font-black italic text-slate-400">Planlanmış aktif dersiniz bulunmuyor.</p>';
+
+                let pastHTML = pastLessons.map(ls => {
+                    return `
+                        <div class="bg-slate-50 dark:bg-slate-900 p-8 rounded-[2.5rem] border dark:border-slate-800 opacity-70 mb-4 transition hover:opacity-100">
+                            <h4 class="text-lg font-black mb-1 italic uppercase text-slate-600 dark:text-slate-300">${ls.title}</h4>
+                            <p class="text-slate-400 font-bold text-[10px]">${new Date(ls.scheduled_at).toLocaleString('tr-TR')}</p>
+                            <span class="mt-4 inline-block px-4 py-2 bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-xl font-black text-[10px] uppercase"><i class="fa-solid fa-check-circle mr-1"></i> Tamamlandı</span>
+                        </div>`;
+                }).join('') || '<p class="py-10 col-span-full text-center font-bold italic text-slate-400 text-xs">Geçmiş ders bulunmuyor.</p>';
+
+                document.getElementById('view-content').innerHTML = `
+                    <div class="view-fade">
+                        <div class="mb-12">
+                            <h3 class="font-black text-slate-400 uppercase tracking-widest text-[10px] mb-6 flex items-center"><i class="fa-solid fa-satellite-dish mr-2 text-green-500 text-lg"></i> Planlı ve Aktif Derslerim</h3>
+                            <div class="grid md:grid-cols-2 gap-8">${activeHTML}</div>
+                        </div>
+                        <div class="pt-8 border-t dark:border-slate-800">
+                            <h3 class="font-black text-slate-400 uppercase tracking-widest text-[10px] mb-6 flex items-center"><i class="fa-solid fa-archive mr-2 text-slate-500 text-lg"></i> Geçmiş Derslerim</h3>
+                            <div class="grid md:grid-cols-3 gap-6">${pastHTML}</div>
+                        </div>
+                    </div>`; 
+            } catch (err) { console.error(err); } 
+        }
+
+        window.renderStudentPoints = async function() { 
+            const { data: p } = await supabaseClient.from('points').select('*').eq('student_id', userProfile.id).order('created_at', { ascending: false }); 
+            const total = (p || []).reduce((acc, curr) => acc + curr.amount, 0) || 0; 
+            const last3 = p?.slice(0, 3) || []; 
+            
+            let l3 = (last3 || []).map(pt => `
+                <div class="p-6 bg-white dark:bg-darkCard border-2 brand-border rounded-[2rem] flex justify-between items-center shadow-sm mb-4">
+                    <div>
+                        <p class="font-black text-lg">${pt.category}</p>
+                        <p class="text-xs text-slate-400 font-bold uppercase">${new Date(pt.created_at).toLocaleDateString('tr-TR')}</p>
+                    </div>
+                    <span class="text-2xl font-black ${pt.amount >= 0 ? 'text-green-500' : 'text-red-500'}">${pt.amount > 0 ? '+' : ''}${pt.amount}</span>
+                </div>`).join('') || '<p class="text-xs italic text-slate-400">Puan yok.</p>'; 
+            
+            document.getElementById('view-content').innerHTML = `
+                <div class="grid md:grid-cols-2 gap-10 view-fade">
+                    <div class="brand-bg p-12 rounded-[4rem] text-white shadow-2xl flex flex-col items-center justify-center italic font-black">
+                        <span class="text-sm uppercase opacity-50 mb-2">Toplam Skor</span>
+                        <span class="text-8xl">${total}</span>
+                    </div>
+                    <div class="space-y-6">
+                        <h4 class="font-black text-[10px] uppercase tracking-[0.2em] text-slate-400 italic mb-4">Son 3 Kazanımın</h4>
+                        ${l3}
+                    </div>
+                </div>`; 
+        }
+
+        window.startStudentExam = async function(eid) {
+            const { data: check } = await supabaseClient.from('submissions').select('id').eq('exam_id', eid).eq('student_id', userProfile.id).maybeSingle();
+            if(check) { 
+                alert("Bu sınavı zaten tamamladın! Mühürlenmiş sınavlara tekrar girilemez."); 
+                window.renderStudentExams(); 
+                return; 
+            }
+
+            const { data: exam } = await supabaseClient.from('exams').select('*').eq('id', eid).single();
+            activeExamData = exam; 
+            currentQuestionIndex = 0; 
+            studentAnswers = new Array(exam?.questions?.length || 0).fill(null);
+            
+            document.getElementById('active-exam-title').innerText = exam.title; 
+            document.getElementById('exam-overlay').classList.remove('hidden');
+            
+            let t = (exam.duration || 40) * 60; 
+            window.updateExamUI();
+            
+            examTimerInterval = setInterval(() => { 
+                t--; 
+                const m = Math.floor(t / 60);
+                const s = t % 60; 
+                document.getElementById('exam-timer').innerText = (m<10?'0':'')+m+':'+(s<10?'0':'')+s; 
+                if(t <= 0) window.finishExam(); 
+            }, 1000);
+        }
+
+        window.updateExamUI = function() {
+            if(!activeExamData || !activeExamData.questions) return;
+            const q = activeExamData.questions[currentQuestionIndex];
+            
+            const opts = ['A','B','C','D'].map(o => `
+                <button type="button" onclick="window.pickAns('${o}')" class="ans-btn w-full p-5 rounded-2xl border-2 font-black text-xl flex justify-between items-center transition ${studentAnswers[currentQuestionIndex] === o ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/30 text-blue-600 shadow-lg' : 'bg-white dark:bg-darkCard hover:bg-slate-50'}">
+                    <span>SEÇENEK ${o}</span>
+                    ${studentAnswers[currentQuestionIndex] === o ? '<i class="fa-solid fa-circle-check"></i>' : ''}
+                </button>
+            `).join('');
+            
+            document.getElementById('exam-question-area').innerHTML = `
+                <div class="md:w-3/5 bg-slate-50 dark:bg-slate-900 rounded-[3rem] p-4 flex items-center justify-center border shadow-inner">
+                    <img src="${q.image}" class="max-w-full h-auto rounded-2xl shadow-xl">
+                </div>
+                <div class="md:w-2/5 flex flex-col justify-center space-y-4">
+                    <p class="text-[10px] font-black text-slate-400 italic">Soru ${currentQuestionIndex+1} / ${activeExamData.questions.length}</p>
+                    <div class="grid gap-3">${opts}</div>
+                </div>`;
+                
+            document.getElementById('exam-pagination').innerHTML = activeExamData.questions.map((_, i) => `
+                <button type="button" onclick="currentQuestionIndex = ${i};window.updateExamUI();" class="w-10 h-10 rounded-xl font-black text-[10px] border ${i === currentQuestionIndex ? 'brand-bg text-white shadow-lg' : (studentAnswers[i] !== null ? 'bg-green-100 text-green-700' : 'bg-white dark:bg-darkCard')}">${i+1}</button>
+            `).join('');
+        }
+
+        window.pickAns = function(o) { 
+            studentAnswers[currentQuestionIndex] = o; 
+            window.updateExamUI(); 
+        }
+
+        window.addFilesToSubmission = function(input) { 
+            if (input.files) { 
+                Array.from(input.files).forEach(f => studentSelectedFiles.push(f)); 
+                window.updateFileUI(); 
+                input.value = ""; 
+            } 
+        }
+
+        window.removeFile = function(idx) { 
+            studentSelectedFiles.splice(idx, 1); 
+            window.updateFileUI(); 
+        }
+
+        window.updateFileUI = function() { 
+            const cont = document.getElementById('file-list-container'); 
+            if(cont) {
+                cont.innerHTML = (studentSelectedFiles || []).map((f, i) => `
+                    <div class="flex justify-between items-center p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl text-[10px] font-black uppercase tracking-widest mb-2">
+                        <span><i class="fa-solid fa-image mr-2 text-blue-500"></i>${f.name}</span>
+                        <button type="button" onclick="window.removeFile(${i})" class="text-red-400 p-1"><i class="fa-solid fa-times"></i></button>
+                    </div>
+                `).join(''); 
+            }
+        }
+
+        window.showSubmitForm = function(hid) { 
+            studentSelectedFiles = []; 
+            document.getElementById('submit-hw-id').value = hid; 
+            const overlay = document.getElementById('submit-overlay'); 
+            overlay.classList.remove('hidden'); 
+            overlay.classList.add('flex'); 
+            window.updateFileUI(); 
+        }
+
+        // ==========================================
+        // EĞİTMEN (TEACHER) MODÜLLERİ
+        // ==========================================
         window.renderTeacherAnalytics = async function() {
             document.getElementById('page-title').innerText = 'Gelişmiş Analiz Merkezi';
             const { data: students } = await supabaseClient.from('profiles').select('*').eq('role', 'student');
@@ -456,9 +957,17 @@
                     <div class="bg-white dark:bg-darkCard p-8 rounded-[3rem] border shadow-sm h-fit">
                         <h4 class="font-black text-lg mb-4 italic uppercase tracking-tighter">Yeni Optik Analiz</h4>
                         <div id="analysis-setup" class="space-y-4">
-                            <select id="an-student" class="w-full p-4 rounded-xl border dark:bg-darkBg outline-none font-bold" onchange="window.loadStudentTasks()"><option value="">Öğrenci Seçin</option>${(students||[]).map(s=>`<option value="${s.id}">${s.full_name}</option>`).join('')}</select>
-                            <select id="an-type" class="w-full p-4 rounded-xl border dark:bg-darkBg outline-none font-bold" onchange="window.loadStudentTasks()"><option value="exam">Sınav Analizi</option><option value="homework">Ödev Analizi</option></select>
-                            <select id="an-task" class="w-full p-4 rounded-xl border dark:bg-darkBg outline-none font-bold" onchange="window.updateAnalysisTitle()"><option value="">Önce öğrenci seçin</option></select>
+                            <select id="an-student" class="w-full p-4 rounded-xl border dark:bg-darkBg outline-none font-bold" onchange="window.loadStudentTasks()">
+                                <option value="">Öğrenci Seçin</option>
+                                ${(students||[]).map(s=>`<option value="${s.id}">${s.full_name}</option>`).join('')}
+                            </select>
+                            <select id="an-type" class="w-full p-4 rounded-xl border dark:bg-darkBg outline-none font-bold" onchange="window.loadStudentTasks()">
+                                <option value="exam">Sınav Analizi</option>
+                                <option value="homework">Ödev Analizi</option>
+                            </select>
+                            <select id="an-task" class="w-full p-4 rounded-xl border dark:bg-darkBg outline-none font-bold" onchange="window.updateAnalysisTitle()">
+                                <option value="">Önce öğrenci seçin</option>
+                            </select>
                             <input type="text" id="an-title" placeholder="Test Adı (Örn: Üslü Sayılar - Test 1)" class="w-full p-4 rounded-xl border dark:bg-darkBg outline-none font-bold uppercase">
                             <input type="number" id="an-qcount" placeholder="Soru Sayısı (Örn: 20)" class="w-full p-4 rounded-xl border dark:bg-darkBg outline-none font-black">
                             <button type="button" onclick="window.generateOpticForm()" class="w-full brand-bg text-white py-4 rounded-xl font-black uppercase tracking-widest shadow-lg transition hover:brightness-110">Optik Form Oluştur</button>
@@ -476,8 +985,13 @@
             const sid = document.getElementById('an-student').value;
             const type = document.getElementById('an-type').value;
             const taskSelect = document.getElementById('an-task');
-            if(!sid) { taskSelect.innerHTML = '<option value="">Önce öğrenci seçin</option>'; return; }
+            if(!sid) { 
+                taskSelect.innerHTML = '<option value="">Önce öğrenci seçin</option>'; 
+                return; 
+            }
+            
             taskSelect.innerHTML = '<option value="">Yükleniyor...</option>';
+            
             if(type === 'exam') {
                 const { data } = await supabaseClient.from('exams').select('id, title').eq('student_id', sid);
                 taskSelect.innerHTML = data && data.length > 0 ? data.map(d => `<option value="${d.id}">${d.title}</option>`).join('') : '<option value="">Sınav Bulunamadı</option>';
@@ -500,11 +1014,13 @@
         window.generateOpticForm = function() {
             const count = parseInt(document.getElementById('an-qcount').value);
             const taskId = document.getElementById('an-task').value;
+            
             if(!taskId) return alert("Lütfen bir Sınav veya Ödev seçin.");
             if(!count || count < 1) return alert("Geçerli bir soru sayısı girin.");
             
             let topicOptions = globalTopics.map(t => `<option value="${t}">${t}</option>`).join('');
             let rows = '';
+            
             for(let i=1; i<=count; i++) {
                 rows += `
                     <div class="flex gap-2 items-center text-xs p-2 border-b dark:border-slate-800">
@@ -514,12 +1030,16 @@
                         <select id="stud-${i}" class="w-16 p-3 rounded-lg border dark:bg-slate-900 outline-none font-black text-blue-600"><option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option><option value="-">Boş</option></select>
                     </div>`;
             }
+            
             document.getElementById('analysis-optic').innerHTML = `
-                <div class="flex gap-2 font-black text-[10px] text-slate-400 uppercase mb-2 px-2"><span class="w-6 text-center">No</span><span class="flex-1">Konu</span><span class="w-16 text-center">Doğru</span><span class="w-16 text-center">Öğrenci</span></div>
+                <div class="flex gap-2 font-black text-[10px] text-slate-400 uppercase mb-2 px-2">
+                    <span class="w-6 text-center">No</span><span class="flex-1">Konu</span><span class="w-16 text-center">Doğru</span><span class="w-16 text-center">Öğrenci</span>
+                </div>
                 <div class="max-h-[400px] overflow-y-auto pr-2 bg-slate-50 dark:bg-slate-900/50 rounded-2xl border dark:border-slate-800 mb-4">${rows}</div>
                 <button type="button" onclick="window.saveDetailedAnalysis()" class="w-full bg-green-500 text-white py-4 rounded-xl font-black mt-2 uppercase shadow-lg transition hover:scale-[1.02]">Analizi Mühürle</button>
                 <button type="button" onclick="document.getElementById('analysis-optic').classList.add('hidden'); document.getElementById('analysis-setup').classList.remove('hidden');" class="w-full bg-slate-100 dark:bg-slate-800 py-3 rounded-xl font-bold mt-2 text-xs uppercase">İptal</button>
             `;
+            
             document.getElementById('analysis-setup').classList.add('hidden');
             document.getElementById('analysis-optic').classList.remove('hidden');
         }
@@ -591,7 +1111,6 @@
             }
         }
 
-        // --- GELİŞİM RAPORU (TEACHER) ---
         window.renderTeacherProgress = async function() {
             document.getElementById('page-title').innerText = 'Genel Gelişim Raporu';
             const { data: students } = await supabaseClient.from('profiles').select('*').eq('role', 'student');
@@ -667,235 +1186,6 @@
                 </div>`;
         }
 
-        // --- STUDENT: ANALİZ MOTORU ---
-        window.renderStudentAnalytics = async function() {
-            document.getElementById('page-title').innerText = 'Analizlerim';
-            const { data: analyses } = await supabaseClient.from('detailed_analyses').select('*').eq('student_id', userProfile.id).order('created_at', { ascending: false });
-
-            const grouped = {};
-            (analyses || []).forEach(a => {
-                if(!grouped[a.task_id]) {
-                    let baseTitle = a.title || 'İsimsiz Görev';
-                    if(baseTitle.includes('-')) baseTitle = baseTitle.split('-')[0].trim();
-                    grouped[a.task_id] = { task_id: a.task_id, title: baseTitle, type: a.type, tests: [] };
-                }
-                grouped[a.task_id].tests.push(a);
-            });
-
-            let html = Object.values(grouped).map(g => {
-                let totalQ = 0, totalC = 0, totalW = 0, totalE = 0;
-                g.tests.forEach(t => { totalQ+=t.total_questions; totalC+=t.correct_count; totalW+=t.wrong_count; totalE+=t.empty_count; });
-                const rate = Math.round((totalC/totalQ)*100)||0;
-                const rateColor = rate >= 50 ? 'text-green-500' : 'text-orange-500';
-
-                return `
-                    <div class="bg-white dark:bg-darkCard p-8 rounded-[3rem] border shadow-sm mb-6 transition hover:shadow-lg">
-                        <div class="flex justify-between items-center mb-6 pb-6 border-b dark:border-slate-800">
-                            <div>
-                                <h4 class="text-2xl font-black italic uppercase tracking-tighter">${g.title} <span class="text-[10px] bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-lg ml-2 not-italic">${g.type === 'exam' ? 'SINAV' : 'ÖDEV'}</span></h4>
-                                <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-2">${g.tests.length} Test İçeriyor</p>
-                            </div>
-                            <div class="text-right">
-                                <p class="text-3xl font-black ${rateColor}">%${rate} Başarı</p>
-                                <p class="text-[10px] font-black uppercase opacity-50 mt-1">${totalC}D ${totalW}Y ${totalE}B</p>
-                            </div>
-                        </div>
-                        <button type="button" onclick="window.showGroupedAnalysisModal('${g.task_id}', '${userProfile.id}')" class="w-full py-4 bg-orange-500 text-white rounded-2xl font-black uppercase text-xs tracking-widest shadow-lg transition hover:scale-[1.02] border border-orange-600"><i class="fa-solid fa-chart-pie text-lg mr-2"></i> Detaylı Analizi Gör</button>
-                    </div>`;
-            }).join('') || '<p class="text-center italic text-slate-400 py-20 font-black uppercase text-xs">Henüz bir analiz kaydınız bulunmuyor.</p>';
-
-            document.getElementById('view-content').innerHTML = `<div class="max-w-4xl mx-auto view-fade">${html}</div>`;
-        }
-
-        // --- STUDENT: EXAMS ---
-        window.renderStudentExams = async function() {
-            document.getElementById('page-title').innerText = 'Sınavlarım';
-            try {
-                const { data: exams } = await supabaseClient.from('exams').select('*').eq('student_id', userProfile.id);
-                const { data: mySubs } = await supabaseClient.from('submissions').select('exam_id, score').eq('student_id', userProfile.id);
-                const { data: analyses } = await supabaseClient.from('detailed_analyses').select('task_id').eq('student_id', userProfile.id).eq('type', 'exam');
-                
-                const subMap = {}; 
-                if(mySubs) mySubs.forEach(s => { subMap[s.exam_id] = s; });
-                const analyzedTaskIds = new Set(analyses ? analyses.map(a => a.task_id) : []);
-
-                let html = (exams || []).map(e => {
-                    const submission = subMap[e.id]; 
-                    const hasAnalysis = analyzedTaskIds.has(e.id);
-                    
-                    let buttonsHTML = '';
-                    if(submission) {
-                        buttonsHTML += `<span class="flex-1 text-center py-4 bg-green-50 text-green-600 rounded-2xl font-black uppercase text-xs italic border border-green-200 shadow-sm flex items-center justify-center"><i class="fa-solid fa-lock mr-2"></i> Puan: ${Math.round(submission.score)}</span>`;
-                    } else {
-                        buttonsHTML += `<button type="button" onclick="window.startStudentExam('${e.id}')" class="flex-1 brand-bg text-white py-4 rounded-2xl font-black shadow-lg uppercase text-xs transition hover:scale-105">BAŞLA</button>`;
-                    }
-
-                    if(hasAnalysis) {
-                        buttonsHTML += `<button type="button" onclick="window.showGroupedAnalysisModal('${e.id}', '${userProfile.id}')" class="flex-1 px-6 py-4 bg-orange-500 text-white rounded-2xl font-black text-xs uppercase shadow-lg transition hover:scale-105 border border-orange-600" title="Analizi Gör"><i class="fa-solid fa-chart-pie text-lg mr-2"></i> ANALİZİ GÖR</button>`;
-                    }
-
-                    return `<div class="bg-white dark:bg-darkCard p-10 rounded-[3rem] border shadow-sm flex flex-col justify-between transition hover:shadow-lg mb-4"><div><h4 class="text-2xl font-black italic uppercase mb-4 tracking-tighter">${e.title}</h4><div class="flex gap-4 text-[10px] font-black uppercase tracking-widest mb-10 text-slate-400"><span>${e.duration || 40} DK</span><span>${e.questions?.length || 0} SORU</span></div></div><div class="flex gap-3 flex-col md:flex-row">${buttonsHTML}</div></div>`;
-                }).join('') || '<p class="col-span-3 text-center text-slate-300 p-20 font-black italic uppercase">Atanmış sınavın yok.</p>';
-                document.getElementById('view-content').innerHTML = `<div class="grid md:grid-cols-3 gap-8 view-fade">${html}</div>`;
-            } catch(e) { console.error(e); }
-        }
-
-        window.startStudentExam = async function(eid) {
-            const { data: check } = await supabaseClient.from('submissions').select('id').eq('exam_id', eid).eq('student_id', userProfile.id).maybeSingle();
-            if(check) { alert("Bu sınavı zaten tamamladın! Mühürlenmiş sınavlara tekrar girilemez."); window.renderStudentExams(); return; }
-
-            const { data: exam } = await supabaseClient.from('exams').select('*').eq('id', eid).single();
-            activeExamData = exam; currentQuestionIndex = 0; studentAnswers = new Array(exam?.questions?.length || 0).fill(null);
-            document.getElementById('active-exam-title').innerText = exam.title; document.getElementById('exam-overlay').classList.remove('hidden');
-            let t = (exam.duration || 40) * 60; window.updateExamUI();
-            examTimerInterval = setInterval(() => { t--; const m = Math.floor(t / 60), s = t % 60; document.getElementById('exam-timer').innerText = (m<10?'0':'')+m+':'+(s<10?'0':'')+s; if(t <= 0) window.finishExam(); }, 1000);
-        }
-
-        window.updateExamUI = function() {
-            if(!activeExamData || !activeExamData.questions) return;
-            const q = activeExamData.questions[currentQuestionIndex];
-            const opts = ['A','B','C','D'].map(o => `<button type="button" onclick="window.pickAns('${o}')" class="ans-btn w-full p-5 rounded-2xl border-2 font-black text-xl flex justify-between items-center transition ${studentAnswers[currentQuestionIndex] === o ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/30 text-blue-600 shadow-lg' : 'bg-white dark:bg-darkCard hover:bg-slate-50'}"><span>SEÇENEK ${o}</span>${studentAnswers[currentQuestionIndex] === o ? '<i class="fa-solid fa-circle-check"></i>' : ''}</button>`).join('');
-            document.getElementById('exam-question-area').innerHTML = `<div class="md:w-3/5 bg-slate-50 dark:bg-slate-900 rounded-[3rem] p-4 flex items-center justify-center border shadow-inner"><img src="${q.image}" class="max-w-full h-auto rounded-2xl shadow-xl"></div><div class="md:w-2/5 flex flex-col justify-center space-y-4"><p class="text-[10px] font-black text-slate-400 italic">Soru ${currentQuestionIndex+1} / ${activeExamData.questions.length}</p><div class="grid gap-3">${opts}</div></div>`;
-            document.getElementById('exam-pagination').innerHTML = activeExamData.questions.map((_, i) => `<button type="button" onclick="currentQuestionIndex = ${i};window.updateExamUI();" class="w-10 h-10 rounded-xl font-black text-[10px] border ${i === currentQuestionIndex ? 'brand-bg text-white shadow-lg' : (studentAnswers[i] !== null ? 'bg-green-100 text-green-700' : 'bg-white dark:bg-darkCard')}">${i+1}</button>`).join('');
-        }
-
-        window.pickAns = function(o) { studentAnswers[currentQuestionIndex] = o; window.updateExamUI(); }
-        window.finishExam = async function() { 
-            clearInterval(examTimerInterval); 
-            let score = 0; 
-            if(activeExamData && activeExamData.questions) {
-                activeExamData.questions.forEach((q, i) => { if(q.correct === studentAnswers[i]) score++; }); 
-                const finalScore = (score / activeExamData.questions.length) * 100;
-                
-                const { error } = await supabaseClient.from('submissions').insert([{ exam_id: activeExamData.id, student_id: userProfile.id, answers: studentAnswers, score: finalScore }]); 
-                if (error) {
-                    alert("Sınav kaydedilirken hata oluştu: " + error.message);
-                } else {
-                    document.getElementById('exam-overlay').classList.add('hidden'); 
-                    window.renderStudentExams(); 
-                    alert("Sınav tamamlandı! Puanın: " + finalScore.toFixed(0));
-                }
-            }
-        }
-
-        // --- STUDENT: HOMEWORKS ---
-        window.renderStudentHomeworks = async function() {
-            try {
-                document.getElementById('page-title').innerText = 'Ödevlerim';
-                const { data: hws } = await supabaseClient.from('homeworks').select('*').eq('student_id', userProfile.id);
-                const { data: mySubs } = await supabaseClient.from('homework_submissions').select('homework_id').eq('student_id', userProfile.id);
-                const { data: analyses } = await supabaseClient.from('detailed_analyses').select('task_id').eq('student_id', userProfile.id).eq('type', 'homework');
-                
-                const subIds = mySubs?.map(s => s.homework_id) || [];
-                const analyzedTaskIds = new Set(analyses ? analyses.map(a => a.task_id) : []);
-
-                let hHTML = (hws || []).map(h => {
-                    const isSent = subIds.includes(h.id);
-                    const hasAnalysis = analyzedTaskIds.has(h.id);
-                    
-                    let actionButtons = '';
-                    if (h.pdf_url) actionButtons += `<a href="${h.pdf_url}" target="_blank" class="flex-1 text-center px-6 py-4 border-2 brand-border brand-text rounded-2xl font-black text-xs uppercase transition hover:scale-105">Ödevi Aç</a>`;
-                    
-                    if (isSent) {
-                        actionButtons += `<span class="flex-1 justify-center px-6 py-4 bg-green-50 text-green-600 rounded-2xl font-black text-xs uppercase flex items-center gap-2 italic shadow-sm border border-green-200"><i class="fa-solid fa-check-circle"></i> Gönderildi</span>`;
-                    } else {
-                        actionButtons += `<button type="button" onclick="window.showSubmitForm('${h.id}')" class="flex-1 px-6 py-4 brand-bg text-white rounded-2xl font-black text-xs uppercase shadow-lg transition hover:scale-105">Çözüm Yükle</button>`;
-                    }
-
-                    if (hasAnalysis) {
-                        actionButtons += `<button type="button" onclick="window.showGroupedAnalysisModal('${h.id}', '${userProfile.id}')" class="flex-1 px-6 py-4 bg-orange-500 text-white rounded-2xl font-black text-xs uppercase shadow-lg transition hover:scale-105 border border-orange-600" title="Analizi Gör"><i class="fa-solid fa-chart-pie text-lg mr-2"></i> ANALİZİ GÖR</button>`;
-                    }
-
-                    return `<div class="bg-white dark:bg-darkCard p-8 rounded-[2.5rem] border flex flex-col justify-between gap-6 shadow-sm mb-4 transition hover:shadow-md"><div class="flex items-center gap-6"><div class="h-16 w-16 bg-orange-50 dark:bg-orange-900/30 text-orange-600 rounded-2xl flex items-center justify-center text-2xl shadow-inner"><i class="fa-solid fa-file-pdf"></i></div><div><h4 class="text-xl font-black italic uppercase tracking-tighter">${h.title}</h4><p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1 italic">Bitiş: ${new Date(h.deadline).toLocaleString('tr-TR')}</p></div></div><div class="flex gap-3 flex-col md:flex-row w-full">${actionButtons}</div></div>`;
-                }).join('') || '<p class="py-20 text-center italic text-slate-400 font-bold uppercase text-xs">Henüz ödev atanmadı.</p>';
-                
-                document.getElementById('view-content').innerHTML = `
-                    <div class="grid md:grid-cols-2 gap-8 view-fade">${hHTML}</div>
-                    <div id="submit-overlay" class="fixed inset-0 bg-slate-900/60 backdrop-blur-md hidden items-center justify-center p-6" style="z-index:99999;">
-                        <div class="max-w-lg w-full bg-white dark:bg-darkCard p-12 rounded-[4rem] shadow-2xl relative view-fade">
-                            <button type="button" onclick="document.getElementById('submit-overlay').classList.add('hidden'); document.getElementById('submit-overlay').classList.remove('flex');" class="absolute top-10 right-10 text-slate-400 transition hover:scale-110"><i class="fa-solid fa-xmark text-2xl"></i></button>
-                            <h3 class="text-2xl font-black mb-8 italic uppercase text-slate-800 dark:text-white">Çözüm Gönder</h3>
-                            <form id="hw-submit-form" class="space-y-6">
-                                <input type="hidden" id="submit-hw-id">
-                                <div id="file-list-container" class="space-y-2 mb-4"></div>
-                                <button type="button" onclick="document.getElementById('file-input-multi').click()" class="w-full p-6 border-2 border-dashed rounded-[2rem] text-slate-400 text-[10px] font-black uppercase"><i class="fa-solid fa-plus-circle text-2xl mb-2 block"></i> Fotoğraf Ekle</button>
-                                <input type="file" id="file-input-multi" class="hidden" multiple onchange="window.addFilesToSubmission(this)">
-                                <textarea id="submit-note" placeholder="Ali Hoca'ya notun..." class="w-full p-5 rounded-2xl border dark:bg-darkBg h-32 outline-none font-medium focus:ring-2 focus:ring-blue-500"></textarea>
-                                <button type="submit" id="submit-btn-final" class="w-full brand-bg text-white py-5 rounded-[2rem] font-black uppercase text-xs shadow-lg">Bitir ve Gönder</button>
-                            </form>
-                        </div>
-                    </div>`;
-            } catch(e) { console.error(e); }
-        }
-
-        window.addFilesToSubmission = function(input) { if (input.files) { Array.from(input.files).forEach(f => studentSelectedFiles.push(f)); window.updateFileUI(); input.value = ""; } }
-        window.removeFile = function(idx) { studentSelectedFiles.splice(idx, 1); window.updateFileUI(); }
-        window.updateFileUI = function() { const cont = document.getElementById('file-list-container'); if(cont) cont.innerHTML = (studentSelectedFiles || []).map((f, i) => `<div class="flex justify-between items-center p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl text-[10px] font-black uppercase tracking-widest mb-2"><span><i class="fa-solid fa-image mr-2 text-blue-500"></i>${f.name}</span><button type="button" onclick="window.removeFile(${i})" class="text-red-400 p-1"><i class="fa-solid fa-times"></i></button></div>`).join(''); }
-        window.showSubmitForm = function(hid) { studentSelectedFiles = []; document.getElementById('submit-hw-id').value = hid; const overlay = document.getElementById('submit-overlay'); overlay.classList.remove('hidden'); overlay.classList.add('flex'); window.updateFileUI(); }
-        
-        // --- STUDENT MODULES ---
-        window.renderStudentLessons = async function() { 
-            try { 
-                document.getElementById('page-title').innerText = 'Derslerim'; 
-                const { data: l } = await supabaseClient.from('lessons').select('*').eq('student_id', userProfile.id).order('scheduled_at', { ascending: true }); 
-                const now = new Date(); 
-                
-                const activeLessons = (l || []).filter(ls => !ls.is_completed);
-                const pastLessons = (l || []).filter(ls => ls.is_completed);
-
-                let activeHTML = activeLessons.map(ls => {
-                    const isLive = now >= new Date(ls.scheduled_at);
-                    return `<div class="bg-white dark:bg-darkCard p-10 rounded-[3rem] border relative transition shadow-sm mb-4"><h4 class="text-2xl font-black mb-2 italic uppercase">${ls.title}</h4><p class="text-slate-400 font-black text-[10px] mb-8">${new Date(ls.scheduled_at).toLocaleString('tr-TR')}</p>${isLive ? `<a href="${ls.link}" target="_blank" class="w-full brand-bg text-white py-5 rounded-2xl font-black block text-center shadow-xl transition hover:brightness-110"><i class="fa-solid fa-video mr-2"></i>DERSE KATIL</a>` : `<button disabled class="w-full bg-slate-100 dark:bg-slate-800 text-slate-400 py-5 rounded-2xl font-black uppercase cursor-not-allowed text-[10px] italic tracking-widest"><i class="fa-solid fa-clock mr-2"></i>Zamanı Bekleniyor</button>`}</div>`;
-                }).join('') || '<p class="py-10 col-span-full text-center font-black italic text-slate-400">Planlanmış aktif dersiniz bulunmuyor.</p>';
-
-                let pastHTML = pastLessons.map(ls => {
-                    return `<div class="bg-slate-50 dark:bg-slate-900 p-8 rounded-[2.5rem] border dark:border-slate-800 opacity-70 mb-4 transition hover:opacity-100"><h4 class="text-lg font-black mb-1 italic uppercase text-slate-600 dark:text-slate-300">${ls.title}</h4><p class="text-slate-400 font-bold text-[10px]">${new Date(ls.scheduled_at).toLocaleString('tr-TR')}</p><span class="mt-4 inline-block px-4 py-2 bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-xl font-black text-[10px] uppercase"><i class="fa-solid fa-check-circle mr-1"></i> Tamamlandı</span></div>`;
-                }).join('') || '<p class="py-10 col-span-full text-center font-bold italic text-slate-400 text-xs">Geçmiş ders bulunmuyor.</p>';
-
-                document.getElementById('view-content').innerHTML = `
-                    <div class="view-fade">
-                        <div class="mb-12">
-                            <h3 class="font-black text-slate-400 uppercase tracking-widest text-[10px] mb-6 flex items-center"><i class="fa-solid fa-satellite-dish mr-2 text-green-500 text-lg"></i> Planlı ve Aktif Derslerim</h3>
-                            <div class="grid md:grid-cols-2 gap-8">${activeHTML}</div>
-                        </div>
-                        <div class="pt-8 border-t dark:border-slate-800">
-                            <h3 class="font-black text-slate-400 uppercase tracking-widest text-[10px] mb-6 flex items-center"><i class="fa-solid fa-archive mr-2 text-slate-500 text-lg"></i> Geçmiş Derslerim</h3>
-                            <div class="grid md:grid-cols-3 gap-6">${pastHTML}</div>
-                        </div>
-                    </div>
-                `; 
-            } catch (err) { console.error(err); } 
-        }
-
-        window.renderStudentPoints = async function() { 
-            const { data: p } = await supabaseClient.from('points').select('*').eq('student_id', userProfile.id).order('created_at', { ascending: false }); 
-            const total = (p || []).reduce((acc, curr) => acc + curr.amount, 0) || 0; 
-            const last3 = p?.slice(0, 3) || []; 
-            let l3 = (last3 || []).map(pt => `
-                <div class="p-6 bg-white dark:bg-darkCard border-2 brand-border rounded-[2rem] flex justify-between items-center shadow-sm mb-4">
-                    <div>
-                        <p class="font-black text-lg">${pt.category}</p>
-                        <p class="text-xs text-slate-400 font-bold uppercase">${new Date(pt.created_at).toLocaleDateString('tr-TR')}</p>
-                    </div>
-                    <span class="text-2xl font-black ${pt.amount >= 0 ? 'text-green-500' : 'text-red-500'}">${pt.amount > 0 ? '+' : ''}${pt.amount}</span>
-                </div>
-            `).join('') || '<p class="text-xs italic text-slate-400">Puan yok.</p>'; 
-            
-            document.getElementById('view-content').innerHTML = `
-                <div class="grid md:grid-cols-2 gap-10 view-fade">
-                    <div class="brand-bg p-12 rounded-[4rem] text-white shadow-2xl flex flex-col items-center justify-center italic font-black">
-                        <span class="text-sm uppercase opacity-50 mb-2">Toplam Skor</span>
-                        <span class="text-8xl">${total}</span>
-                    </div>
-                    <div class="space-y-6">
-                        <h4 class="font-black text-[10px] uppercase tracking-[0.2em] text-slate-400 italic mb-4">Son 3 Kazanımın</h4>
-                        ${l3}
-                    </div>
-                </div>
-            `; 
-        }
-
-        // --- TEACHER & SYSTEM MODULES ---
         window.renderTeacherExams = async function() { 
             document.getElementById('page-title').innerText = 'Sınav Hazırlama'; 
             const { data: students } = await supabaseClient.from('profiles').select('*').eq('role', 'student'); 
@@ -924,6 +1214,63 @@
                 </div>
             `; 
             window.renderQPreview(); 
+        }
+
+        window.selCorrect = function(o) { 
+            document.querySelectorAll('.q-opt-btn').forEach(b => b.classList.remove('selected')); 
+            const target = document.getElementById('btn-q-' + o); 
+            if (target) target.classList.add('selected'); 
+            document.getElementById('q-correct').value = o; 
+        }
+
+        window.addQToTemp = async function() { 
+            const f = document.getElementById('q-file').files[0]; 
+            const c = document.getElementById('q-correct').value; 
+            if(!f || !c) return alert("Dosya ve cevap seçmelisin!"); 
+            
+            try { 
+                const url = await uploadFile(f, 'exam-questions'); 
+                tempQuestions.push({ image: url, correct: c }); 
+                localStorage.setItem('exam_draft', JSON.stringify({ title: document.getElementById('ex-title').value, duration: document.getElementById('ex-duration').value, student_id: document.getElementById('ex-student').value, questions: tempQuestions })); 
+                document.getElementById('q-file').value = ''; 
+                document.querySelectorAll('.q-opt-btn').forEach(b => b.classList.remove('selected')); 
+                document.getElementById('q-correct').value = ''; 
+                window.renderQPreview(); 
+            } catch(err) { 
+                alert(err.message); 
+            } 
+        }
+
+        window.renderQPreview = function() { 
+            const list = document.getElementById('q-preview-list'); 
+            if(list) {
+                list.innerHTML = `<h4 class="text-slate-400 text-[10px] font-black uppercase mb-4 italic tracking-[0.2em]">Soru Havuzu (${tempQuestions.length})</h4>` + tempQuestions.map((q, i) => `
+                    <div class="p-4 bg-white dark:bg-darkCard rounded-2xl border flex justify-between items-center shadow-sm transition hover:shadow-md">
+                        <span class="font-black italic text-xs uppercase tracking-tighter">Soru ${i+1}</span>
+                        <img src="${q.image}" class="h-12 w-12 object-cover rounded-xl shadow-inner">
+                        <span class="px-3 py-1 bg-green-50 dark:bg-green-900/30 text-green-600 rounded-lg text-[10px] font-black uppercase">CEVAP: ${q.correct}</span>
+                        <button type="button" onclick="tempQuestions.splice(${i},1);window.renderQPreview();" class="text-red-400 transition hover:scale-110"><i class="fa-solid fa-times-circle"></i></button>
+                    </div>
+                `).join(''); 
+            }
+        }
+
+        window.publishExamFinal = async function() { 
+            const sid = document.getElementById('ex-student').value;
+            const title = document.getElementById('ex-title').value;
+            const dur = document.getElementById('ex-duration').value; 
+            
+            if(!title || !dur || tempQuestions.length === 0) return alert("Eksik veri!"); 
+            
+            const { error } = await supabaseClient.from('exams').insert([{ student_id: sid, title: title, duration: parseInt(dur), questions: tempQuestions }]); 
+            if(!error) { 
+                localStorage.removeItem('exam_draft'); 
+                tempQuestions = []; 
+                alert("Sınav başarıyla gönderildi!"); 
+                window.renderTeacherExams(); 
+            } else {
+                alert(error.message); 
+            }
         }
 
         window.renderTeacherSettings = async function() { 
@@ -959,6 +1306,7 @@
 
         window.renderTeacherMessages = async function() { 
             const { data: m } = await supabaseClient.from('contact_messages').select('*').order('created_at', { ascending: false }); 
+            
             document.getElementById('view-content').innerHTML = '<div class="grid md:grid-cols-2 gap-8 view-fade">' + ((m || []).map(msg => `
                 <div class="p-6 bg-white dark:bg-darkCard rounded-[2rem] border-2 shadow-sm mb-4">
                     <div class="flex justify-between items-start mb-4">
@@ -1014,6 +1362,7 @@
 
         window.renderTeacherStudents = async function() { 
             const { data: s } = await supabaseClient.from('profiles').select('*').eq('role', 'student'); 
+            
             document.getElementById('view-content').innerHTML = `
                 <div class="grid md:grid-cols-2 gap-10 view-fade">
                     <form id="add-student-form" class="bg-white dark:bg-darkCard p-8 rounded-3xl border space-y-4 h-fit">
@@ -1038,16 +1387,110 @@
             }; 
         }
 
+        window.renderTeacherLessons = async function() { 
+            const { data: s } = await supabaseClient.from('profiles').select('*').eq('role', 'student'); 
+            const { data: l } = await supabaseClient.from('lessons').select('*, profiles(full_name)').order('scheduled_at', { ascending: false }); 
+            
+            let listHTML = (l||[]).map(ls => {
+                const isCompleted = ls.is_completed;
+                const statusBadge = isCompleted 
+                    ? `<span class="bg-slate-100 text-slate-500 px-2 py-1 rounded-md text-[8px] uppercase font-black ml-2"><i class="fa-solid fa-archive mr-1"></i>Geçmiş</span>` 
+                    : `<span class="bg-green-50 text-green-600 px-2 py-1 rounded-md text-[8px] uppercase font-black ml-2"><i class="fa-solid fa-satellite-dish mr-1"></i>Aktif</span>`;
+                
+                return `
+                    <div class="p-6 bg-white dark:bg-darkCard border rounded-2xl flex flex-col md:flex-row gap-4 justify-between items-center shadow-sm mb-4 transition hover:shadow-md ${isCompleted ? 'opacity-60 grayscale' : ''}">
+                        <div>
+                            <h5 class="font-black uppercase text-sm">${ls.title} ${statusBadge}</h5>
+                            <p class="text-[10px] font-bold text-slate-400 mt-1">${ls.profiles?.full_name || 'Bilinmiyor'} • ${new Date(ls.scheduled_at).toLocaleString('tr-TR')}</p>
+                        </div>
+                        <div class="flex gap-2">
+                            ${!isCompleted 
+                                ? `<button type="button" onclick="window.markLessonCompleted('${ls.id}')" class="w-10 h-10 bg-green-50 text-green-600 rounded-xl transition hover:scale-110" title="Dersi Tamamla"><i class="fa-solid fa-check"></i></button>` 
+                                : `<button type="button" onclick="window.markLessonActive('${ls.id}')" class="w-10 h-10 bg-orange-50 text-orange-600 rounded-xl transition hover:scale-110" title="Aktif Yap"><i class="fa-solid fa-rotate-left"></i></button>`}
+                            <button type="button" onclick="window.startEditLesson('${ls.id}')" class="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl transition hover:scale-110" title="Düzenle"><i class="fa-solid fa-pencil"></i></button>
+                            <button type="button" onclick="window.deleteItem('lessons', '${ls.id}', window.renderTeacherLessons)" class="w-10 h-10 bg-red-50 text-red-600 rounded-xl transition hover:scale-110" title="Sil"><i class="fa-solid fa-trash"></i></button>
+                        </div>
+                    </div>`;
+            }).join('') || '<p class="text-center p-10 italic text-slate-400">Ders yok.</p>'; 
+
+            document.getElementById('view-content').innerHTML = `
+                <div class="grid md:grid-cols-2 gap-10 view-fade">
+                    <form id="lesson-form" class="bg-white dark:bg-darkCard p-8 rounded-3xl border space-y-4 h-fit">
+                        <h4 class="font-black text-lg mb-4 italic uppercase tracking-tighter" id="lesson-form-title">Yeni Ders Planla</h4>
+                        <select id="l-student" class="w-full p-4 rounded-xl border dark:bg-darkBg">${(s||[]).map(st => `<option value="${st.id}">${st.full_name}</option>`).join('') || ''}</select>
+                        <input type="text" id="l-title" placeholder="Ders Başlığı" required class="w-full p-4 rounded-xl border dark:bg-darkBg font-bold uppercase">
+                        <input type="url" id="l-link" placeholder="Meet / Zoom Linki" required class="w-full p-4 rounded-xl border dark:bg-darkBg font-medium">
+                        <input type="datetime-local" id="l-time" required class="w-full p-4 rounded-xl border dark:bg-darkBg font-black text-blue-600">
+                        <button type="submit" id="lesson-form-btn" class="w-full brand-bg text-white py-4 rounded-xl font-black uppercase shadow-lg transition hover:brightness-110">Yayınla</button>
+                    </form>
+                    <div class="space-y-4">
+                        <h4 class="font-black text-[10px] uppercase text-slate-400 tracking-[0.2em] italic mb-4">Tüm Dersler</h4>
+                        ${listHTML}
+                    </div>
+                </div>`; 
+            
+            document.getElementById('lesson-form').onsubmit = async (e) => { 
+                e.preventDefault(); 
+                const btn = document.getElementById('lesson-form-btn'); 
+                btn.disabled = true; 
+                const d = { student_id: document.getElementById('l-student').value, title: document.getElementById('l-title').value, link: document.getElementById('l-link').value, scheduled_at: new Date(document.getElementById('l-time').value).toISOString() }; 
+                let { error } = editingLessonId ? await supabaseClient.from('lessons').update(d).eq('id', editingLessonId) : await supabaseClient.from('lessons').insert([d]); 
+                if(!error) { alert("Gönderildi!"); editingLessonId = null; window.renderTeacherLessons(); } else { alert(error.message); btn.disabled = false; } 
+            }; 
+        }
+
+        window.startEditLesson = async function(id) { 
+            editingLessonId = id; 
+            const { data: l } = await supabaseClient.from('lessons').select('*').eq('id', id).single(); 
+            if (l) { 
+                document.getElementById('lesson-form-title').innerText = "Dersi Düzenle"; 
+                document.getElementById('l-student').value = l.student_id; 
+                document.getElementById('l-title').value = l.title; 
+                document.getElementById('l-link').value = l.link; 
+                const d = new Date(l.scheduled_at); 
+                const off = new Date(d.getTime() - (d.getTimezoneOffset() * 60000)); 
+                document.getElementById('l-time').value = off.toISOString().slice(0, 16); 
+                document.getElementById('lesson-form').scrollIntoView({ behavior: 'smooth' }); 
+            } 
+        }
+
+        window.markLessonCompleted = async function(id) {
+            if(confirm("Bu dersi tamamlandı (geçmiş) olarak işaretlemek istediğinize emin misiniz?")) {
+                const { error } = await supabaseClient.from('lessons').update({ is_completed: true }).eq('id', id);
+                if(!error) window.renderTeacherLessons(); else alert("Hata: " + error.message);
+            }
+        };
+
+        window.markLessonActive = async function(id) {
+            if(confirm("Bu dersi tekrar aktif planlı dersler arasına taşımak istediğinize emin misiniz?")) {
+                const { error } = await supabaseClient.from('lessons').update({ is_completed: false }).eq('id', id);
+                if(!error) window.renderTeacherLessons(); else alert("Hata: " + error.message);
+            }
+        };
+
         window.renderTeacherHomeworks = async function() { 
             const { data: s } = await supabaseClient.from('profiles').select('*').eq('role', 'student'); 
             const { data: sb } = await supabaseClient.from('homework_submissions').select('*, profiles(full_name), homeworks(title)').order('created_at', { ascending: false }); 
             const { data: analyses } = await supabaseClient.from('detailed_analyses').select('task_id, student_id').eq('type', 'homework'); 
-            const analyzedTasks = new Set(analyses ? analyses.map(a => a.task_id + '_' + a.student_id) : []); 
+            
+            const analyzedTasks = new Set();
+            if (analyses) {
+                analyses.forEach(a => analyzedTasks.add(a.task_id + '_' + a.student_id));
+            }
             
             let sbHTML = (sb||[]).map(sub => { 
-                const files = (sub.file_urls||[]).map((url, i) => `<a href="${url}" target="_blank" class="block p-3 bg-blue-50 text-blue-600 rounded-xl mt-2 text-[10px] font-black uppercase truncate transition hover:brightness-110">Ödevi Aç (${i+1})</a>`).join('') || '-'; 
+                const files = (sub.file_urls||[]).map((url, i) => `
+                    <a href="${url}" target="_blank" class="block p-3 bg-blue-50 text-blue-600 rounded-xl mt-2 text-[10px] font-black uppercase truncate transition hover:brightness-110">
+                        Ödevi Aç (${i+1})
+                    </a>
+                `).join('') || '-'; 
+                
                 const hasAnalysis = analyzedTasks.has(sub.homework_id + '_' + sub.student_id); 
-                let analysisBtn = hasAnalysis ? `<button type="button" onclick="window.showGroupedAnalysisModal('${sub.homework_id}', '${sub.student_id}')" class="mt-2 w-full px-4 py-3 bg-orange-500 text-white rounded-xl font-black text-[10px] uppercase shadow-md transition hover:scale-105 border border-orange-600"><i class="fa-solid fa-chart-pie mr-2 text-sm"></i>Analizi İncele</button>` : ''; 
+                let analysisBtn = hasAnalysis ? `
+                    <button type="button" onclick="window.showGroupedAnalysisModal('${sub.homework_id}', '${sub.student_id}')" class="mt-2 w-full px-4 py-3 bg-orange-500 text-white rounded-xl font-black text-[10px] uppercase shadow-md transition hover:scale-105 border border-orange-600">
+                        <i class="fa-solid fa-chart-pie mr-2 text-sm"></i>Analizi İncele
+                    </button>
+                ` : ''; 
                 
                 return `
                     <div class="p-6 bg-white dark:bg-darkCard border-2 brand-border rounded-[2rem] shadow-sm mb-4">
