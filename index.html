@@ -38,8 +38,11 @@
         .dynamic-frame { width: 100%; min-height: 80vh; border: none; border-radius: 1.5rem; background: white; }
         .q-opt-btn.selected { background-color: #ea580c !important; color: white !important; border-color: transparent !important; }
         .theme-blue .q-opt-btn.selected { background-color: #2563eb !important; }
-        #custom-modal, #analysis-detail-modal { display: none; }
-        #custom-modal.active, #analysis-detail-modal.active { display: flex; }
+        
+        /* ÇÖKME SEBEBİ OLAN CSS ÇAKIŞMASI DÜZELTİLDİ: Sadece custom-modal burada yönetiliyor. */
+        #custom-modal { display: none; }
+        #custom-modal.active { display: flex; }
+        
         .hero-gradient { background: radial-gradient(circle at top right, rgba(37, 99, 235, 0.1), transparent); }
     </style>
 </head>
@@ -76,7 +79,7 @@
         </section>
         <section id="about" class="py-32 bg-slate-50/50 dark:bg-slate-900/50 px-6">
             <div class="max-w-7xl mx-auto grid md:grid-cols-3 gap-8">
-                <div class="bg-white dark:bg-darkCard p-10 rounded-[3rem] border shadow-sm transition hover:-translate-y-2 group"><div class="w-16 h-16 bg-blue-50 dark:bg-blue-900/30 text-blue-600 rounded-2xl flex items-center justify-center mb-8 text-2xl transition group-hover:scale-110"><i class="fa-solid fa-brain"></i></div><h3 class="text-2xl font-black mb-4 italic dark:text-white uppercase tracking-tighter">Analitik Eğitim</h3><p class="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">Ezber yerine mantıksal kurg ve rasyonel öğrenme metodolojisi.</p></div>
+                <div class="bg-white dark:bg-darkCard p-10 rounded-[3rem] border shadow-sm transition hover:-translate-y-2 group"><div class="w-16 h-16 bg-blue-50 dark:bg-blue-900/30 text-blue-600 rounded-2xl flex items-center justify-center mb-8 text-2xl transition group-hover:scale-110"><i class="fa-solid fa-brain"></i></div><h3 class="text-2xl font-black mb-4 italic dark:text-white uppercase tracking-tighter">Analitik Eğitim</h3><p class="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">Ezber yerine mantıksal kurgu ve rasyonel öğrenme metodolojisi.</p></div>
                 <div class="bg-white dark:bg-darkCard p-10 rounded-[3rem] border shadow-sm transition hover:-translate-y-2 group"><div class="w-16 h-16 bg-orange-50 dark:bg-orange-900/30 text-orange-600 rounded-2xl flex items-center justify-center mb-8 text-2xl transition group-hover:scale-110"><i class="fa-solid fa-chart-line"></i></div><h3 class="text-2xl font-black mb-4 italic dark:text-white uppercase tracking-tighter">Veri Takibi</h3><p class="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">Çözülen her soru dijital veri havuzunda rasyonel olarak işlenir.</p></div>
                 <div class="bg-white dark:bg-darkCard p-10 rounded-[3rem] border shadow-sm transition hover:-translate-y-2 group"><div class="w-16 h-16 bg-green-50 dark:bg-green-900/30 text-green-600 rounded-2xl flex items-center justify-center mb-8 text-2xl transition group-hover:scale-110"><i class="fa-solid fa-bolt"></i></div><h3 class="text-2xl font-black mb-4 italic dark:text-white uppercase tracking-tighter">Hızlı Sonuç</h3><p class="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">Performansa dayalı anlık rasyonel geri bildirimler.</p></div>
             </div>
@@ -142,7 +145,7 @@
         </div>
     </div>
 
-    <!-- Geniş Detaylı Analiz Modalı (Grid Layout & Error Protection) -->
+    <!-- YENİ: Geniş Detaylı Analiz Modalı (SADECE TAILWIND İLE ÇALIŞIR, CSS ÇAKIŞMASI YOK) -->
     <div id="analysis-detail-modal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-md hidden items-center justify-center p-4" style="z-index: 99999;">
         <div class="max-w-[95vw] lg:max-w-7xl w-full bg-white dark:bg-darkCard p-8 md:p-12 rounded-[3rem] shadow-2xl relative view-fade max-h-[90vh] overflow-y-auto" id="analysis-detail-content">
         </div>
@@ -163,7 +166,7 @@
         let currentUser = null, userProfile = null, activeExamData = null, currentQuestionIndex = 0, studentAnswers = [], examTimerInterval = null;
         let editingLessonId = null, tempQuestions = [], studentSelectedFiles = [];
         
-        // 404 Hatasını engellemek için konuları koda gömdük.
+        // Veritabanı (404) hatasını engellemek için konular doğrudan koda gömüldü.
         const globalTopics = [
             'Çarpanlar ve Katlar', 'Üslü İfadeler', 'Kareköklü İfadeler', 'Veri Analizi', 
             'Basit Olayların Olma Olasılığı', 'Cebirsel İfadeler ve Özdeşlikler', 
@@ -192,6 +195,7 @@
         window.closeAnalysisModal = function() {
             const modal = document.getElementById('analysis-detail-modal');
             if(modal) {
+                // Tailwind classları ile kontrol ediliyor, CSS çakışması yok.
                 modal.classList.add('hidden');
                 modal.classList.remove('flex');
             }
@@ -239,7 +243,6 @@
             } catch (err) { console.error("Session Error", err); logout(); } finally { hideLoading(); }
         }
 
-        // LOGIN FORM LISTENER
         document.getElementById('login-form').onsubmit = async (e) => {
             e.preventDefault(); 
             const btn = document.getElementById('login-btn'); 
@@ -331,14 +334,14 @@
             }
         }
 
-        // --- ORTAK KULLANIM: BÜYÜK ANALİZ MODALI (ÇÖKME KORUMASI EKLENDİ) ---
+        // --- ORTAK KULLANIM: BÜYÜK ANALİZ MODALI (GRID & ÇÖKME KORUMALI) ---
         window.showGroupedAnalysisModal = async function(taskId, studentId) {
             try {
                 if (!taskId || taskId === 'null' || taskId === 'undefined') {
                     return alert("Bu görev için geçerli bir ID bulunamadı.");
                 }
 
-                // Modal'ı aç ve yükleniyor göstergesi koy
+                // Modal'ı Tailwind classları ile aç ve Yükleniyor göstergesi koy (CSS sorunu tamamen çözüldü)
                 const contentDiv = document.getElementById('analysis-detail-content');
                 contentDiv.innerHTML = '<div class="p-20 flex justify-center"><div class="animate-spin h-10 w-10 border-4 border-slate-200 border-t-orange-500 rounded-full"></div></div>';
                 const modal = document.getElementById('analysis-detail-modal');
@@ -412,7 +415,7 @@
         window.renderTeacherAnalytics = async function() {
             document.getElementById('page-title').innerText = 'Gelişmiş Analiz Merkezi';
             const { data: students } = await supabaseClient.from('profiles').select('*').eq('role', 'student');
-            const { data: analyses } = await supabaseClient.from('detailed_analyses').select('*, profiles(full_name)').order('created_at', { ascending: false });
+            const { data: analyses } = await supabaseClient.from('detailed_analyses').select('*, profiles:student_id(full_name)').order('created_at', { ascending: false });
 
             const grouped = {};
             (analyses || []).forEach(a => {
@@ -425,7 +428,7 @@
                 grouped[key].tests.push(a);
             });
 
-            let listHTML = (Object.values(grouped) || []).map(g => {
+            let listHTML = Object.values(grouped).map(g => {
                 let totalQ = 0, totalC = 0, totalW = 0, totalE = 0;
                 g.tests.forEach(t => { totalQ+=t.total_questions; totalC+=t.correct_count; totalW+=t.wrong_count; totalE+=t.empty_count; });
                 const rate = Math.round((totalC/totalQ)*100)||0;
@@ -681,7 +684,7 @@
                 grouped[a.task_id].tests.push(a);
             });
 
-            let html = (Object.values(grouped) || []).map(g => {
+            let html = Object.values(grouped).map(g => {
                 let totalQ = 0, totalC = 0, totalW = 0, totalE = 0;
                 g.tests.forEach(t => { totalQ+=t.total_questions; totalC+=t.correct_count; totalW+=t.wrong_count; totalE+=t.empty_count; });
                 const rate = Math.round((totalC/totalQ)*100)||0;
@@ -706,7 +709,7 @@
             document.getElementById('view-content').innerHTML = `<div class="max-w-4xl mx-auto view-fade">${html}</div>`;
         }
 
-        // --- STUDENT: EXAMS (KİLİTLEME VE BUTON EKLENDİ) ---
+        // --- STUDENT: EXAMS (KİLİTLEME VE KOCAMAN BUTON) ---
         window.renderStudentExams = async function() {
             document.getElementById('page-title').innerText = 'Sınavlarım';
             try {
@@ -778,7 +781,7 @@
             }
         }
 
-        // --- STUDENT: HOMEWORKS ---
+        // --- STUDENT: HOMEWORKS (KOCAMAN ANALİZ BUTONU EKLENDİ) ---
         window.renderStudentHomeworks = async function() {
             try {
                 document.getElementById('page-title').innerText = 'Ödevlerim';
@@ -811,7 +814,7 @@
                 }).join('') || '<p class="py-20 text-center italic text-slate-400 font-bold uppercase text-xs">Henüz ödev atanmadı.</p>';
                 
                 document.getElementById('view-content').innerHTML = `
-                    <div class="view-fade">${hHTML}</div>
+                    <div class="grid md:grid-cols-2 gap-8 view-fade">${hHTML}</div>
                     <div id="submit-overlay" class="fixed inset-0 bg-slate-900/60 backdrop-blur-md hidden items-center justify-center p-6" style="z-index:99999;">
                         <div class="max-w-lg w-full bg-white dark:bg-darkCard p-12 rounded-[4rem] shadow-2xl relative view-fade">
                             <button type="button" onclick="document.getElementById('submit-overlay').classList.add('hidden'); document.getElementById('submit-overlay').classList.remove('flex');" class="absolute top-10 right-10 text-slate-400 transition hover:scale-110"><i class="fa-solid fa-xmark text-2xl"></i></button>
