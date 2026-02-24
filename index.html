@@ -142,7 +142,7 @@
         </div>
     </div>
 
-    <!-- YENİ: Geniş Detaylı Analiz Modalı (Test Test - Soru Soru Görüntüleme) -->
+    <!-- YENİ: Geniş Detaylı Analiz Modalı -->
     <div id="analysis-detail-modal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-md hidden items-center justify-center p-4" style="z-index: 9999;">
         <div class="max-w-4xl w-full bg-white dark:bg-darkCard p-8 md:p-12 rounded-[3rem] shadow-2xl relative view-fade max-h-[90vh] overflow-y-auto" id="analysis-detail-content">
         </div>
@@ -162,7 +162,14 @@
         
         let currentUser = null, userProfile = null, activeExamData = null, currentQuestionIndex = 0, studentAnswers = [], examTimerInterval = null;
         let editingLessonId = null, tempQuestions = [], studentSelectedFiles = [];
-        let globalTopics = ['Çarpanlar ve Katlar', 'Üslü İfadeler', 'Kareköklü İfadeler', 'Veri Analizi', 'Basit Olayların Olma Olasılığı', 'Cebirsel İfadeler', 'Doğrusal Denklemler', 'Eşitsizlikler', 'Üçgenler', 'Eşlik ve Benzerlik', 'Dönüşüm Geometrisi', 'Geometrik Cisimler'];
+        
+        // DÜZELTME 1: Veritabanı sorgusunu (fetchTopics) iptal ettik ve 404 hatasını yok ettik. Konular doğrudan kod içinde eklendi.
+        const globalTopics = [
+            'Çarpanlar ve Katlar', 'Üslü İfadeler', 'Kareköklü İfadeler', 'Veri Analizi', 
+            'Basit Olayların Olma Olasılığı', 'Cebirsel İfadeler ve Özdeşlikler', 
+            'Doğrusal Denklemler', 'Eşitsizlikler', 'Üçgenler', 'Eşlik ve Benzerlik', 
+            'Dönüşüm Geometrisi', 'Geometrik Cisimler'
+        ];
 
         // --- CORE UTILS ---
         function updateLogos() {
@@ -191,20 +198,12 @@
             return publicUrl;
         }
 
-        async function fetchTopics() {
-            try {
-                const { data } = await supabaseClient.from('topics').select('name');
-                if(data && data.length > 0) globalTopics = data.map(t => t.name);
-            } catch (e) { console.log("Konular yüklenemedi, varsayılanlar kullanılacak."); }
-        }
-
         // --- AUTH ---
         async function initAuth() {
             if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
                 document.documentElement.classList.add('dark');
             }
             updateLogos();
-            await fetchTopics();
             const { data: { session } } = await supabaseClient.auth.getSession();
             if (session) await handleSession(session); else { showLanding(); hideLoading(); }
             supabaseClient.auth.onAuthStateChange((event, session) => {
@@ -311,52 +310,66 @@
             }
         }
 
-        // --- YENİ: BÜYÜK ANALİZ MODALI (HER İKİ TARAF İÇİN ORTAK) ---
+        // DÜZELTME 2: Detaylı Analiz Modalı Gösterme Fonksiyonuna Hata Güvenliği Eklendi
         window.showGroupedAnalysisModal = async function(taskId, studentId) {
-            const { data: analyses } = await supabaseClient.from('detailed_analyses').select('*').eq('task_id', taskId).eq('student_id', studentId).order('created_at', { ascending: true });
-            if(!analyses || analyses.length === 0) return alert("Bu görev için henüz analiz girilmemiş.");
-
-            let content = `<button onclick="document.getElementById('analysis-detail-modal').classList.add('hidden')" class="absolute top-8 right-8 text-slate-400 hover:text-slate-600 transition"><i class="fa-solid fa-xmark text-3xl"></i></button>`;
-            
-            let baseTitle = analyses[0].title;
-            if(baseTitle.includes('-')) baseTitle = baseTitle.split('-')[0].trim();
-            content += `<h3 class="text-3xl font-black mb-8 italic uppercase tracking-tighter text-slate-800 dark:text-white border-b pb-4 dark:border-slate-800">${baseTitle} - Detaylı Rapor</h3>`;
-
-            analyses.forEach((a, index) => {
-                let qTable = '';
-                if (a.question_details && a.question_details.length > 0) {
-                    qTable = `<div class="grid grid-cols-5 font-black text-[10px] text-slate-400 uppercase mb-3 px-3"><span class="col-span-1">No</span><span class="col-span-2">Konu</span><span class="col-span-1 text-center">Doğru</span><span class="col-span-1 text-center">Öğrenci</span></div>`;
-                    qTable += a.question_details.map(q => {
-                        const isCorrect = q.correct === q.student;
-                        const isEmpty = q.student === '-';
-                        const color = isCorrect ? 'text-green-600 bg-green-50 dark:bg-green-900/20' : (isEmpty ? 'text-slate-500 bg-slate-50 dark:bg-slate-800' : 'text-red-600 bg-red-50 dark:bg-red-900/20');
-                        const icon = isCorrect ? 'fa-check' : (isEmpty ? 'fa-minus' : 'fa-times');
-                        return `<div class="grid grid-cols-5 items-center p-3 mb-2 rounded-xl text-xs font-bold ${color} transition hover:brightness-95"><span class="col-span-1">${q.no}</span><span class="col-span-2 truncate" title="${q.topic}">${q.topic}</span><span class="col-span-1 text-center font-black">${q.correct}</span><span class="col-span-1 text-center"><i class="fa-solid ${icon} mr-1"></i> ${q.student}</span></div>`;
-                    }).join('');
-                } else {
-                    qTable = `<p class="text-xs italic text-slate-400 p-4">Bu test için soru soru detay girilmemiş.</p>`;
+            try {
+                if (!taskId || taskId === 'null' || taskId === 'undefined') {
+                    return alert("Bu eski bir görev olduğu için detaylı analizi bulunmuyor. Yeni bir analiz oluşturmalısınız.");
                 }
 
-                content += `
-                    <div class="mb-10 p-8 border-2 border-slate-100 dark:border-slate-800 rounded-[2rem] bg-white dark:bg-darkCard shadow-sm">
-                        <div class="flex flex-col md:flex-row justify-between items-center mb-6">
-                            <h4 class="text-xl font-black text-blue-600 italic uppercase">${a.title}</h4>
-                            <div class="flex gap-4 mt-2 md:mt-0">
-                                <span class="px-4 py-2 bg-green-50 text-green-600 rounded-xl font-black text-xs">${a.correct_count} Doğru</span>
-                                <span class="px-4 py-2 bg-red-50 text-red-600 rounded-xl font-black text-xs">${a.wrong_count} Yanlış</span>
-                                <span class="px-4 py-2 bg-slate-100 text-slate-500 rounded-xl font-black text-xs">${a.empty_count} Boş</span>
-                            </div>
-                        </div>
-                        <div class="bg-slate-50 dark:bg-slate-900 p-4 rounded-2xl border dark:border-slate-800 max-h-60 overflow-y-auto">${qTable}</div>
-                    </div>
-                `;
-            });
+                const { data: analyses, error } = await supabaseClient.from('detailed_analyses').select('*').eq('task_id', taskId).eq('student_id', studentId).order('created_at', { ascending: true });
+                if(error) throw error;
+                if(!analyses || analyses.length === 0) return alert("Bu görev için henüz analiz detayı girilmemiş.");
 
-            document.getElementById('analysis-detail-content').innerHTML = content;
-            document.getElementById('analysis-detail-modal').classList.remove('hidden');
+                const hideModalCommand = "document.getElementById('analysis-detail-modal').classList.add('hidden'); document.getElementById('analysis-detail-modal').classList.remove('flex');";
+                let content = `<button onclick="${hideModalCommand}" class="absolute top-8 right-8 text-slate-400 hover:text-slate-600 transition z-50"><i class="fa-solid fa-xmark text-3xl"></i></button>`;
+                
+                let baseTitle = analyses[0].title || 'Analiz Raporu';
+                if(baseTitle.includes('-')) baseTitle = baseTitle.split('-')[0].trim();
+                content += `<h3 class="text-3xl font-black mb-8 italic uppercase tracking-tighter text-slate-800 dark:text-white border-b pb-4 dark:border-slate-800">${baseTitle} - Detaylı Rapor</h3>`;
+
+                analyses.forEach((a, index) => {
+                    let qTable = '';
+                    if (a.question_details && a.question_details.length > 0) {
+                        qTable = `<div class="grid grid-cols-5 font-black text-[10px] text-slate-400 uppercase mb-3 px-3"><span class="col-span-1">No</span><span class="col-span-2">Konu</span><span class="col-span-1 text-center">Doğru</span><span class="col-span-1 text-center">Öğrenci</span></div>`;
+                        qTable += a.question_details.map(q => {
+                            const isCorrect = q.correct === q.student;
+                            const isEmpty = q.student === '-';
+                            const color = isCorrect ? 'text-green-600 bg-green-50 dark:bg-green-900/20' : (isEmpty ? 'text-slate-500 bg-slate-50 dark:bg-slate-800' : 'text-red-600 bg-red-50 dark:bg-red-900/20');
+                            const icon = isCorrect ? 'fa-check' : (isEmpty ? 'fa-minus' : 'fa-times');
+                            return `<div class="grid grid-cols-5 items-center p-3 mb-2 rounded-xl text-xs font-bold ${color} transition hover:brightness-95"><span class="col-span-1">${q.no}</span><span class="col-span-2 truncate" title="${q.topic}">${q.topic}</span><span class="col-span-1 text-center font-black">${q.correct}</span><span class="col-span-1 text-center"><i class="fa-solid ${icon} mr-1"></i> ${q.student}</span></div>`;
+                        }).join('');
+                    } else {
+                        qTable = `<p class="text-xs italic text-slate-400 p-4">Bu test için soru detayları girilmemiş.</p>`;
+                    }
+
+                    content += `
+                        <div class="mb-10 p-8 border-2 border-slate-100 dark:border-slate-800 rounded-[2rem] bg-white dark:bg-darkCard shadow-sm relative">
+                            <div class="flex flex-col md:flex-row justify-between items-center mb-6">
+                                <h4 class="text-xl font-black text-blue-600 italic uppercase">${a.title || 'İsimsiz Test'}</h4>
+                                <div class="flex gap-4 mt-2 md:mt-0">
+                                    <span class="px-4 py-2 bg-green-50 text-green-600 rounded-xl font-black text-xs">${a.correct_count} Doğru</span>
+                                    <span class="px-4 py-2 bg-red-50 text-red-600 rounded-xl font-black text-xs">${a.wrong_count} Yanlış</span>
+                                    <span class="px-4 py-2 bg-slate-100 text-slate-500 rounded-xl font-black text-xs">${a.empty_count} Boş</span>
+                                </div>
+                            </div>
+                            <div class="bg-slate-50 dark:bg-slate-900 p-4 rounded-2xl border dark:border-slate-800 max-h-60 overflow-y-auto">${qTable}</div>
+                        </div>
+                    `;
+                });
+
+                document.getElementById('analysis-detail-content').innerHTML = content;
+                // DÜZELTME: Görünmezlik sorununu çözmek için flex eklendi.
+                const modal = document.getElementById('analysis-detail-modal');
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+            } catch (err) {
+                console.error("Modal Error:", err);
+                alert("Analiz detayları yüklenirken bir hata oluştu.");
+            }
         }
 
-        // --- ANALİZ MOTORU (TEACHER) ---
+        // --- YENİ: ANALİZ MOTORU (TEACHER) ---
         window.renderTeacherAnalytics = async function() {
             document.getElementById('page-title').innerText = 'Gelişmiş Analiz Merkezi';
             const { data: students } = await supabaseClient.from('profiles').select('*').eq('role', 'student');
@@ -366,7 +379,7 @@
             analyses?.forEach(a => {
                 const key = a.task_id + '_' + a.student_id;
                 if(!grouped[key]) {
-                    let baseTitle = a.title;
+                    let baseTitle = a.title || 'İsimsiz Görev';
                     if(baseTitle.includes('-')) baseTitle = baseTitle.split('-')[0].trim();
                     grouped[key] = { task_id: a.task_id, student_id: a.student_id, student_name: a.profiles?.full_name, title: baseTitle, type: a.type, tests: [] };
                 }
@@ -474,7 +487,7 @@
             const type = document.getElementById('an-type').value;
             const taskSelect = document.getElementById('an-task');
             
-            const taskId = taskSelect.value; // FIXED: Artık Random ID değil, gerçek Görev ID'si kaydediliyor.
+            const taskId = taskSelect.value;
             const title = document.getElementById('an-title').value || taskSelect.options[taskSelect.selectedIndex].text;
             const count = parseInt(document.getElementById('an-qcount').value);
 
@@ -494,7 +507,6 @@
                 else if(stud === corr) { correctCount++; topicAnalysis[topic].correct++; }
                 else { wrongCount++; topicAnalysis[topic].wrong++; }
 
-                // Soru detayını diziye ekliyoruz
                 questionDetails.push({ no: i, topic: topic, correct: corr, student: stud });
             }
 
@@ -508,10 +520,9 @@
             if(error) {
                 alert("Kaydetme Hatası: " + error.message); 
             } else { 
-                // YENİ: Otomatik Puan Ekleme (% başarı oranının 10'da 1'i)
                 const scorePercentage = (correctCount / count) * 100;
                 const addedPoints = Math.round(scorePercentage / 10);
-                const pointCategory = type === 'exam' ? 'Sınav Uygulama' : 'Ödev Yapma'; // DB Kısıtlamasına uygun kategori
+                const pointCategory = type === 'exam' ? 'Sınav Uygulama' : 'Ödev Yapma';
                 
                 await supabaseClient.from('points').insert([{ student_id: sid, category: pointCategory, amount: addedPoints }]);
                 
@@ -522,8 +533,6 @@
 
         window.deleteAnalysisGroup = async function(taskId, studentId) {
             if(confirm("Bu göreve ait TÜM test analizlerini silmek istediğine emin misin Ali Hoca? Silinirse öğrencinin kazandığı puanlar da geri alınacaktır.")) {
-                
-                // Puanları geri almak için silinecek analizleri çek
                 const { data: analysesToDelete } = await supabaseClient.from('detailed_analyses').select('*').eq('task_id', taskId).eq('student_id', studentId);
                 
                 if (analysesToDelete) {
@@ -531,12 +540,9 @@
                         const scorePercentage = (a.correct_count / a.total_questions) * 100;
                         const removedPoints = Math.round(scorePercentage / 10);
                         const pointCategory = a.type === 'exam' ? 'Sınav Uygulama' : 'Ödev Yapma';
-                        // Negatif puan girerek işlemi tersine çeviriyoruz
                         await supabaseClient.from('points').insert([{ student_id: a.student_id, category: pointCategory, amount: -removedPoints }]);
                     }
                 }
-
-                // Analizleri sil
                 const { error } = await supabaseClient.from('detailed_analyses').delete().eq('task_id', taskId).eq('student_id', studentId);
                 if(error) alert(error.message); else { alert("Analizler ve ilgili puanlar başarıyla silindi!"); window.renderTeacherAnalytics(); }
             }
@@ -626,7 +632,7 @@
             const grouped = {};
             analyses?.forEach(a => {
                 if(!grouped[a.task_id]) {
-                    let baseTitle = a.title;
+                    let baseTitle = a.title || 'İsimsiz Görev';
                     if(baseTitle.includes('-')) baseTitle = baseTitle.split('-')[0].trim();
                     grouped[a.task_id] = { task_id: a.task_id, title: baseTitle, type: a.type, tests: [] };
                 }
@@ -664,14 +670,13 @@
             try {
                 const { data: exams } = await supabaseClient.from('exams').select('*').eq('student_id', userProfile.id);
                 const { data: mySubs } = await supabaseClient.from('submissions').select('exam_id, score').eq('student_id', userProfile.id);
-                // Öğrencinin bu sınava ait detaylı analizinin olup olmadığını kontrol et
                 const { data: analyses } = await supabaseClient.from('detailed_analyses').select('task_id').eq('student_id', userProfile.id).eq('type', 'exam');
                 
                 const subMap = {}; mySubs?.forEach(s => { subMap[s.exam_id] = s; });
                 const analyzedTaskIds = new Set(analyses?.map(a => a.task_id));
 
                 let html = exams?.map(e => {
-                    const submission = subMap[e.id]; // Eğer varsa sınav bitmiş demektir
+                    const submission = subMap[e.id]; 
                     const hasAnalysis = analyzedTaskIds.has(e.id);
                     
                     let buttonsHTML = '';
@@ -682,7 +687,6 @@
                     }
 
                     if(hasAnalysis) {
-                        // Analizi Gör Butonu
                         buttonsHTML += `<button onclick="window.showGroupedAnalysisModal('${e.id}', '${userProfile.id}')" class="px-6 py-4 bg-orange-50 text-orange-600 rounded-2xl font-black text-[10px] uppercase shadow-sm border border-orange-100 transition hover:scale-105" title="Analizi Gör"><i class="fa-solid fa-chart-pie text-lg"></i></button>`;
                     }
 
@@ -727,7 +731,6 @@
                 document.getElementById('page-title').innerText = 'Ödevlerim';
                 const { data: hws } = await supabaseClient.from('homeworks').select('*').eq('student_id', userProfile.id);
                 const { data: mySubs } = await supabaseClient.from('homework_submissions').select('homework_id').eq('student_id', userProfile.id);
-                // Öğrencinin bu ödeve ait analizinin olup olmadığını kontrol et
                 const { data: analyses } = await supabaseClient.from('detailed_analyses').select('task_id').eq('student_id', userProfile.id).eq('type', 'homework');
                 
                 const subIds = mySubs?.map(s => s.homework_id) || [];
@@ -743,27 +746,26 @@
                     if (isSent) {
                         actionButtons += `<span class="px-6 py-4 bg-green-50 text-green-600 rounded-2xl font-black text-[10px] uppercase flex items-center gap-2 italic shadow-sm border border-green-200"><i class="fa-solid fa-check-circle"></i> Gönderildi</span>`;
                     } else {
-                        actionButtons += `<button onclick="showSubmitForm('${h.id}')" class="px-6 py-4 brand-bg text-white rounded-2xl font-black text-[10px] uppercase shadow-lg transition hover:scale-105">Ödevi Yükle</button>`;
+                        actionButtons += `<button onclick="window.showSubmitForm('${h.id}')" class="px-6 py-4 brand-bg text-white rounded-2xl font-black text-[10px] uppercase shadow-lg transition hover:scale-105">Ödevi Yükle</button>`;
                     }
 
                     if (hasAnalysis) {
-                        // Analizi Gör Butonu
                         actionButtons += `<button onclick="window.showGroupedAnalysisModal('${h.id}', '${userProfile.id}')" class="px-6 py-4 bg-orange-50 text-orange-600 rounded-2xl font-black text-[10px] uppercase shadow-sm border border-orange-100 transition hover:scale-105" title="Analizi Gör"><i class="fa-solid fa-chart-pie text-lg"></i></button>`;
                     }
 
                     return `<div class="bg-white dark:bg-darkCard p-8 rounded-[2.5rem] border flex flex-col md:flex-row justify-between items-center gap-6 shadow-sm mb-4 transition hover:shadow-md"><div class="flex items-center gap-6"><div class="h-16 w-16 bg-orange-50 dark:bg-orange-900/30 text-orange-600 rounded-2xl flex items-center justify-center text-2xl shadow-inner"><i class="fa-solid fa-file-pdf"></i></div><div><h4 class="text-xl font-black italic uppercase tracking-tighter">${h.title}</h4><p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1 italic">Bitiş: ${new Date(h.deadline).toLocaleString('tr-TR')}</p></div></div><div class="flex gap-3">${actionButtons}</div></div>`;
                 }).join('') || '<p class="py-20 text-center italic text-slate-400">Henüz ödev atanmadı.</p>';
-                document.getElementById('view-content').innerHTML = `<div class="view-fade">${hHTML}</div><div id="submit-overlay" class="fixed inset-0 z-[150] bg-slate-900/60 backdrop-blur-md hidden flex items-center justify-center p-6"><div class="max-w-lg w-full bg-white dark:bg-darkCard p-12 rounded-[4rem] shadow-2xl relative view-fade"><button onclick="document.getElementById('submit-overlay').classList.add('hidden')" class="absolute top-10 right-10 text-slate-400 transition hover:scale-110"><i class="fa-solid fa-xmark text-2xl"></i></button><h3 class="text-2xl font-black mb-8 italic uppercase text-slate-800 dark:text-white">Çözüm Gönder</h3><form id="hw-submit-form" class="space-y-6"><input type="hidden" id="submit-hw-id"><div id="file-list-container" class="space-y-2 mb-4"></div><button type="button" onclick="document.getElementById('file-input-multi').click()" class="w-full p-6 border-2 border-dashed rounded-[2rem] text-slate-400 text-[10px] font-black uppercase"><i class="fa-solid fa-plus-circle text-2xl mb-2 block"></i> Fotoğraf Ekle</button><input type="file" id="file-input-multi" class="hidden" multiple onchange="addFilesToSubmission(this)"><textarea id="submit-note" placeholder="Notun..." class="w-full p-5 rounded-2xl border dark:bg-darkBg h-32 outline-none font-medium"></textarea><button type="submit" id="submit-btn-final" class="w-full brand-bg text-white py-5 rounded-[2rem] font-black uppercase text-xs">Bitir ve Gönder</button></form></div></div>`;
+                document.getElementById('view-content').innerHTML = `<div class="view-fade">${hHTML}</div><div id="submit-overlay" class="fixed inset-0 z-[150] bg-slate-900/60 backdrop-blur-md hidden flex items-center justify-center p-6"><div class="max-w-lg w-full bg-white dark:bg-darkCard p-12 rounded-[4rem] shadow-2xl relative view-fade"><button onclick="document.getElementById('submit-overlay').classList.add('hidden')" class="absolute top-10 right-10 text-slate-400 transition hover:scale-110"><i class="fa-solid fa-xmark text-2xl"></i></button><h3 class="text-2xl font-black mb-8 italic uppercase text-slate-800 dark:text-white">Çözüm Gönder</h3><form id="hw-submit-form" class="space-y-6"><input type="hidden" id="submit-hw-id"><div id="file-list-container" class="space-y-2 mb-4"></div><button type="button" onclick="document.getElementById('file-input-multi').click()" class="w-full p-6 border-2 border-dashed rounded-[2rem] text-slate-400 text-[10px] font-black uppercase"><i class="fa-solid fa-plus-circle text-2xl mb-2 block"></i> Fotoğraf Ekle</button><input type="file" id="file-input-multi" class="hidden" multiple onchange="window.addFilesToSubmission(this)"><textarea id="submit-note" placeholder="Notun..." class="w-full p-5 rounded-2xl border dark:bg-darkBg h-32 outline-none font-medium"></textarea><button type="submit" id="submit-btn-final" class="w-full brand-bg text-white py-5 rounded-[2rem] font-black uppercase text-xs">Bitir ve Gönder</button></form></div></div>`;
             } catch(e) { console.error(e); }
         }
 
-        function addFilesToSubmission(input) { if (input.files) { Array.from(input.files).forEach(f => studentSelectedFiles.push(f)); updateFileUI(); input.value = ""; } }
-        function removeFile(idx) { studentSelectedFiles.splice(idx, 1); updateFileUI(); }
-        function updateFileUI() { const cont = document.getElementById('file-list-container'); if(cont) cont.innerHTML = studentSelectedFiles.map((f, i) => `<div class="flex justify-between items-center p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl text-[10px] font-black uppercase tracking-widest mb-2"><span><i class="fa-solid fa-image mr-2 text-blue-500"></i>${f.name}</span><button onclick="removeFile(${i})" class="text-red-400 p-1"><i class="fa-solid fa-times"></i></button></div>`).join(''); }
-        function showSubmitForm(hid) { studentSelectedFiles = []; document.getElementById('submit-hw-id').value = hid; document.getElementById('submit-overlay').classList.remove('hidden'); updateFileUI(); }
+        window.addFilesToSubmission = function(input) { if (input.files) { Array.from(input.files).forEach(f => studentSelectedFiles.push(f)); window.updateFileUI(); input.value = ""; } }
+        window.removeFile = function(idx) { studentSelectedFiles.splice(idx, 1); window.updateFileUI(); }
+        window.updateFileUI = function() { const cont = document.getElementById('file-list-container'); if(cont) cont.innerHTML = studentSelectedFiles.map((f, i) => `<div class="flex justify-between items-center p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl text-[10px] font-black uppercase tracking-widest mb-2"><span><i class="fa-solid fa-image mr-2 text-blue-500"></i>${f.name}</span><button type="button" onclick="window.removeFile(${i})" class="text-red-400 p-1"><i class="fa-solid fa-times"></i></button></div>`).join(''); }
+        window.showSubmitForm = function(hid) { studentSelectedFiles = []; document.getElementById('submit-hw-id').value = hid; document.getElementById('submit-overlay').classList.remove('hidden'); window.updateFileUI(); }
         document.addEventListener('submit', async (e) => { if(e.target.id === 'hw-submit-form') { e.preventDefault(); const btn = document.getElementById('submit-btn-final'); if (studentSelectedFiles.length === 0) return alert("En az 1 dosya seç!"); btn.disabled = true; btn.innerText = "GÖNDERİLİYOR..."; try { const urls = []; for (let f of studentSelectedFiles) { urls.push(await uploadFile(f, 'student-submissions')); } await supabaseClient.from('homework_submissions').insert([{ homework_id: document.getElementById('submit-hw-id').value, student_id: userProfile.id, file_urls: urls, note: document.getElementById('submit-note').value }]); alert("Ödev başarıyla gönderildi!"); document.getElementById('submit-overlay').classList.add('hidden'); window.renderStudentHomeworks(); } catch (err) { alert(err.message); btn.disabled = false; } } });
 
-        // --- OTHER STANDART MODULES ---
+        // --- STUDENT MODULES ---
         async function renderStudentLessons() { 
             try { 
                 document.getElementById('page-title').innerText = 'Derslerim'; 
@@ -777,6 +779,8 @@
         }
 
         async function renderStudentPoints() { const { data: p } = await supabaseClient.from('points').select('*').eq('student_id', userProfile.id).order('created_at', { ascending: false }); const total = p?.reduce((acc, curr) => acc + curr.amount, 0) || 0; const last3 = p?.slice(0, 3) || []; let l3 = last3.map(pt => `<div class="p-6 bg-white dark:bg-darkCard border-2 brand-border rounded-[2rem] flex justify-between items-center shadow-sm mb-4"><div><p class="font-black text-lg">${pt.category}</p><p class="text-xs text-slate-400 font-bold uppercase">${new Date(pt.created_at).toLocaleDateString('tr-TR')}</p></div><span class="text-2xl font-black ${pt.amount >= 0 ? 'text-green-500' : 'text-red-500'}">${pt.amount > 0 ? '+' : ''}${pt.amount}</span></div>`).join('') || '<p class="text-xs italic text-slate-400">Puan yok.</p>'; document.getElementById('view-content').innerHTML = `<div class="grid md:grid-cols-2 gap-10 view-fade"><div class="brand-bg p-12 rounded-[4rem] text-white shadow-2xl flex flex-col items-center justify-center italic font-black"><span class="text-sm uppercase opacity-50 mb-2">Toplam Skor</span><span class="text-8xl">${total}</span></div><div class="space-y-6"><h4 class="font-black text-[10px] uppercase tracking-[0.2em] text-slate-400 italic mb-4">Son 3 Kazanımın</h4>${l3}</div></div>`; }
+
+        // --- OTHER UTILS ---
         async function renderTeacherSettings() { try { document.getElementById('page-title').innerText = 'Sistem Kodları'; const types = ['study', 'sordur', 'lgs']; let html = '<div class="grid gap-10 view-fade">'; for(let t of types) { const { data } = await supabaseClient.from('dynamic_content').select('html_content').eq('type', t).maybeSingle(); html += `<div class="bg-white dark:bg-darkCard p-10 rounded-[3rem] border shadow-sm transition hover:shadow-xl"><h4 class="font-black mb-4 uppercase brand-text text-[10px] tracking-widest italic">${t} Modülü</h4><textarea id="code-${t}" class="w-full h-80 p-6 font-mono text-xs bg-slate-900 text-green-400 rounded-[2rem] outline-none border-8 border-slate-800 dark:border-slate-950 mb-6 shadow-inner">${data?.html_content || ''}</textarea><button onclick="saveDynamicCode('${t}')" class="brand-bg text-white px-10 py-4 rounded-2xl font-black text-xs uppercase shadow-xl transition hover:scale-105">GÜNCELLE</button></div>`; } document.getElementById('view-content').innerHTML = html + '</div>'; } catch(e) { console.error(e); } }
         async function saveDynamicCode(t) { const h = document.getElementById('code-' + t).value; const { error } = await supabaseClient.from('dynamic_content').upsert({ type: t, html_content: h }); if (!error) alert("Güncellendi!"); }
         async function deleteItem(t, id, cb) { if(confirm("Emin misin Ali Hoca?")) { const { error } = await supabaseClient.from(t).delete().eq('id', id); if(!error) cb(); else alert("Hata: " + error.message); } }
