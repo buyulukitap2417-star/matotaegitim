@@ -38,8 +38,11 @@
         .dynamic-frame { width: 100%; min-height: 80vh; border: none; border-radius: 1.5rem; background: white; }
         .q-opt-btn.selected { background-color: #ea580c !important; color: white !important; border-color: transparent !important; }
         .theme-blue .q-opt-btn.selected { background-color: #2563eb !important; }
-        #custom-modal, #analysis-detail-modal { display: none; }
-        #custom-modal.active, #analysis-detail-modal.active { display: flex; }
+        
+        /* GÖRÜNMEZLİK HATASI DÜZELTİLDİ: Analiz Modalı buradaki ezici kurallardan çıkarıldı. */
+        #custom-modal { display: none; }
+        #custom-modal.active { display: flex; }
+        
         .hero-gradient { background: radial-gradient(circle at top right, rgba(37, 99, 235, 0.1), transparent); }
     </style>
 </head>
@@ -142,7 +145,8 @@
         </div>
     </div>
 
-    <!-- Geniş Detaylı Analiz Modalı (Grid Layout) -->
+    <!-- Geniş Detaylı Analiz Modalı (Grid Layout & Error Protection) -->
+    <!-- DÜZELTME: Bu modaldan CSS display kuralları çıkarıldı, görünmezlik kalkanı aşıldı! -->
     <div id="analysis-detail-modal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-md hidden items-center justify-center p-4" style="z-index: 99999;">
         <div class="max-w-[95vw] lg:max-w-7xl w-full bg-white dark:bg-darkCard p-8 md:p-12 rounded-[3rem] shadow-2xl relative view-fade max-h-[90vh] overflow-y-auto" id="analysis-detail-content">
         </div>
@@ -183,6 +187,7 @@
         let tempQuestions = [];
         let studentSelectedFiles = [];
         
+        // Konuları koda gömdük. 404 hatasını ve çöküşü bitirir.
         const globalTopics = [
             'Çarpanlar ve Katlar', 'Üslü İfadeler', 'Kareköklü İfadeler', 'Veri Analizi', 
             'Basit Olayların Olma Olasılığı', 'Cebirsel İfadeler ve Özdeşlikler', 
@@ -267,6 +272,7 @@
         window.closeAnalysisModal = function() {
             const modal = document.getElementById('analysis-detail-modal');
             if(modal) {
+                // Tailwind classları ile kontrol ediliyor, CSS çakışması yok.
                 modal.classList.add('hidden');
                 modal.classList.remove('flex');
             }
@@ -876,42 +882,26 @@
             window.updateExamUI(); 
         }
 
-        window.addFilesToSubmission = function(input) { 
-            if (input.files) { 
-                Array.from(input.files).forEach(f => studentSelectedFiles.push(f)); 
-                window.updateFileUI(); 
-                input.value = ""; 
-            } 
-        }
-
-        window.removeFile = function(idx) { 
-            studentSelectedFiles.splice(idx, 1); 
-            window.updateFileUI(); 
-        }
-
-        window.updateFileUI = function() { 
-            const cont = document.getElementById('file-list-container'); 
-            if(cont) {
-                cont.innerHTML = (studentSelectedFiles || []).map((f, i) => `
-                    <div class="flex justify-between items-center p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl text-[10px] font-black uppercase tracking-widest mb-2">
-                        <span><i class="fa-solid fa-image mr-2 text-blue-500"></i>${f.name}</span>
-                        <button type="button" onclick="window.removeFile(${i})" class="text-red-400 p-1"><i class="fa-solid fa-times"></i></button>
-                    </div>
-                `).join(''); 
+        window.finishExam = async function() { 
+            clearInterval(examTimerInterval); 
+            let score = 0; 
+            if(activeExamData && activeExamData.questions) {
+                activeExamData.questions.forEach((q, i) => { if(q.correct === studentAnswers[i]) score++; }); 
+                const finalScore = (score / activeExamData.questions.length) * 100;
+                
+                const { error } = await supabaseClient.from('submissions').insert([{ exam_id: activeExamData.id, student_id: userProfile.id, answers: studentAnswers, score: finalScore }]); 
+                if (error) {
+                    alert("Sınav kaydedilirken hata oluştu: " + error.message);
+                } else {
+                    document.getElementById('exam-overlay').classList.add('hidden'); 
+                    window.renderStudentExams(); 
+                    alert("Sınav tamamlandı! Puanın: " + finalScore.toFixed(0));
+                }
             }
         }
 
-        window.showSubmitForm = function(hid) { 
-            studentSelectedFiles = []; 
-            document.getElementById('submit-hw-id').value = hid; 
-            const overlay = document.getElementById('submit-overlay'); 
-            overlay.classList.remove('hidden'); 
-            overlay.classList.add('flex'); 
-            window.updateFileUI(); 
-        }
-
         // ==========================================
-        // EĞİTMEN (TEACHER) MODÜLLERİ
+        // EGITMEN (TEACHER) MODÜLLERİ
         // ==========================================
         window.renderTeacherAnalytics = async function() {
             document.getElementById('page-title').innerText = 'Gelişmiş Analiz Merkezi';
