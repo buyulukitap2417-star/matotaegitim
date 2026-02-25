@@ -883,20 +883,38 @@
         }
 
         window.finishExam = async function() { 
-            clearInterval(examTimerInterval); 
-            let score = 0; 
-            if(activeExamData && activeExamData.questions) {
-                activeExamData.questions.forEach((q, i) => { if(q.correct === studentAnswers[i]) score++; }); 
-                const finalScore = (score / activeExamData.questions.length) * 100;
+            try {
+                clearInterval(examTimerInterval); 
+                let score = 0; 
+                let totalQs = activeExamData.questions ? activeExamData.questions.length : 0;
                 
-                const { error } = await supabaseClient.from('submissions').insert([{ exam_id: activeExamData.id, student_id: userProfile.id, answers: studentAnswers, score: finalScore }]); 
-                if (error) {
-                    alert("Sınav kaydedilirken hata oluştu: " + error.message);
+                if (totalQs > 0) {
+                    activeExamData.questions.forEach((q, i) => { if(q.correct === studentAnswers[i]) score++; }); 
+                    const finalScore = (score / totalQs) * 100;
+                    
+                    const { error } = await supabaseClient.from('submissions').insert([{ 
+                        exam_id: activeExamData.id, 
+                        student_id: userProfile.id, 
+                        answers: studentAnswers, 
+                        score: finalScore 
+                    }]); 
+                    
+                    if (error) {
+                        alert("Sınav kaydedilirken hata oluştu: " + error.message);
+                    } else {
+                        document.getElementById('exam-overlay').classList.add('hidden'); 
+                        alert("Sınav başarıyla tamamlandı! Puanın: " + finalScore.toFixed(0));
+                        // DÜZELTME: Ekranı yenilemeden önce verinin işlenmesini BEKLE. (Kilitleme Garantisi)
+                        await window.renderStudentExams(); 
+                    }
                 } else {
-                    document.getElementById('exam-overlay').classList.add('hidden'); 
-                    window.renderStudentExams(); 
-                    alert("Sınav tamamlandı! Puanın: " + finalScore.toFixed(0));
+                    document.getElementById('exam-overlay').classList.add('hidden');
+                    alert("Bu sınavda soru bulunmuyor.");
+                    await window.renderStudentExams();
                 }
+            } catch (err) {
+                console.error("Sınav Gönderme Hatası:", err);
+                alert("Sınav bitirilirken beklenmeyen bir hata oluştu.");
             }
         }
 
@@ -1177,30 +1195,52 @@
         }
 
         window.renderTeacherExams = async function() { 
-            document.getElementById('page-title').innerText = 'Sınav Hazırlama'; 
+            document.getElementById('page-title').innerText = 'Sınav Hazırlama ve Sonuçlar'; 
             const { data: students } = await supabaseClient.from('profiles').select('*').eq('role', 'student'); 
+            
+            // YENİ EKLENDİ: Öğrencilerin çözdüğü online sınav sonuçlarını getir
+            const { data: subs } = await supabaseClient.from('submissions').select('*, profiles(full_name), exams(title)').order('created_at', { ascending: false });
+            let subsHTML = (subs || []).map(s => `
+                <div class="p-6 bg-white dark:bg-darkCard border-2 brand-border rounded-[2rem] shadow-sm mb-4 flex justify-between items-center transition hover:shadow-md">
+                    <div>
+                        <h5 class="font-black italic uppercase text-sm">${s.exams?.title || 'Bilinmeyen Sınav'}</h5>
+                        <p class="text-[10px] font-bold text-slate-400 mt-1">${s.profiles?.full_name || 'Öğrenci'} • ${new Date(s.created_at).toLocaleString('tr-TR')}</p>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-2xl font-black text-green-500">%${Math.round(s.score)}</span>
+                    </div>
+                </div>
+            `).join('') || '<p class="text-center italic text-xs text-slate-400 p-10 font-bold uppercase">Henüz çözülen bir sınav yok.</p>';
+
             const draft = JSON.parse(localStorage.getItem('exam_draft') || 'null'); 
             if (draft && tempQuestions.length === 0) tempQuestions = draft.questions || []; 
             
             document.getElementById('view-content').innerHTML = `
                 <div class="grid md:grid-cols-2 gap-10 view-fade">
-                    <div class="bg-white dark:bg-darkCard p-8 rounded-[2.5rem] border shadow-sm h-fit space-y-4">
-                        <select id="ex-student" class="w-full p-4 rounded-2xl border dark:bg-darkBg font-bold outline-none">
-                            ${(students||[]).map(s => `<option value="${s.id}" ${draft?.student_id === s.id ? 'selected' : ''}>${s.full_name}</option>`).join('')}
-                        </select>
-                        <input type="text" id="ex-title" value="${draft?.title || ''}" placeholder="Sınav Başlığı" class="w-full p-4 rounded-2xl border dark:bg-darkBg font-black uppercase">
-                        <input type="number" id="ex-duration" value="${draft?.duration || ''}" placeholder="Süre (DK)" class="w-full p-4 rounded-2xl border dark:bg-darkBg font-black">
-                        <div class="p-6 border-2 border-dashed rounded-3xl space-y-4 bg-slate-50 dark:bg-slate-900">
-                            <input type="file" id="q-file" class="w-full text-[10px]">
-                            <div class="grid grid-cols-4 gap-2">
-                                ${['A','B','C','D'].map(o => `<button type="button" onclick="window.selCorrect('${o}')" class="q-opt-btn p-3 rounded-xl border dark:border-slate-800 font-black" id="btn-q-${o}">${o}</button>`).join('')}
+                    <div class="space-y-6">
+                        <div class="bg-white dark:bg-darkCard p-8 rounded-[2.5rem] border shadow-sm space-y-4">
+                            <h4 class="font-black text-lg mb-2 italic uppercase tracking-tighter">Yeni Sınav Oluştur</h4>
+                            <select id="ex-student" class="w-full p-4 rounded-2xl border dark:bg-darkBg font-bold outline-none">
+                                ${(students||[]).map(s => `<option value="${s.id}" ${draft?.student_id === s.id ? 'selected' : ''}>${s.full_name}</option>`).join('')}
+                            </select>
+                            <input type="text" id="ex-title" value="${draft?.title || ''}" placeholder="Sınav Başlığı" class="w-full p-4 rounded-2xl border dark:bg-darkBg font-black uppercase">
+                            <input type="number" id="ex-duration" value="${draft?.duration || ''}" placeholder="Süre (DK)" class="w-full p-4 rounded-2xl border dark:bg-darkBg font-black">
+                            <div class="p-6 border-2 border-dashed rounded-3xl space-y-4 bg-slate-50 dark:bg-slate-900">
+                                <input type="file" id="q-file" class="w-full text-[10px]">
+                                <div class="grid grid-cols-4 gap-2">
+                                    ${['A','B','C','D'].map(o => `<button type="button" onclick="window.selCorrect('${o}')" class="q-opt-btn p-3 rounded-xl border dark:border-slate-800 font-black" id="btn-q-${o}">${o}</button>`).join('')}
+                                </div>
+                                <input type="hidden" id="q-correct">
+                                <button type="button" onclick="window.addQToTemp()" class="w-full brand-bg text-white py-3 rounded-xl font-black text-[10px] uppercase shadow-lg transition hover:scale-105">Havuza Ekle</button>
                             </div>
-                            <input type="hidden" id="q-correct">
-                            <button type="button" onclick="window.addQToTemp()" class="w-full brand-bg text-white py-3 rounded-xl font-black text-[10px] uppercase shadow-lg">Havuza Ekle</button>
+                            <button type="button" onclick="window.publishExamFinal()" class="w-full bg-slate-900 dark:bg-white dark:text-slate-900 py-5 rounded-[2.5rem] font-black text-xl shadow-2xl transition hover:scale-105">SINAVI GÖNDER</button>
                         </div>
-                        <button type="button" onclick="window.publishExamFinal()" class="w-full bg-slate-900 dark:bg-white dark:text-slate-900 py-5 rounded-[2.5rem] font-black text-xl shadow-2xl transition hover:scale-105">SINAVI GÖNDER</button>
+                        <div id="q-preview-list" class="space-y-4"></div>
                     </div>
-                    <div id="q-preview-list" class="space-y-4"></div>
+                    <div class="space-y-4">
+                        <h4 class="font-black text-[10px] uppercase text-slate-400 tracking-[0.2em] italic mb-4">Öğrenci Sınav Sonuçları (Online)</h4>
+                        ${subsHTML}
+                    </div>
                 </div>
             `; 
             window.renderQPreview(); 
