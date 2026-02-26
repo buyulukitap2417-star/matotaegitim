@@ -88,7 +88,7 @@
             <div class="max-w-4xl mx-auto bg-slate-900 text-white rounded-[4rem] p-12 md:p-20 shadow-2xl relative overflow-hidden">
                 <div class="relative z-10 grid md:grid-cols-2 gap-12 items-center">
                     <div><h2 class="text-4xl font-black mb-6 italic tracking-tighter">İletişime Geç.</h2><p class="text-slate-400 mb-8">Sorularını rasyonel bir dille iletebilirsin.</p></div>
-                    <form id="contact-form" class="space-y-4">
+                    <form id="contact-form" class="space-y-4" onsubmit="window.submitContactForm(event)">
                         <input type="text" id="c-name" placeholder="Ad Soyad" required class="w-full px-6 py-4 bg-white/10 border border-white/10 rounded-2xl outline-none text-slate-100"><input type="email" id="c-email" placeholder="E-posta" required class="w-full px-6 py-4 bg-white/10 border border-white/10 rounded-2xl outline-none text-slate-100"><textarea id="c-msg" placeholder="Mesajınız..." required class="w-full px-6 py-4 bg-white/10 border border-white/10 rounded-2xl outline-none h-32 text-slate-100"></textarea><button type="submit" id="c-btn" class="w-full bg-blue-600 py-4 rounded-2xl font-black transition hover:brightness-110">GÖNDER</button>
                     </form>
                 </div>
@@ -145,8 +145,7 @@
         </div>
     </div>
 
-    <!-- Geniş Detaylı Analiz Modalı (Grid Layout & Error Protection) -->
-    <!-- DÜZELTME: Bu modaldan CSS display kuralları çıkarıldı, görünmezlik kalkanı aşıldı! -->
+    <!-- Geniş Detaylı Analiz Modalı (Grid Layout) -->
     <div id="analysis-detail-modal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-md hidden items-center justify-center p-4" style="z-index: 99999;">
         <div class="max-w-[95vw] lg:max-w-7xl w-full bg-white dark:bg-darkCard p-8 md:p-12 rounded-[3rem] shadow-2xl relative view-fade max-h-[90vh] overflow-y-auto" id="analysis-detail-content">
         </div>
@@ -154,18 +153,8 @@
 
     <!-- Exam Overlay -->
     <div id="exam-overlay" class="fixed inset-0 bg-white dark:bg-darkBg hidden flex flex-col" style="z-index: 99999;">
-        <div class="h-20 glass border-b px-8 flex justify-between items-center">
-            <h3 class="font-black text-xl italic" id="active-exam-title">SINAV</h3>
-            <div class="flex items-center gap-6">
-                <div class="font-black text-blue-600 bg-blue-50 px-5 py-2 rounded-xl">
-                    <i class="fa-solid fa-clock"></i> <span id="exam-timer">00:00</span>
-                </div>
-                <button type="button" onclick="showCustomModal('Sınavı Bitirmek İstediğinden Emin Misin?', window.finishExam)" class="bg-red-600 text-white px-6 py-2 rounded-xl font-bold uppercase text-xs shadow-lg">Sınavı Bitir</button>
-            </div>
-        </div>
-        <div class="flex-1 overflow-y-auto p-12">
-            <div class="max-w-4xl mx-auto flex flex-col md:flex-row gap-12" id="exam-question-area"></div>
-        </div>
+        <div class="h-20 glass border-b px-8 flex justify-between items-center"><h3 class="font-black text-xl italic" id="active-exam-title">SINAV</h3><div class="flex items-center gap-6"><div class="font-black text-blue-600 bg-blue-50 px-5 py-2 rounded-xl"><i class="fa-solid fa-clock"></i> <span id="exam-timer">00:00</span></div><button type="button" onclick="showCustomModal('Sınavı Bitirmek İstediğinden Emin Misin?', window.finishExam)" class="bg-red-600 text-white px-6 py-2 rounded-xl font-bold uppercase text-xs shadow-lg">Sınavı Bitir</button></div></div>
+        <div class="flex-1 overflow-y-auto p-12"><div class="max-w-4xl mx-auto flex flex-col md:flex-row gap-12" id="exam-question-area"></div></div>
         <div class="h-24 glass border-t p-4 flex justify-center gap-2" id="exam-pagination"></div>
     </div>
 
@@ -187,7 +176,7 @@
         let tempQuestions = [];
         let studentSelectedFiles = [];
         
-        // Konuları koda gömdük. 404 hatasını ve çöküşü bitirir.
+        // Konuları koda gömdük.
         const globalTopics = [
             'Çarpanlar ve Katlar', 'Üslü İfadeler', 'Kareköklü İfadeler', 'Veri Analizi', 
             'Basit Olayların Olma Olasılığı', 'Cebirsel İfadeler ve Özdeşlikler', 
@@ -278,6 +267,24 @@
             }
         };
 
+        window.submitContactForm = async function(e) {
+            e.preventDefault(); 
+            const btn = document.getElementById('c-btn'); 
+            btn.disabled = true; 
+            const { error } = await supabaseClient.from('contact_messages').insert([{ 
+                full_name: document.getElementById('c-name').value, 
+                email: document.getElementById('c-email').value, 
+                message: document.getElementById('c-msg').value 
+            }]); 
+            if(!error) { 
+                alert("Mesajınız başarıyla gönderildi!"); 
+                document.getElementById('contact-form').reset(); 
+            } else {
+                alert(error.message); 
+            }
+            btn.disabled = false;
+        };
+
         async function uploadFile(file, folder) {
             if(!file) return "";
             const fileName = Date.now() + "_" + sanitizeFileName(file.name);
@@ -348,25 +355,6 @@
                 hideLoading(); 
             }
         }
-
-        document.getElementById('login-form').onsubmit = async (e) => {
-            e.preventDefault(); 
-            const btn = document.getElementById('login-btn'); 
-            btn.disabled = true; 
-            btn.innerText = "KONTROL EDİLİYOR...";
-            
-            const { error } = await supabaseClient.auth.signInWithPassword({ 
-                email: document.getElementById('login-email').value, 
-                password: document.getElementById('login-password').value 
-            });
-            
-            if (error) { 
-                document.getElementById('login-error-container').innerText = error.message; 
-                document.getElementById('login-error-container').classList.remove('hidden'); 
-                btn.disabled = false; 
-                btn.innerText = "Giriş Yap"; 
-            }
-        };
 
         // ==========================================
         // MENU VE NAVIGASYON
@@ -610,6 +598,49 @@
         // ==========================================
         // ÖGRENCİ (STUDENT) MODÜLLERİ
         // ==========================================
+        
+        // ÖDEV GÖNDERME İŞLEVİ (SORUN BURADAYDI, TAMAMEN DÜZELTİLDİ)
+        window.submitHomework = async function(e) {
+            e.preventDefault(); 
+            const btn = document.getElementById('submit-btn-final'); 
+            if (studentSelectedFiles.length === 0) return alert("Lütfen en az 1 dosya/fotoğraf seçin!"); 
+            
+            btn.disabled = true; 
+            btn.innerText = "YÜKLENİYOR..."; 
+            
+            try { 
+                const urls = []; 
+                for (let f of studentSelectedFiles) { 
+                    urls.push(await uploadFile(f, 'student-submissions')); 
+                } 
+                
+                const payload = { 
+                    homework_id: document.getElementById('submit-hw-id').value, 
+                    student_id: userProfile.id, 
+                    file_urls: urls, 
+                    note: document.getElementById('submit-note').value 
+                };
+                
+                const { error } = await supabaseClient.from('homework_submissions').insert([payload]); 
+                
+                if(error) {
+                    alert("Ödev gönderilirken hata oluştu: " + error.message);
+                    btn.disabled = false;
+                    btn.innerText = "Bitir ve Gönder";
+                } else {
+                    alert("Ödev başarıyla gönderildi!"); 
+                    const overlay = document.getElementById('submit-overlay');
+                    overlay.classList.add('hidden'); 
+                    overlay.classList.remove('flex'); 
+                    window.renderStudentHomeworks(); 
+                }
+            } catch (err) { 
+                alert("Dosya yükleme hatası: " + err.message); 
+                btn.disabled = false;
+                btn.innerText = "Bitir ve Gönder";
+            } 
+        };
+
         window.renderStudentHomeworks = async function() {
             try {
                 document.getElementById('page-title').innerText = 'Ödevlerim';
@@ -660,7 +691,7 @@
                         <div class="max-w-lg w-full bg-white dark:bg-darkCard p-12 rounded-[4rem] shadow-2xl relative view-fade">
                             <button type="button" onclick="document.getElementById('submit-overlay').classList.add('hidden'); document.getElementById('submit-overlay').classList.remove('flex');" class="absolute top-10 right-10 text-slate-400 transition hover:scale-110"><i class="fa-solid fa-xmark text-2xl"></i></button>
                             <h3 class="text-2xl font-black mb-8 italic uppercase text-slate-800 dark:text-white">Çözüm Gönder</h3>
-                            <form id="hw-submit-form" class="space-y-6">
+                            <form id="hw-submit-form" class="space-y-6" onsubmit="window.submitHomework(event)">
                                 <input type="hidden" id="submit-hw-id">
                                 <div id="file-list-container" class="space-y-2 mb-4"></div>
                                 <button type="button" onclick="document.getElementById('file-input-multi').click()" class="w-full p-6 border-2 border-dashed rounded-[2rem] text-slate-400 text-[10px] font-black uppercase"><i class="fa-solid fa-plus-circle text-2xl mb-2 block"></i> Fotoğraf Ekle</button>
@@ -904,7 +935,6 @@
                     } else {
                         document.getElementById('exam-overlay').classList.add('hidden'); 
                         alert("Sınav başarıyla tamamlandı! Puanın: " + finalScore.toFixed(0));
-                        // DÜZELTME: Ekranı yenilemeden önce verinin işlenmesini BEKLE. (Kilitleme Garantisi)
                         await window.renderStudentExams(); 
                     }
                 } else {
@@ -916,6 +946,40 @@
                 console.error("Sınav Gönderme Hatası:", err);
                 alert("Sınav bitirilirken beklenmeyen bir hata oluştu.");
             }
+        }
+
+        window.addFilesToSubmission = function(input) { 
+            if (input.files) { 
+                Array.from(input.files).forEach(f => studentSelectedFiles.push(f)); 
+                window.updateFileUI(); 
+                input.value = ""; 
+            } 
+        }
+
+        window.removeFile = function(idx) { 
+            studentSelectedFiles.splice(idx, 1); 
+            window.updateFileUI(); 
+        }
+
+        window.updateFileUI = function() { 
+            const cont = document.getElementById('file-list-container'); 
+            if(cont) {
+                cont.innerHTML = (studentSelectedFiles || []).map((f, i) => `
+                    <div class="flex justify-between items-center p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl text-[10px] font-black uppercase tracking-widest mb-2">
+                        <span><i class="fa-solid fa-image mr-2 text-blue-500"></i>${f.name}</span>
+                        <button type="button" onclick="window.removeFile(${i})" class="text-red-400 p-1"><i class="fa-solid fa-times"></i></button>
+                    </div>
+                `).join(''); 
+            }
+        }
+
+        window.showSubmitForm = function(hid) { 
+            studentSelectedFiles = []; 
+            document.getElementById('submit-hw-id').value = hid; 
+            const overlay = document.getElementById('submit-overlay'); 
+            overlay.classList.remove('hidden'); 
+            overlay.classList.add('flex'); 
+            window.updateFileUI(); 
         }
 
         // ==========================================
@@ -1198,7 +1262,6 @@
             document.getElementById('page-title').innerText = 'Sınav Hazırlama ve Sonuçlar'; 
             const { data: students } = await supabaseClient.from('profiles').select('*').eq('role', 'student'); 
             
-            // YENİ EKLENDİ: Öğrencilerin çözdüğü online sınav sonuçlarını getir
             const { data: subs } = await supabaseClient.from('submissions').select('*, profiles(full_name), exams(title)').order('created_at', { ascending: false });
             let subsHTML = (subs || []).map(s => `
                 <div class="p-6 bg-white dark:bg-darkCard border-2 brand-border rounded-[2rem] shadow-sm mb-4 flex justify-between items-center transition hover:shadow-md">
