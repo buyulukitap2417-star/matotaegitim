@@ -186,7 +186,7 @@
         let tempQuestions = [];
         let studentSelectedFiles = [];
         
-        // 404 Hatasını engellemek için konuları koda gömdük.
+        // Konuları koda gömdük. 404 hatasını ve çöküşü bitirir.
         const globalTopics = [
             'Çarpanlar ve Katlar', 'Üslü İfadeler', 'Kareköklü İfadeler', 'Veri Analizi', 
             'Basit Olayların Olma Olasılığı', 'Cebirsel İfadeler ve Özdeşlikler', 
@@ -542,7 +542,6 @@
                     return alert("Bu görev için geçerli bir ID bulunamadı.");
                 }
 
-                // Modal'ı aç ve Yükleniyor göstergesi koy 
                 const contentDiv = document.getElementById('analysis-detail-content');
                 contentDiv.innerHTML = '<div class="p-20 flex justify-center"><div class="animate-spin h-10 w-10 border-4 border-slate-200 border-t-orange-500 rounded-full"></div></div>';
                 
@@ -550,17 +549,16 @@
                 modal.classList.remove('hidden');
                 modal.classList.add('flex');
 
-                // Veritabanından Analizleri Çek (Hata korumalı)
-                let analysesData = [];
-                try {
-                    const { data, error } = await supabaseClient.from('detailed_analyses').select('*').eq('task_id', taskId).eq('student_id', studentId).order('created_at', { ascending: true });
-                    if(error) throw error;
-                    analysesData = data;
-                } catch(e) {
-                    console.warn("Analysis Fetch Warn:", e);
-                }
+                const { data: analyses, error } = await supabaseClient
+                    .from('detailed_analyses')
+                    .select('*')
+                    .eq('task_id', taskId)
+                    .eq('student_id', studentId)
+                    .order('created_at', { ascending: true });
                 
-                if(!analysesData || analysesData.length === 0) {
+                if(error) throw error;
+                
+                if(!analyses || analyses.length === 0) {
                     contentDiv.innerHTML = `
                         <div class="text-center p-10">
                             <h3 class="text-2xl font-black mb-4">Henüz Analiz Yok</h3>
@@ -572,13 +570,13 @@
 
                 let content = `<button type="button" onclick="window.closeAnalysisModal()" class="absolute top-8 right-8 text-slate-400 hover:text-slate-600 transition z-50"><i class="fa-solid fa-xmark text-3xl"></i></button>`;
                 
-                let baseTitle = analysesData[0].title ? analysesData[0].title.toString() : 'Analiz Raporu';
+                let baseTitle = analyses[0].title ? analyses[0].title.toString() : 'Analiz Raporu';
                 if(baseTitle.includes('-')) baseTitle = baseTitle.split('-')[0].trim();
                 
                 content += `<h3 class="text-3xl font-black mb-8 italic uppercase tracking-tighter text-slate-800 dark:text-white border-b pb-4 dark:border-slate-800 pr-12">${baseTitle} - Detaylı Rapor</h3>`;
                 content += `<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">`;
 
-                analysesData.forEach((a, index) => {
+                analyses.forEach((a, index) => {
                     let qTable = '';
                     let qDetails = a.question_details;
                     
@@ -703,6 +701,7 @@
                         actionButtons += `<button type="button" onclick="window.showGroupedAnalysisModal('${h.id}', '${userProfile.id}')" class="flex-1 px-6 py-4 bg-orange-500 text-white rounded-2xl font-black text-xs uppercase shadow-lg transition hover:scale-105 border border-orange-600" title="Analizi Gör"><i class="fa-solid fa-chart-pie text-lg mr-2"></i> ANALİZİ GÖR</button>`;
                     }
 
+                    // BUTONLARIN OLDUĞU DIV'E flex-col md:flex-row EKLENDİ
                     return `
                         <div class="bg-white dark:bg-darkCard p-8 rounded-[2.5rem] border flex flex-col justify-between gap-6 shadow-sm mb-4 transition hover:shadow-md">
                             <div class="flex items-center gap-6">
@@ -718,20 +717,21 @@
                         </div>`;
                 }).join('') || '<p class="py-20 text-center italic text-slate-400 font-bold uppercase text-xs">Henüz ödev atanmadı.</p>';
                 
+                // YÜKLEME KISMI DÜZELTİLDİ: max-h-[30vh] overflow-y-auto eklendi. Buton ve form taşmaları engellendi.
                 document.getElementById('view-content').innerHTML = `
                     <div class="grid md:grid-cols-2 gap-8 view-fade">${hHTML}</div>
                     <div id="submit-overlay" class="fixed inset-0 bg-slate-900/60 backdrop-blur-md hidden items-center justify-center p-6" style="z-index:99999;">
-                        <div class="max-w-lg w-full bg-white dark:bg-darkCard p-12 rounded-[4rem] shadow-2xl relative view-fade">
-                            <button type="button" onclick="document.getElementById('submit-overlay').classList.add('hidden'); document.getElementById('submit-overlay').classList.remove('flex');" class="absolute top-10 right-10 text-slate-400 transition hover:scale-110"><i class="fa-solid fa-xmark text-2xl"></i></button>
-                            <h3 class="text-2xl font-black mb-8 italic uppercase text-slate-800 dark:text-white">Çözüm Gönder</h3>
-                            <div class="space-y-6">
+                        <div class="max-w-lg w-full bg-white dark:bg-darkCard p-8 md:p-12 rounded-[4rem] shadow-2xl relative view-fade max-h-[95vh] flex flex-col">
+                            <button type="button" onclick="document.getElementById('submit-overlay').classList.add('hidden'); document.getElementById('submit-overlay').classList.remove('flex');" class="absolute top-6 right-6 md:top-10 md:right-10 text-slate-400 transition hover:scale-110 z-10"><i class="fa-solid fa-xmark text-2xl"></i></button>
+                            <h3 class="text-2xl font-black mb-4 md:mb-8 italic uppercase text-slate-800 dark:text-white shrink-0">Çözüm Gönder</h3>
+                            <form id="hw-submit-form" class="space-y-4 md:space-y-6 overflow-y-auto pr-2 flex-1 custom-scrollbar">
                                 <input type="hidden" id="submit-hw-id">
-                                <div id="file-list-container" class="space-y-2 mb-4"></div>
-                                <button type="button" onclick="document.getElementById('file-input-multi').click()" class="w-full p-6 border-2 border-dashed rounded-[2rem] text-slate-400 text-[10px] font-black uppercase"><i class="fa-solid fa-plus-circle text-2xl mb-2 block"></i> Fotoğraf Ekle</button>
+                                <div id="file-list-container" class="space-y-2 mb-4 max-h-[30vh] overflow-y-auto pr-2"></div>
+                                <button type="button" onclick="document.getElementById('file-input-multi').click()" class="w-full p-4 md:p-6 border-2 border-dashed rounded-[2rem] text-slate-400 text-[10px] font-black uppercase shrink-0"><i class="fa-solid fa-plus-circle text-2xl mb-2 block"></i> Fotoğraf Ekle</button>
                                 <input type="file" id="file-input-multi" class="hidden" multiple onchange="window.addFilesToSubmission(this)">
-                                <textarea id="submit-note" placeholder="Ali Hoca'ya notun..." class="w-full p-5 rounded-2xl border dark:bg-darkBg h-32 outline-none font-medium focus:ring-2 focus:ring-blue-500"></textarea>
-                                <button type="button" id="submit-btn-final" onclick="window.submitHomeworkData()" class="w-full brand-bg text-white py-5 rounded-[2rem] font-black uppercase text-xs shadow-lg transition hover:scale-105">Bitir ve Gönder</button>
-                            </div>
+                                <textarea id="submit-note" placeholder="Ali Hoca'ya notun..." class="w-full p-4 md:p-5 rounded-2xl border dark:bg-darkBg h-24 md:h-32 outline-none font-medium focus:ring-2 focus:ring-blue-500 shrink-0"></textarea>
+                                <button type="button" id="submit-btn-final" onclick="window.submitHomeworkData()" class="w-full brand-bg text-white py-4 md:py-5 rounded-[2rem] font-black uppercase text-xs shadow-lg transition hover:scale-105 shrink-0 mt-2">Bitir ve Gönder</button>
+                            </form>
                         </div>
                     </div>`;
             } catch(e) { console.error(e); }
