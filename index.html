@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MATOTA | Modern Eğitim Ekosistemi</title>
     
-    <!-- Ekstra Fontlar ve Kütüphaneler (PeerJS Canlı Ders İçin) -->
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
@@ -28,7 +27,6 @@
         }
     </script>
     <style>
-        /* MATOTA ANA STİLLERİ */
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
         body { font-family: 'Inter', sans-serif; transition: background-color 0.3s ease; scroll-behavior: smooth; }
         .glass { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(12px); }
@@ -42,34 +40,21 @@
         .view-fade { animation: fadeIn 0.4s ease-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
         .logo-img { height: 45px; width: auto; object-fit: contain; }
-        .dynamic-frame { width: 100%; min-height: 80vh; border: none; border-radius: 1.5rem; background: white; }
         .q-opt-btn.selected { background-color: #ea580c !important; color: white !important; border-color: transparent !important; }
         .theme-blue .q-opt-btn.selected { background-color: #2563eb !important; }
         
         #custom-modal { display: none; }
         #custom-modal.active { display: flex; }
-        
         .hero-gradient { background: radial-gradient(circle at top right, rgba(37, 99, 235, 0.1), transparent); }
 
-        /* ========================================================================= */
-        /* MATOTA CANLI DERS MODÜLÜ İZOLE EDİLMİŞ STİLLER (ASLA SİSTEMİ BOZMAZ)      */
-        /* ========================================================================= */
+        /* MATOTA CANLI DERS MODÜLÜ İZOLE EDİLMİŞ STİLLER */
         #matota-meeting-module {
             font-family: 'Plus Jakarta Sans', sans-serif !important;
             position: fixed; inset: 0; width: 100vw; height: 100dvh; overflow: hidden;
             background: #0f172a; color: white; z-index: 999999;
         }
-        #matota-meeting-module * {
-            cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5" fill="%233b82f6" stroke="rgba(255,255,255,0.8)" stroke-width="2"/></svg>') 12 12, auto;
-        }
-        #matota-meeting-module button, #matota-meeting-module a, #matota-meeting-module input, #matota-meeting-module .meet-video-card, #matota-meeting-module .cursor-pointer {
-            cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><circle cx="12" cy="12" r="6" fill="%2310b981" stroke="rgba(255,255,255,0.8)" stroke-width="2"/></svg>') 12 12, pointer !important;
-        }
-        .meet-click-ripple {
-            position: absolute; border-radius: 50%; pointer-events: none; width: 20px; height: 20px; background: rgba(59, 130, 246, 0.6); transform: translate(-50%, -50%) scale(1); animation: meet-ripple-anim 0.5s ease-out forwards; z-index: 99999;
-        }
-        @keyframes meet-ripple-anim { 0% { transform: translate(-50%, -50%) scale(1); opacity: 1; } 100% { transform: translate(-50%, -50%) scale(4); opacity: 0; } }
-        
+        #matota-meeting-module * { cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5" fill="%233b82f6" stroke="rgba(255,255,255,0.8)" stroke-width="2"/></svg>') 12 12, auto; }
+        #matota-meeting-module button, #matota-meeting-module a, #matota-meeting-module input, #matota-meeting-module .meet-video-card { cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><circle cx="12" cy="12" r="6" fill="%2310b981" stroke="rgba(255,255,255,0.8)" stroke-width="2"/></svg>') 12 12, pointer !important; }
         #matota-meeting-module .meet-glass-panel { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.08); }
         
         #meet-video-area { flex: 1; width: 100%; height: 100%; display: flex; flex-direction: row; gap: 16px; padding: 16px; padding-bottom: 100px; overflow: hidden; }
@@ -107,9 +92,6 @@
         
         #meet-floating-controls { position: absolute; bottom: 24px; left: 50%; transform: translateX(-50%); z-index: 100; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 9999px; padding: 8px 16px; display: flex; gap: 12px; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5); }
         @media (max-width: 768px) { #meet-floating-controls { width: 90%; justify-content: space-between; bottom: env(safe-area-inset-bottom, 20px); border-radius: 20px; padding: 10px; } }
-        
-        #matota-meeting-module .meet-chat-msg { animation: meetFadeIn 0.3s ease-out forwards; }
-        @keyframes meetFadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body class="text-slate-800 dark:text-slate-100 dark:bg-darkBg theme-blue overflow-x-hidden" id="main-body">
@@ -211,7 +193,7 @@
         </div>
     </div>
 
-    <!-- Geniş Detaylı Analiz Modalı (Grid Layout & Error Protection) -->
+    <!-- Geniş Detaylı Analiz Modalı (Grid Layout) -->
     <div id="analysis-detail-modal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-md hidden items-center justify-center p-4" style="z-index: 99999;">
         <div class="max-w-[95vw] lg:max-w-7xl w-full bg-white dark:bg-darkCard p-8 md:p-12 rounded-[3rem] shadow-2xl relative view-fade max-h-[90vh] overflow-y-auto" id="analysis-detail-content">
         </div>
@@ -234,12 +216,9 @@
         <div class="h-24 glass border-t p-4 flex justify-center gap-2" id="exam-pagination"></div>
     </div>
 
-    <!-- ======================================================================= -->
-    <!-- MATOTA CANLI DERS KAPSÜLÜ (SİSTEME GÖMÜLÜ, İZOLE, KUSURSUZ)              -->
-    <!-- ======================================================================= -->
+    <!-- MATOTA CANLI DERS KAPSÜLÜ -->
     <div id="matota-meeting-module" class="hidden">
         
-        <!-- Meet Loader -->
         <div id="meet-loader" class="fixed inset-0 z-[60] bg-gray-900 flex items-center justify-center hidden">
             <div class="text-center">
                 <div class="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
@@ -247,7 +226,6 @@
             </div>
         </div>
 
-        <!-- 1. LOBİ EKRANI -->
         <div id="meet-lobby-screen" class="absolute inset-0 z-50 flex flex-col items-center justify-center p-4 bg-[#0f172a] hidden">
             <div class="text-center mb-6">
                 <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 shadow-lg shadow-indigo-500/30 mb-4 animate-float">
@@ -289,7 +267,6 @@
             </div>
         </div>
 
-        <!-- 2. ODA EKRANI -->
         <div id="meet-room-screen" class="hidden flex-1 w-full h-full flex flex-col relative bg-[#0b1120] overflow-hidden">
             <header class="h-14 meet-glass-panel border-b border-white/5 flex items-center justify-between px-4 shrink-0 z-20">
                 <div class="flex items-center gap-3">
@@ -327,7 +304,6 @@
                 <div id="meet-gallery-wrapper"></div>
             </main>
 
-            <!-- YAN PANELLER -->
             <div id="meet-participants-sidebar" class="meet-side-panel w-64 p-4 shadow-2xl">
                 <div class="flex justify-between items-center mb-4 border-b border-white/10 pb-2 shrink-0">
                     <h3 class="font-bold text-sm">Katılımcılar</h3>
@@ -350,7 +326,6 @@
                 </div>
             </div>
 
-            <!-- YÜZEN KONTROL PANELİ -->
             <div id="meet-floating-controls">
                 <button type="button" id="meet-toggle-mic" class="w-12 h-12 rounded-full bg-gray-700 hover:bg-gray-600 text-white transition flex items-center justify-center text-lg" title="Mikrofon"><i class="fas fa-microphone"></i></button>
                 <button type="button" id="meet-toggle-cam" class="w-12 h-12 rounded-full bg-gray-700 hover:bg-gray-600 text-white transition flex items-center justify-center text-lg" title="Kamera"><i class="fas fa-video"></i></button>
@@ -361,7 +336,6 @@
                 <button type="button" id="meet-leave-btn" class="w-14 h-12 rounded-full bg-red-600 hover:bg-red-700 text-white transition flex items-center justify-center text-xl shadow-lg shadow-red-900/20" title="Ayrıl"><i class="fas fa-phone-slash"></i></button>
             </div>
 
-            <!-- ARAÇLAR MODAL -->
             <div id="meet-utils-modal" class="hidden fixed inset-0 z-[200] bg-black/70 flex items-center justify-center backdrop-blur-sm p-4">
                 <div class="bg-gray-800 border border-white/10 rounded-2xl p-6 w-full max-w-sm shadow-2xl relative">
                     <button type="button" onclick="document.getElementById('meet-utils-modal').classList.add('hidden')" class="absolute top-4 right-4 text-gray-400 hover:text-white"><i class="fas fa-times text-lg"></i></button>
@@ -398,12 +372,8 @@
             <canvas id="meet-timer-canvas" width="640" height="360" class="hidden"></canvas>
         </div>
     </div>
-    <!-- CANLI DERS KAPSÜLÜ SONU -->
 
     <script>
-        // ==========================================
-        // SISTEM AYARLARI VE GLOBAL DEGISKENLER
-        // ==========================================
         const SUPABASE_URL = "https://tnhofdyonpbmozqzimzj.supabase.co"; 
         const SUPABASE_ANON_KEY = "sb_publishable_xVFfpA85IjnCqIjEJWvtvQ_VZCH_n60"; 
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -418,7 +388,6 @@
         let tempQuestions = [];
         let studentSelectedFiles = [];
         
-        // Konuları koda gömdük. 404 hatasını ve çöküşü bitirir.
         const globalTopics = [
             'Çarpanlar ve Katlar', 'Üslü İfadeler', 'Kareköklü İfadeler', 'Veri Analizi', 
             'Basit Olayların Olma Olasılığı', 'Cebirsel İfadeler ve Özdeşlikler', 
@@ -426,9 +395,6 @@
             'Dönüşüm Geometrisi', 'Geometrik Cisimler'
         ];
 
-        // ==========================================
-        // TEMEL FONKSIYONLAR
-        // ==========================================
         function updateLogos() {
             const isDark = document.documentElement.classList.contains('dark');
             const url = SUPABASE_URL + "/storage/v1/object/public/logos/" + (isDark ? "acik.png" : "koyu.png");
@@ -535,9 +501,6 @@
             return publicUrl;
         }
 
-        // ==========================================
-        // KIMLIK DOGRULAMA (AUTH) 
-        // ==========================================
         async function initAuth() {
             if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
                 document.documentElement.classList.add('dark');
@@ -618,9 +581,6 @@
             }
         };
 
-        // ==========================================
-        // MENU VE NAVIGASYON
-        // ==========================================
         function renderSidebar() {
             const nav = document.getElementById('sidebar-nav');
             const teacherViews = [ 
@@ -688,9 +648,6 @@
             }
         }
 
-        // ==========================================
-        // ORTAK: DASHBOARD & ANALIZ MODALI
-        // ==========================================
         async function renderDashboard() {
             document.getElementById('page-title').innerText = 'Dashboard';
             const content = document.getElementById('view-content');
@@ -857,9 +814,6 @@
             }
         }
 
-        // ==========================================
-        // ÖGRENCİ (STUDENT) MODÜLLERİ
-        // ==========================================
         window.submitHomeworkData = async function() {
             const btn = document.getElementById('submit-btn-final'); 
             if (studentSelectedFiles.length === 0) return alert("Lütfen en az 1 dosya veya fotoğraf seçin!"); 
@@ -1317,7 +1271,7 @@
                                     <option value="homework">Ödev Analizi</option>
                                 </select>
                                 <select id="an-task" class="w-full p-4 rounded-xl border dark:bg-darkBg outline-none font-bold" onchange="window.updateAnalysisTitle()">
-                                    <option value="">Önce öğrenci seçin</option>
+                                    <option value="">Önce öğrenci Seçin</option>
                                 </select>
                                 <input type="text" id="an-title" placeholder="Test Adı (Örn: Üslü Sayılar - Test 1)" class="w-full p-4 rounded-xl border dark:bg-darkBg outline-none font-bold uppercase">
                                 <input type="number" id="an-qcount" placeholder="Soru Sayısı (Örn: 20)" class="w-full p-4 rounded-xl border dark:bg-darkBg outline-none font-black">
@@ -1434,9 +1388,8 @@
             if(error) {
                 alert("Kaydetme Hatası: " + error.message); 
             } else { 
-                // Otomatik 10'da 1 Puan Ekleme Sistemi
                 const scorePercentage = (correctCount / count) * 100;
-                const addedPoints = Math.round(scorePercentage / 10); // %75 -> 8 puan
+                const addedPoints = Math.round(scorePercentage / 10); 
                 const pointCategory = type === 'exam' ? 'Sınav Uygulama' : 'Ödev Yapma';
                 
                 await supabaseClient.from('points').insert([{ student_id: sid, category: pointCategory, amount: addedPoints }]);
@@ -1544,7 +1497,6 @@
             try {
                 const { data: students } = await supabaseClient.from('profiles').select('*').eq('role', 'student'); 
                 
-                // Öğrencilerin çözdüğü online sınav sonuçlarını getir
                 let subsHTML = '<p class="text-center italic text-xs text-slate-400 p-10 font-bold uppercase">Henüz çözülen bir sınav yok.</p>';
                 const { data: subs, error } = await supabaseClient.from('submissions').select('*, profiles(full_name), exams(title)').order('created_at', { ascending: false });
                 
@@ -1847,7 +1799,7 @@
                 document.getElementById('lesson-form-title').innerText = "Dersi Düzenle"; 
                 document.getElementById('l-student').value = l.student_id; 
                 document.getElementById('l-title').value = l.title; 
-                document.getElementById('l-link').value = l.link.startsWith('matota_') ? '' : l.link; 
+                document.getElementById('l-link').value = l.link && l.link.startsWith('matota_') ? '' : l.link; 
                 const d = new Date(l.scheduled_at); 
                 const off = new Date(d.getTime() - (d.getTimezoneOffset() * 60000)); 
                 document.getElementById('l-time').value = off.toISOString().slice(0, 16); 
@@ -1932,6 +1884,73 @@
                     } catch (err) { alert(err.message); btn.disabled = false; } 
                 }; 
             } catch(e) { console.error(e); }
+        }
+
+        // ==========================================
+        // YARDIMCI VE TAMAMLAYICI MEETS FONKSİYONLARI
+        // ==========================================
+        function meetTogglePeerVideoPlaceholder(peerId, isEnabled) {
+            const container = document.getElementById(`vid-${peerId}`);
+            if (container) {
+                const placeholder = container.querySelector('.cam-placeholder');
+                if (placeholder) {
+                    if (isEnabled) placeholder.style.display = 'none';
+                    else placeholder.style.display = 'flex';
+                }
+            }
+        }
+
+        function meetUpdateParticipantsList(id, name, isTeacherPeer) {
+            if (meetState.participants.some(p => p.id === id)) return;
+            meetState.participants.push({ id, name, isTeacherPeer });
+            meetRenderParticipants();
+        }
+
+        function meetRemoveParticipant(id) {
+            const exists = meetState.participants.find(p => p.id === id);
+            if (exists) {
+                meetPlaySound('leave'); 
+                meetState.participants = meetState.participants.filter(p => p.id !== id);
+                meetRenderParticipants();
+            }
+        }
+
+        function meetRenderParticipants() {
+            meetEls.pCount.innerText = meetState.participants.length;
+            meetEls.pList.innerHTML = '';
+            meetState.participants.forEach(p => {
+                const item = document.createElement('div');
+                item.className = 'flex items-center justify-between bg-white/5 p-2 rounded-lg text-xs';
+                const left = document.createElement('div');
+                left.className = 'flex items-center gap-2';
+                left.innerHTML = `<i class="fas fa-user-circle text-gray-400"></i> <span>${p.name} ${p.id === 'me' ? '(Sen)' : ''}</span>`;
+                item.appendChild(left);
+                if (meetState.isTeacher && p.id !== 'me') {
+                    const kickBtn = document.createElement('button');
+                    kickBtn.className = 'text-red-500 hover:text-red-400 p-1';
+                    kickBtn.innerHTML = '<i class="fas fa-times"></i>';
+                    kickBtn.onclick = () => meetKickUser(p.id);
+                    item.appendChild(kickBtn);
+                }
+                meetEls.pList.appendChild(item);
+            });
+        }
+
+        function meetKickUser(peerId) {
+            if(!confirm("Kullanıcı atılsın mı?")) return;
+            const conn = meetState.dataConnections[peerId];
+            if (conn && conn.open) conn.send({ type: 'kick' });
+            if (meetState.activeCalls[peerId]) meetState.activeCalls[peerId].close();
+            
+            const pId = `vid-${peerId}`;
+            document.getElementById(pId)?.remove();
+            
+            if(meetState.mainSpeakerId === pId) {
+                meetState.mainSpeakerId = meetAutoSelectMainSpeaker();
+                if(!meetState.mainSpeakerId) meetState.layoutMode = 'grid';
+            }
+            meetApplyLayout();
+            meetRemoveParticipant(peerId);
         }
 
         window.onload = initAuth;
