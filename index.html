@@ -503,7 +503,6 @@
         window.closeAnalysisModal = function() {
             const modal = document.getElementById('analysis-detail-modal');
             if(modal) {
-                // Tailwind classları ile kontrol ediliyor, CSS çakışması yok.
                 modal.classList.add('hidden');
                 modal.classList.remove('flex');
             }
@@ -598,7 +597,6 @@
             }
         }
 
-        // GİRİŞ YAPMA FONKSİYONU - Formdan çağrılacak şekilde sağlamlaştırıldı
         window.handleLogin = async function(e) {
             e.preventDefault(); 
             const btn = document.getElementById('login-btn'); 
@@ -616,7 +614,6 @@
                 btn.disabled = false; 
                 btn.innerText = "Giriş Yap"; 
             } else {
-                // Başarılı girişte sayfayı tamamen yenile ki session tertemiz okunsun
                 window.location.reload();
             }
         };
@@ -863,7 +860,6 @@
         // ==========================================
         // ÖGRENCİ (STUDENT) MODÜLLERİ
         // ==========================================
-        
         window.submitHomeworkData = async function() {
             const btn = document.getElementById('submit-btn-final'); 
             if (studentSelectedFiles.length === 0) return alert("Lütfen en az 1 dosya veya fotoğraf seçin!"); 
@@ -1936,17 +1932,6 @@
                     } catch (err) { alert(err.message); btn.disabled = false; } 
                 }; 
             } catch(e) { console.error(e); }
-        }
-
-        function meetToggleVideo() {
-            if (!meetState.localStream) return;
-            const track = meetState.localStream.getVideoTracks()[0];
-            track.enabled = !track.enabled;
-            meetState.isCamOn = track.enabled;
-            meetUpdateButtonUI(meetEls.btnCam, meetState.isCamOn, 'fa-video', 'fa-video-slash');
-            meetUpdateButtonUI(meetEls.prevCam, meetState.isCamOn, 'fa-video', 'fa-video-slash');
-            meetTogglePeerVideoPlaceholder('me', meetState.isCamOn);
-            meetBroadcastData({ type: 'cam-status', enabled: meetState.isCamOn });
         }
 
         window.onload = initAuth;
