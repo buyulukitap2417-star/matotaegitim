@@ -863,7 +863,7 @@
                     const isLive = now >= new Date(ls.scheduled_at);
                     const isMatotaLive = ls.link && ls.link.startsWith('matota_');
                     
-                    const studentUrl = `https://egitim.matota.online/?room=${ls.link}&name=${encodeURIComponent(userProfile.full_name)}&role=student`;
+                    const studentUrl = `https://egitim.matota.online/?room=${ls.link}&name=${encodeURIComponent(userProfile.full_name)}&role=2s4t3`;
                     const joinBtn = isMatotaLive
                         ? `<a href="${studentUrl}" target="_blank" class="w-full brand-bg text-white py-5 rounded-2xl font-black block text-center shadow-xl transition hover:brightness-110"><i class="fa-solid fa-video mr-2"></i>SİSTEMDEN DERSE KATIL</a>`
                         : `<a href="${ls.link}" target="_blank" class="w-full bg-blue-600 text-white py-5 rounded-2xl font-black block text-center shadow-xl transition hover:brightness-110"><i class="fa-solid fa-external-link-alt mr-2"></i>HARİCİ DERSE KATIL</a>`;
@@ -1550,7 +1550,7 @@
                     ? `<span class="bg-slate-100 text-slate-500 px-2 py-1 rounded-md text-[8px] uppercase font-black ml-2"><i class="fa-solid fa-archive mr-1"></i>Geçmiş</span>` 
                     : `<span class="bg-green-50 text-green-600 px-2 py-1 rounded-md text-[8px] uppercase font-black ml-2"><i class="fa-solid fa-satellite-dish mr-1"></i>Aktif</span>`;
                 
-                const teacherUrl = `https://egitim.matota.online/?room=${ls.link}&name=${encodeURIComponent(userProfile.full_name)}&role=teacher`;
+                const teacherUrl = `https://egitim.matota.online/?room=${ls.link}&name=${encodeURIComponent(userProfile.full_name)}&role=7o7r2`;
                 const launchBtn = isMatotaLive 
                     ? `<a href="${teacherUrl}" target="_blank" class="w-10 h-10 bg-purple-50 text-purple-600 rounded-xl transition hover:scale-110 shadow-sm flex items-center justify-center" title="Canlı Yayını Başlat"><i class="fa-solid fa-video"></i></a>`
                     : `<a href="${ls.link}" target="_blank" class="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl transition hover:scale-110 shadow-sm flex items-center justify-center" title="Harici Linke Git"><i class="fa-solid fa-external-link-alt"></i></a>`;
