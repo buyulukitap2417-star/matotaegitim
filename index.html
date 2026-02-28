@@ -43,6 +43,9 @@
         #custom-modal { display: none; }
         #custom-modal.active { display: flex; }
         .hero-gradient { background: radial-gradient(circle at top right, rgba(37, 99, 235, 0.1), transparent); }
+
+        /* Filtre geçişleri için */
+        .filterable-item { transition: opacity 0.3s ease; }
     </style>
 </head>
 <body class="text-slate-800 dark:text-slate-100 dark:bg-darkBg theme-blue overflow-x-hidden" id="main-body">
@@ -185,7 +188,6 @@
         let tempQuestions = [];
         let studentSelectedFiles = [];
         
-        // 404 Hatasını engellemek için konuları koda gömdük.
         const globalTopics = [
             'Çarpanlar ve Katlar', 'Üslü İfadeler', 'Kareköklü İfadeler', 'Veri Analizi', 
             'Basit Olayların Olma Olasılığı', 'Cebirsel İfadeler ve Özdeşlikler', 
@@ -194,8 +196,34 @@
         ];
 
         // ==========================================
-        // TEMEL FONKSIYONLAR
+        // TEMEL FONKSIYONLAR & GENEL FİLTRE MOTORU
         // ==========================================
+        
+        // Evrensel Filtreleme Fonksiyonu
+        window.applyFilters = function(containerId, searchInputId, studentSelectId, dateInputId) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+            
+            const search = document.getElementById(searchInputId)?.value.toLowerCase() || '';
+            const student = document.getElementById(studentSelectId)?.value || '';
+            const date = document.getElementById(dateInputId)?.value || ''; 
+            
+            const items = container.querySelectorAll('.filterable-item');
+            
+            items.forEach(item => {
+                const textStr = (item.dataset.search || '').toLowerCase();
+                const stuId = item.dataset.student || '';
+                const itemDate = item.dataset.date || '';
+                
+                let match = true;
+                if (search && !textStr.includes(search)) match = false;
+                if (student && stuId !== student) match = false;
+                if (date && !itemDate.startsWith(date)) match = false;
+                
+                item.style.display = match ? '' : 'none';
+            });
+        }
+
         function updateLogos() {
             const isDark = document.documentElement.classList.contains('dark');
             const url = SUPABASE_URL + "/storage/v1/object/public/logos/" + (isDark ? "acik.png" : "koyu.png");
@@ -303,7 +331,7 @@
         }
 
         // ==========================================
-        // KIMLIK DOGRULAMA (AUTH) 
+        // KIMLIK DOGRULAMA (AUTH)
         // ==========================================
         async function initAuth() {
             if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
@@ -498,7 +526,7 @@
             } else {
                 const { data: p } = await supabaseClient.from('points').select('*').eq('student_id', userProfile.id);
                 const { data: l } = await supabaseClient.from('lessons').select('*').eq('student_id', userProfile.id).neq('is_completed', true).gte('scheduled_at', new Date().toISOString()).limit(2);
-                const { data: h } = await supabaseClient.from('homeworks').select('*').eq('student_id', userProfile.id).gte('deadline', new Date().toISOString()).limit(2);
+                const { data: h } = await supabaseClient.from('homeworks').select('*').eq('student_id', userProfile.id).neq('is_completed', true).gte('deadline', new Date().toISOString()).limit(2);
                 
                 const total = (p || []).reduce((acc, curr) => acc + curr.amount, 0) || 0;
                 
@@ -524,7 +552,7 @@
                                 ${lessonHtml}
                             </div>
                             <div class="bg-white dark:bg-darkCard p-8 rounded-[3rem] border shadow-sm">
-                                <h4 class="font-black text-[10px] text-slate-400 uppercase tracking-widest mb-4 italic">Yaklaşan Ödevler</h4>
+                                <h4 class="font-black text-[10px] text-slate-400 uppercase tracking-widest mb-4 italic">Yaklaşan Aktif Ödevler</h4>
                                 ${hwHtml}
                             </div>
                         </div>
@@ -668,17 +696,21 @@
             } 
         };
 
+        // YENİ: ÖĞRENCİ ÖDEVLERİ (AKTİF VE GEÇMİŞ)
         window.renderStudentHomeworks = async function() {
             try {
                 document.getElementById('page-title').innerText = 'Ödevlerim';
-                const { data: hws } = await supabaseClient.from('homeworks').select('*').eq('student_id', userProfile.id);
+                const { data: hws } = await supabaseClient.from('homeworks').select('*').eq('student_id', userProfile.id).order('created_at', { ascending: false });
                 const { data: mySubs } = await supabaseClient.from('homework_submissions').select('homework_id').eq('student_id', userProfile.id);
                 const { data: analyses } = await supabaseClient.from('detailed_analyses').select('task_id').eq('student_id', userProfile.id).eq('type', 'homework');
                 
                 const subIds = (mySubs || []).map(s => s.homework_id);
                 const analyzedTaskIds = new Set(analyses ? analyses.map(a => a.task_id) : []);
 
-                let hHTML = (hws || []).map(h => {
+                const activeHws = (hws || []).filter(h => !h.is_completed);
+                const pastHws = (hws || []).filter(h => h.is_completed);
+
+                const generateHwCard = (h, isActiveCard) => {
                     const isSent = subIds.includes(h.id);
                     const hasAnalysis = analyzedTaskIds.has(h.id);
                     
@@ -689,8 +721,10 @@
                     
                     if (isSent) {
                         actionButtons += `<span class="flex-1 justify-center px-6 py-4 bg-green-50 text-green-600 rounded-2xl font-black text-xs uppercase flex items-center gap-2 italic shadow-sm border border-green-200"><i class="fa-solid fa-check-circle"></i> Gönderildi</span>`;
-                    } else {
+                    } else if (isActiveCard) {
                         actionButtons += `<button type="button" onclick="window.showSubmitForm('${h.id}')" class="flex-1 px-6 py-4 brand-bg text-white rounded-2xl font-black text-xs uppercase shadow-lg transition hover:scale-105">Çözüm Yükle</button>`;
+                    } else {
+                        actionButtons += `<span class="flex-1 justify-center px-6 py-4 bg-slate-100 text-slate-500 rounded-2xl font-black text-xs uppercase flex items-center gap-2 italic shadow-sm"><i class="fa-solid fa-lock"></i> Süre Bitti</span>`;
                     }
 
                     if (hasAnalysis) {
@@ -698,22 +732,35 @@
                     }
 
                     return `
-                        <div class="bg-white dark:bg-darkCard p-8 rounded-[2.5rem] border flex flex-col justify-between gap-6 shadow-sm mb-4 transition hover:shadow-md">
+                        <div class="bg-white dark:bg-darkCard p-8 rounded-[2.5rem] border flex flex-col justify-between gap-6 shadow-sm mb-4 transition hover:shadow-md ${isActiveCard ? '' : 'opacity-75 grayscale'}">
                             <div class="flex items-center gap-6">
                                 <div class="h-16 w-16 bg-orange-50 dark:bg-orange-900/30 text-orange-600 rounded-2xl flex items-center justify-center text-2xl shadow-inner">
                                     <i class="fa-solid fa-file-pdf"></i>
                                 </div>
                                 <div>
                                     <h4 class="text-xl font-black italic uppercase tracking-tighter">${h.title}</h4>
-                                    <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1 italic">Bitiş: ${new Date(h.deadline).toLocaleString('tr-TR')}</p>
+                                    <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1 italic">Son Teslim: ${new Date(h.deadline).toLocaleString('tr-TR')}</p>
                                 </div>
                             </div>
                             <div class="flex gap-3 flex-col md:flex-row w-full">${actionButtons}</div>
                         </div>`;
-                }).join('') || '<p class="py-20 text-center italic text-slate-400 font-bold uppercase text-xs">Henüz ödev atanmadı.</p>';
+                };
+
+                let activeHTML = activeHws.map(h => generateHwCard(h, true)).join('') || '<p class="py-10 col-span-full text-center font-bold italic text-slate-400 text-xs">Bekleyen aktif ödevin yok.</p>';
+                let pastHTML = pastHws.map(h => generateHwCard(h, false)).join('') || '<p class="py-10 col-span-full text-center font-bold italic text-slate-400 text-xs">Geçmiş ödevin yok.</p>';
                 
                 document.getElementById('view-content').innerHTML = `
-                    <div class="grid md:grid-cols-2 gap-8 view-fade">${hHTML}</div>
+                    <div class="view-fade">
+                        <div class="mb-12">
+                            <h3 class="font-black text-slate-400 uppercase tracking-widest text-[10px] mb-6 flex items-center"><i class="fa-solid fa-book-open mr-2 text-blue-500 text-lg"></i> Aktif Ödevlerim</h3>
+                            <div class="grid md:grid-cols-2 gap-8">${activeHTML}</div>
+                        </div>
+                        <div class="pt-8 border-t dark:border-slate-800">
+                            <h3 class="font-black text-slate-400 uppercase tracking-widest text-[10px] mb-6 flex items-center"><i class="fa-solid fa-archive mr-2 text-slate-500 text-lg"></i> Geçmiş Ödevlerim</h3>
+                            <div class="grid md:grid-cols-2 gap-8">${pastHTML}</div>
+                        </div>
+                    </div>
+                    
                     <div id="submit-overlay" class="fixed inset-0 bg-slate-900/60 backdrop-blur-md hidden items-center justify-center p-6" style="z-index:99999;">
                         <div class="max-w-lg w-full bg-white dark:bg-darkCard p-8 md:p-12 rounded-[4rem] shadow-2xl relative view-fade max-h-[95vh] flex flex-col">
                             <button type="button" onclick="document.getElementById('submit-overlay').classList.add('hidden'); document.getElementById('submit-overlay').classList.remove('flex');" class="absolute top-6 right-6 md:top-10 md:right-10 text-slate-400 transition hover:scale-110 z-10"><i class="fa-solid fa-xmark text-2xl"></i></button>
@@ -861,12 +908,7 @@
 
                 let activeHTML = activeLessons.map(ls => {
                     const isLive = now >= new Date(ls.scheduled_at);
-                    const isMatotaLive = ls.link && ls.link.startsWith('matota_');
-                    
-                    const studentUrl = `https://egitim.matota.online/?room=${ls.link}&name=${encodeURIComponent(userProfile.full_name)}&role=2s4t3`;
-                    const joinBtn = isMatotaLive
-                        ? `<a href="${studentUrl}" target="_blank" class="w-full brand-bg text-white py-5 rounded-2xl font-black block text-center shadow-xl transition hover:brightness-110"><i class="fa-solid fa-video mr-2"></i>SİSTEMDEN DERSE KATIL</a>`
-                        : `<a href="${ls.link}" target="_blank" class="w-full bg-blue-600 text-white py-5 rounded-2xl font-black block text-center shadow-xl transition hover:brightness-110"><i class="fa-solid fa-external-link-alt mr-2"></i>HARİCİ DERSE KATIL</a>`;
+                    const joinBtn = `<a href="${ls.link}" target="_blank" class="w-full bg-blue-600 text-white py-5 rounded-2xl font-black block text-center shadow-xl transition hover:brightness-110"><i class="fa-solid fa-external-link-alt mr-2"></i>DERSE KATIL</a>`;
 
                     return `
                         <div class="bg-white dark:bg-darkCard p-10 rounded-[3rem] border relative transition shadow-sm mb-4">
@@ -920,7 +962,7 @@
                         <span class="text-8xl">${total}</span>
                     </div>
                     <div class="space-y-6">
-                        <h4 class="font-black text-[10px] uppercase tracking-[0.2em] text-slate-400 italic mb-4">Son 3 Kazanımın</h4>
+                        <h4 class="font-black text-[10px] uppercase tracking-widest text-slate-400 italic mb-4">Son 3 Kazanımın</h4>
                         ${l3}
                     </div>
                 </div>`; 
@@ -1020,8 +1062,9 @@
         }
 
         // ==========================================
-        // EGITMEN (TEACHER) MODÜLLERİ
+        // EGITMEN (TEACHER) MODÜLLERİ VE FİLTRELER
         // ==========================================
+
         window.renderTeacherAnalytics = async function() {
             document.getElementById('page-title').innerText = 'Gelişmiş Analiz Merkezi';
             try {
@@ -1044,17 +1087,20 @@
                         let baseTitle = a.title || 'İsimsiz Görev';
                         if(baseTitle.includes('-')) baseTitle = baseTitle.split('-')[0].trim();
                         let studentName = a.profiles?.full_name || 'Öğrenci'; 
-                        grouped[key] = { task_id: a.task_id, student_id: a.student_id, student_name: studentName, title: baseTitle, type: a.type, tests: [] };
+                        let dateStr = a.created_at ? a.created_at.split('T')[0] : '';
+                        grouped[key] = { task_id: a.task_id, student_id: a.student_id, student_name: studentName, title: baseTitle, type: a.type, tests: [], dateStr: dateStr };
                     }
                     grouped[key].tests.push(a);
                 });
 
+                // YENİ: Filtrelenebilir div eklendi
                 let listHTML = Object.values(grouped).map(g => {
                     let totalQ = 0, totalC = 0, totalW = 0, totalE = 0;
                     g.tests.forEach(t => { totalQ+=t.total_questions; totalC+=t.correct_count; totalW+=t.wrong_count; totalE+=t.empty_count; });
                     const rate = Math.round((totalC/totalQ)*100)||0;
                     return `
-                    <div class="p-6 bg-white dark:bg-darkCard border-2 brand-border rounded-[2rem] flex flex-col md:flex-row justify-between items-center shadow-sm mb-4 transition hover:shadow-md gap-4">
+                    <div class="filterable-item p-6 bg-white dark:bg-darkCard border-2 brand-border rounded-[2.5rem] flex flex-col md:flex-row justify-between items-center shadow-sm mb-4 transition hover:shadow-md gap-4"
+                         data-student="${g.student_id}" data-search="${g.title.toLowerCase()}" data-date="${g.dateStr}">
                         <div class="w-full md:w-auto">
                             <h5 class="font-black italic uppercase text-lg text-slate-800 dark:text-white">${g.title} <span class="bg-slate-100 dark:bg-slate-800 text-[8px] px-2 py-1 rounded ml-2 not-italic">${g.type === 'exam' ? 'SINAV' : 'ÖDEV'}</span></h5>
                             <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">${g.student_name} • ${g.tests.length} Test İçeriyor</p>
@@ -1072,9 +1118,21 @@
                     </div>`;
                 }).join('') || '<p class="text-center italic text-xs text-slate-400 p-10 font-bold uppercase">Analiz bulunmuyor.</p>';
 
+                // YENİ: Arama/Filtre Arayüzü
+                let filterUI = `
+                    <div class="bg-white dark:bg-darkCard p-4 rounded-2xl border shadow-sm mb-4 flex flex-col md:flex-row gap-4 items-center">
+                        <div class="font-black text-xs uppercase text-slate-400 shrink-0"><i class="fa-solid fa-filter mr-1"></i> Filtrele:</div>
+                        <input type="text" id="filter-an-search" placeholder="Görev Adı..." class="flex-1 p-3 rounded-xl border dark:bg-darkBg outline-none text-xs font-bold" oninput="window.applyFilters('an-list-container', 'filter-an-search', 'filter-an-student', 'filter-an-date')">
+                        <select id="filter-an-student" class="flex-1 p-3 rounded-xl border dark:bg-darkBg outline-none text-xs font-bold" onchange="window.applyFilters('an-list-container', 'filter-an-search', 'filter-an-student', 'filter-an-date')">
+                            <option value="">Tüm Öğrenciler</option>
+                            ${(students||[]).map(st => `<option value="${st.id}">${st.full_name}</option>`).join('')}
+                        </select>
+                        <input type="date" id="filter-an-date" class="flex-1 p-3 rounded-xl border dark:bg-darkBg outline-none text-xs font-bold" onchange="window.applyFilters('an-list-container', 'filter-an-search', 'filter-an-student', 'filter-an-date')">
+                    </div>`;
+
                 document.getElementById('view-content').innerHTML = `
-                    <div class="grid md:grid-cols-2 gap-10 view-fade">
-                        <div class="bg-white dark:bg-darkCard p-8 rounded-[3rem] border shadow-sm h-fit">
+                    <div class="grid md:grid-cols-3 gap-10 view-fade">
+                        <div class="md:col-span-1 bg-white dark:bg-darkCard p-8 rounded-[3rem] border shadow-sm h-fit">
                             <h4 class="font-black text-lg mb-4 italic uppercase tracking-tighter">Yeni Optik Analiz</h4>
                             <div id="analysis-setup" class="space-y-4">
                                 <select id="an-student" class="w-full p-4 rounded-xl border dark:bg-darkBg outline-none font-bold" onchange="window.loadStudentTasks()">
@@ -1094,9 +1152,11 @@
                             </div>
                             <div id="analysis-optic" class="hidden mt-6 space-y-4"></div>
                         </div>
-                        <div class="space-y-4">
-                            <h4 class="font-black text-[10px] uppercase text-slate-400 tracking-[0.2em] italic mb-4">Görev Bazlı Analizler</h4>
-                            ${listHTML}
+                        <div class="md:col-span-2 space-y-4">
+                            ${filterUI}
+                            <div id="an-list-container">
+                                ${listHTML}
+                            </div>
                         </div>
                     </div>`;
             } catch(e) { console.error("Teacher Analytics Error:", e); }
@@ -1203,6 +1263,7 @@
             if(error) {
                 alert("Kaydetme Hatası: " + error.message); 
             } else { 
+                // Otomatik 10'da 1 Puan Ekleme Sistemi
                 const scorePercentage = (correctCount / count) * 100;
                 const addedPoints = Math.round(scorePercentage / 10); 
                 const pointCategory = type === 'exam' ? 'Sınav Uygulama' : 'Ödev Yapma';
@@ -1232,16 +1293,19 @@
             }
         }
 
+        // YENİ: GELİŞİM RAPORU İÇİN TARİH FİLTRESİ
         window.renderTeacherProgress = async function() {
             document.getElementById('page-title').innerText = 'Genel Gelişim Raporu';
             const { data: students } = await supabaseClient.from('profiles').select('*').eq('role', 'student');
             
             document.getElementById('view-content').innerHTML = `
-                <div class="bg-white dark:bg-darkCard p-8 rounded-[3rem] border shadow-sm mb-8 view-fade flex gap-4">
+                <div class="bg-white dark:bg-darkCard p-8 rounded-[3rem] border shadow-sm mb-8 view-fade flex flex-wrap gap-4 items-center">
                     <select id="prog-student" class="flex-1 p-4 rounded-xl border dark:bg-darkBg outline-none font-bold">
-                        <option value="">Raporunu Görmek İstediğiniz Öğrenciyi Seçin</option>
+                        <option value="">Öğrenci Seçin</option>
                         ${(students || []).map(s => `<option value="${s.id}">${s.full_name}</option>`).join('')}
                     </select>
+                    <input type="date" id="prog-date-start" class="p-4 rounded-xl border dark:bg-darkBg outline-none font-bold text-xs" title="Başlangıç Tarihi">
+                    <input type="date" id="prog-date-end" class="p-4 rounded-xl border dark:bg-darkBg outline-none font-bold text-xs" title="Bitiş Tarihi">
                     <button type="button" onclick="window.loadStudentProgress()" class="bg-blue-600 text-white px-8 py-4 rounded-xl font-black shadow-lg transition hover:scale-105">Raporu Çıkar</button>
                 </div>
                 <div id="progress-content" class="view-fade"></div>
@@ -1252,16 +1316,34 @@
             const sid = document.getElementById('prog-student').value;
             if(!sid) return alert("Öğrenci seçiniz.");
             
+            const startDate = document.getElementById('prog-date-start').value;
+            const endDate = document.getElementById('prog-date-end').value;
+
             const { data: analyses } = await supabaseClient.from('detailed_analyses').select('*').eq('student_id', sid);
             if(!analyses || analyses.length === 0) {
                 document.getElementById('progress-content').innerHTML = `<p class="text-center italic text-slate-400 p-10 font-bold uppercase text-xs">Bu öğrenciye ait analiz verisi bulunmuyor.</p>`;
                 return;
             }
 
+            // Tarih Filtresi Uygula
+            let filteredAnalyses = analyses;
+            if (startDate) {
+                filteredAnalyses = filteredAnalyses.filter(a => new Date(a.created_at) >= new Date(startDate));
+            }
+            if (endDate) {
+                // Günün sonuna kadar dahil et
+                filteredAnalyses = filteredAnalyses.filter(a => new Date(a.created_at) <= new Date(endDate + 'T23:59:59'));
+            }
+
+            if(filteredAnalyses.length === 0) {
+                document.getElementById('progress-content').innerHTML = `<p class="text-center italic text-slate-400 p-10 font-bold uppercase text-xs">Seçilen tarih aralığında analiz verisi bulunmuyor.</p>`;
+                return;
+            }
+
             let tQ = 0, tC = 0, tW = 0, tE = 0;
             let tStats = {};
 
-            analyses.forEach(a => {
+            filteredAnalyses.forEach(a => {
                 tQ += a.total_questions || 0; tC += a.correct_count || 0; tW += a.wrong_count || 0; tE += a.empty_count || 0;
                 if(a.topic_analysis) {
                     Object.keys(a.topic_analysis).forEach(t => {
@@ -1538,94 +1620,67 @@
             }; 
         }
 
+        // YENİ: DERSLERİ FİLTRELEME VE YAN YANA GÖSTERME
         window.renderTeacherLessons = async function() { 
             const { data: s } = await supabaseClient.from('profiles').select('*').eq('role', 'student'); 
             const { data: l } = await supabaseClient.from('lessons').select('*, profiles(full_name)').order('scheduled_at', { ascending: false }); 
             
             let listHTML = (l||[]).map(ls => {
                 const isCompleted = ls.is_completed;
-                const isMatotaLive = ls.link && ls.link.startsWith('matota_');
-                
                 const statusBadge = isCompleted 
                     ? `<span class="bg-slate-100 text-slate-500 px-2 py-1 rounded-md text-[8px] uppercase font-black ml-2"><i class="fa-solid fa-archive mr-1"></i>Geçmiş</span>` 
                     : `<span class="bg-green-50 text-green-600 px-2 py-1 rounded-md text-[8px] uppercase font-black ml-2"><i class="fa-solid fa-satellite-dish mr-1"></i>Aktif</span>`;
                 
-                const teacherUrl = `https://egitim.matota.online/?room=${ls.link}&name=${encodeURIComponent(userProfile.full_name)}&role=7o7r2`;
-                const launchBtn = isMatotaLive 
-                    ? `<a href="${teacherUrl}" target="_blank" class="w-10 h-10 bg-purple-50 text-purple-600 rounded-xl transition hover:scale-110 shadow-sm flex items-center justify-center" title="Canlı Yayını Başlat"><i class="fa-solid fa-video"></i></a>`
-                    : `<a href="${ls.link}" target="_blank" class="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl transition hover:scale-110 shadow-sm flex items-center justify-center" title="Harici Linke Git"><i class="fa-solid fa-external-link-alt"></i></a>`;
-
                 return `
-                    <div class="p-6 bg-white dark:bg-darkCard border rounded-2xl flex flex-col md:flex-row gap-4 justify-between items-center shadow-sm mb-4 transition hover:shadow-md ${isCompleted ? 'opacity-60 grayscale' : ''}">
+                    <div class="filterable-item p-6 bg-white dark:bg-darkCard border rounded-2xl flex flex-col md:flex-row gap-4 justify-between items-center shadow-sm mb-4 transition hover:shadow-md ${isCompleted ? 'opacity-60 grayscale' : ''}" data-student="${ls.student_id}" data-search="${ls.title.toLowerCase()}" data-date="${ls.scheduled_at ? ls.scheduled_at.split('T')[0] : ''}">
                         <div>
                             <h5 class="font-black uppercase text-sm">${ls.title} ${statusBadge}</h5>
                             <p class="text-[10px] font-bold text-slate-400 mt-1">${ls.profiles?.full_name || 'Bilinmiyor'} • ${new Date(ls.scheduled_at).toLocaleString('tr-TR')}</p>
                         </div>
                         <div class="flex gap-2">
-                            ${!isCompleted ? launchBtn + `<button type="button" onclick="window.markLessonCompleted('${ls.id}')" class="w-10 h-10 bg-green-50 text-green-600 rounded-xl transition hover:scale-110" title="Dersi Tamamla"><i class="fa-solid fa-check"></i></button>` : `<button type="button" onclick="window.markLessonActive('${ls.id}')" class="w-10 h-10 bg-orange-50 text-orange-600 rounded-xl transition hover:scale-110" title="Aktif Yap"><i class="fa-solid fa-rotate-left"></i></button>`}
+                            ${!isCompleted ? `<button type="button" onclick="window.markLessonCompleted('${ls.id}')" class="w-10 h-10 bg-green-50 text-green-600 rounded-xl transition hover:scale-110" title="Dersi Tamamla"><i class="fa-solid fa-check"></i></button>` : `<button type="button" onclick="window.markLessonActive('${ls.id}')" class="w-10 h-10 bg-orange-50 text-orange-600 rounded-xl transition hover:scale-110" title="Aktif Yap"><i class="fa-solid fa-rotate-left"></i></button>`}
                             <button type="button" onclick="window.startEditLesson('${ls.id}')" class="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl transition hover:scale-110" title="Düzenle"><i class="fa-solid fa-pencil"></i></button>
                             <button type="button" onclick="window.deleteItem('lessons', '${ls.id}', window.renderTeacherLessons)" class="w-10 h-10 bg-red-50 text-red-600 rounded-xl transition hover:scale-110" title="Sil"><i class="fa-solid fa-trash"></i></button>
                         </div>
                     </div>`;
             }).join('') || '<p class="text-center p-10 italic text-slate-400">Ders yok.</p>'; 
 
+            let filterUI = `
+                <div class="bg-white dark:bg-darkCard p-4 rounded-2xl border shadow-sm mb-4 flex flex-col md:flex-row gap-4 items-center">
+                    <div class="font-black text-xs uppercase text-slate-400 shrink-0"><i class="fa-solid fa-filter mr-1"></i> Filtrele:</div>
+                    <input type="text" id="filter-ls-search" placeholder="Ders Adı..." class="flex-1 p-3 rounded-xl border dark:bg-darkBg outline-none text-xs font-bold" oninput="window.applyFilters('ls-list-container', 'filter-ls-search', 'filter-ls-student', 'filter-ls-date')">
+                    <select id="filter-ls-student" class="flex-1 p-3 rounded-xl border dark:bg-darkBg outline-none text-xs font-bold" onchange="window.applyFilters('ls-list-container', 'filter-ls-search', 'filter-ls-student', 'filter-ls-date')">
+                        <option value="">Tüm Öğrenciler</option>
+                        ${(s||[]).map(st => `<option value="${st.id}">${st.full_name}</option>`).join('')}
+                    </select>
+                    <input type="date" id="filter-ls-date" class="flex-1 p-3 rounded-xl border dark:bg-darkBg outline-none text-xs font-bold" onchange="window.applyFilters('ls-list-container', 'filter-ls-search', 'filter-ls-student', 'filter-ls-date')">
+                </div>`;
+
             document.getElementById('view-content').innerHTML = `
-                <div class="grid md:grid-cols-2 gap-10 view-fade">
-                    <form id="lesson-form" class="bg-white dark:bg-darkCard p-8 rounded-3xl border space-y-4 h-fit">
-                        <h4 class="font-black text-lg mb-4 italic uppercase tracking-tighter" id="lesson-form-title">Yeni Ders Planla</h4>
-                        <select id="l-student" class="w-full p-4 rounded-xl border dark:bg-darkBg">${(s||[]).map(st => `<option value="${st.id}">${st.full_name}</option>`).join('') || ''}</select>
-                        <input type="text" id="l-title" placeholder="Ders Başlığı" required class="w-full p-4 rounded-xl border dark:bg-darkBg font-bold uppercase">
-                        
-                        <div class="flex items-center">
-                            <button type="button" id="btn-toggle-link" class="text-[10px] font-bold uppercase bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 text-slate-500 hover:text-blue-600 px-4 py-3 rounded-xl transition w-full text-left flex justify-between items-center shadow-sm">
-                                <span><i class="fa-solid fa-link mr-2"></i> Harici Link Ekle (İsteğe Bağlı)</span>
-                                <i class="fa-solid fa-chevron-down"></i>
-                            </button>
-                        </div>
-                        
-                        <div id="link-container" class="hidden">
-                            <input type="url" id="l-link" placeholder="Zoom / Meet Linki Yapıştır" class="w-full p-4 rounded-xl border dark:bg-darkBg font-medium text-xs">
-                        </div>
-                        
-                        <input type="datetime-local" id="l-time" required class="w-full p-4 rounded-xl border dark:bg-darkBg font-black text-blue-600">
-                        <p class="text-[10px] text-slate-400 italic mb-2 mt-2">* Harici link girmezseniz, sistem otomatik canlı ders odası oluşturur.</p>
-                        
-                        <button type="submit" id="lesson-form-btn" class="w-full brand-bg text-white py-4 rounded-xl font-black uppercase shadow-lg transition hover:brightness-110">Yayınla</button>
-                    </form>
-                    <div class="space-y-4">
-                        <h4 class="font-black text-[10px] uppercase text-slate-400 tracking-[0.2em] italic mb-4">Tüm Dersler</h4>
-                        ${listHTML}
+                <div class="grid lg:grid-cols-3 gap-10 view-fade">
+                    <div class="lg:col-span-1">
+                        <form id="lesson-form" class="bg-white dark:bg-darkCard p-8 rounded-3xl border shadow-sm space-y-4 sticky top-24">
+                            <h4 class="font-black text-lg mb-4 italic uppercase tracking-tighter" id="lesson-form-title">Yeni Ders Planla</h4>
+                            <select id="l-student" class="w-full p-4 rounded-xl border dark:bg-darkBg">${(s||[]).map(st => `<option value="${st.id}">${st.full_name}</option>`).join('') || ''}</select>
+                            <input type="text" id="l-title" placeholder="Ders Başlığı" required class="w-full p-4 rounded-xl border dark:bg-darkBg font-bold uppercase">
+                            <input type="url" id="l-link" placeholder="Meet / Zoom Linki" required class="w-full p-4 rounded-xl border dark:bg-darkBg font-medium text-xs">
+                            <input type="datetime-local" id="l-time" required class="w-full p-4 rounded-xl border dark:bg-darkBg font-black text-blue-600">
+                            <button type="submit" id="lesson-form-btn" class="w-full brand-bg text-white py-4 rounded-xl font-black uppercase shadow-lg transition hover:brightness-110">Yayınla</button>
+                        </form>
+                    </div>
+                    <div class="lg:col-span-2 space-y-4">
+                        ${filterUI}
+                        <div id="ls-list-container">${listHTML}</div>
                     </div>
                 </div>`; 
             
-            document.getElementById('btn-toggle-link').onclick = () => {
-                const c = document.getElementById('link-container');
-                c.classList.toggle('hidden');
-                if(!c.classList.contains('hidden')) {
-                    document.getElementById('l-link').focus();
-                } else {
-                    document.getElementById('l-link').value = '';
-                }
-            };
-
             document.getElementById('lesson-form').onsubmit = async (e) => { 
                 e.preventDefault(); 
                 const btn = document.getElementById('lesson-form-btn'); 
                 btn.disabled = true; 
-                
-                let linkVal = document.getElementById('l-link').value.trim();
-                if (!linkVal) {
-                    linkVal = 'matota_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 4);
-                }
-                
-                const d = { 
-                    student_id: document.getElementById('l-student').value, 
-                    title: document.getElementById('l-title').value, 
-                    link: linkVal, 
-                    scheduled_at: new Date(document.getElementById('l-time').value).toISOString() 
-                }; 
+                const d = { student_id: document.getElementById('l-student').value, title: document.getElementById('l-title').value, link: document.getElementById('l-link').value, scheduled_at: new Date(document.getElementById('l-time').value).toISOString() }; 
                 let { error } = editingLessonId ? await supabaseClient.from('lessons').update(d).eq('id', editingLessonId) : await supabaseClient.from('lessons').insert([d]); 
-                if(!error) { alert("Ders başarıyla planlandı!"); editingLessonId = null; window.renderTeacherLessons(); } else { alert(error.message); btn.disabled = false; } 
+                if(!error) { alert("Gönderildi!"); editingLessonId = null; window.renderTeacherLessons(); } else { alert(error.message); btn.disabled = false; } 
             }; 
         }
 
@@ -1636,19 +1691,7 @@
                 document.getElementById('lesson-form-title').innerText = "Dersi Düzenle"; 
                 document.getElementById('l-student').value = l.student_id; 
                 document.getElementById('l-title').value = l.title; 
-                
-                const linkInput = document.getElementById('l-link');
-                const linkContainer = document.getElementById('link-container');
-                
-                // Eğer MATOTA koduyse dış link kutusunu gizli bırak
-                if (l.link && !l.link.startsWith('matota_')) {
-                    linkContainer.classList.remove('hidden');
-                    linkInput.value = l.link;
-                } else {
-                    linkContainer.classList.add('hidden');
-                    linkInput.value = '';
-                }
-
+                document.getElementById('l-link').value = l.link; 
                 const d = new Date(l.scheduled_at); 
                 const off = new Date(d.getTime() - (d.getTimezoneOffset() * 60000)); 
                 document.getElementById('l-time').value = off.toISOString().slice(0, 16); 
@@ -1670,9 +1713,25 @@
             }
         };
 
+        // YENİ: ÖĞRETMEN ÖDEVLERİ, ARŞİVLEME, FİLTRELEME VE GÖNDERİLENLER LİSTESİ EKLENDİ
+        window.markHomeworkCompleted = async function(id) {
+            if(confirm("Bu ödevi süresi doldu (geçmiş) olarak işaretlemek istediğinize emin misiniz?")) {
+                const { error } = await supabaseClient.from('homeworks').update({ is_completed: true }).eq('id', id);
+                if(!error) window.renderTeacherHomeworks(); else alert("Hata: " + error.message);
+            }
+        };
+
+        window.markHomeworkActive = async function(id) {
+            if(confirm("Bu ödevi tekrar aktif (sürüyor) olarak değiştirmek istediğinize emin misiniz?")) {
+                const { error } = await supabaseClient.from('homeworks').update({ is_completed: false }).eq('id', id);
+                if(!error) window.renderTeacherHomeworks(); else alert("Hata: " + error.message);
+            }
+        };
+
         window.renderTeacherHomeworks = async function() { 
             try {
                 const { data: s } = await supabaseClient.from('profiles').select('*').eq('role', 'student'); 
+                const { data: hw } = await supabaseClient.from('homeworks').select('*, profiles(full_name)').order('created_at', { ascending: false });
                 const { data: sb } = await supabaseClient.from('homework_submissions').select('*, profiles(full_name), homeworks(title)').order('created_at', { ascending: false }); 
                 const { data: analyses } = await supabaseClient.from('detailed_analyses').select('task_id, student_id').eq('type', 'homework'); 
                 
@@ -1680,44 +1739,77 @@
                 if (analyses) {
                     analyses.forEach(a => analyzedTasks.add(a.task_id + '_' + a.student_id));
                 }
+
+                // Submissions grouplama (Hangi ödeve hangi çözümler gelmiş?)
+                const subsByHw = {};
+                (sb||[]).forEach(sub => {
+                    if(!subsByHw[sub.homework_id]) subsByHw[sub.homework_id] = [];
+                    subsByHw[sub.homework_id].push(sub);
+                });
                 
-                let sbHTML = (sb||[]).map(sub => { 
-                    const files = (sub.file_urls||[]).map((url, i) => `
-                        <a href="${url}" target="_blank" class="block p-3 bg-blue-50 text-blue-600 rounded-xl mt-2 text-[10px] font-black uppercase truncate transition hover:brightness-110">
-                            Ödevi Aç (${i+1})
-                        </a>
-                    `).join('') || '-'; 
-                    
-                    const hasAnalysis = analyzedTasks.has(sub.homework_id + '_' + sub.student_id); 
-                    let analysisBtn = hasAnalysis ? `
-                        <button type="button" onclick="window.showGroupedAnalysisModal('${sub.homework_id}', '${sub.student_id}')" class="mt-2 w-full px-4 py-3 bg-orange-500 text-white rounded-xl font-black text-[10px] uppercase shadow-md transition hover:scale-105 border border-orange-600">
-                            <i class="fa-solid fa-chart-pie mr-2 text-sm"></i>Analizi İncele
-                        </button>
-                    ` : ''; 
+                let hwHTML = (hw||[]).map(h => { 
+                    const isCompleted = h.is_completed;
+                    const statusBadge = isCompleted 
+                        ? `<span class="bg-slate-100 text-slate-500 px-2 py-1 rounded-md text-[8px] uppercase font-black ml-2"><i class="fa-solid fa-archive mr-1"></i>Geçmiş</span>` 
+                        : `<span class="bg-green-50 text-green-600 px-2 py-1 rounded-md text-[8px] uppercase font-black ml-2"><i class="fa-solid fa-satellite-dish mr-1"></i>Aktif</span>`;
+
+                    let subsForThis = subsByHw[h.id] || [];
+                    let subsHTML = subsForThis.map(sub => {
+                        const files = (sub.file_urls||[]).map((url, i) => `<a href="${url}" target="_blank" class="text-blue-500 hover:underline">Dosya ${i+1}</a>`).join(' | ');
+                        const hasAnalysis = analyzedTasks.has(sub.homework_id + '_' + sub.student_id); 
+                        let analysisBtn = hasAnalysis ? `<button type="button" onclick="window.showGroupedAnalysisModal('${sub.homework_id}', '${sub.student_id}')" class="ml-2 text-orange-500 text-[10px] font-black uppercase hover:underline"><i class="fa-solid fa-chart-pie"></i> Analizi İncele</button>` : ''; 
+                        return `<div class="bg-slate-50 dark:bg-slate-900 p-3 rounded-xl text-xs mt-2 border dark:border-slate-700 flex flex-col md:flex-row justify-between items-start md:items-center"><span class="font-bold">${sub.profiles?.full_name}</span> <span class="text-[10px] mt-1 md:mt-0">${files} - Not: ${sub.note||'-'} ${analysisBtn}</span></div>`;
+                    }).join('');
+                    if(!subsHTML) subsHTML = `<div class="text-[10px] text-slate-400 italic mt-2">Bu ödev için henüz çözüm gönderilmedi.</div>`;
                     
                     return `
-                        <div class="p-6 bg-white dark:bg-darkCard border-2 brand-border rounded-[2rem] shadow-sm mb-4">
-                            <p class="font-black text-[10px] brand-text uppercase mb-1">${sub.homeworks?.title || 'Ödev'}</p>
-                            <p class="font-bold text-sm mb-4 italic">${sub.profiles?.full_name}</p>
-                            ${files}
-                            ${analysisBtn}
-                            <p class="text-slate-400 text-[10px] mt-4 italic bg-slate-50 dark:bg-slate-900 p-3 rounded-xl border">Not: ${sub.note || '-'}</p>
-                        </div>`; 
-                }).join('') || '<p class="p-10 text-center text-slate-400 italic">Çözüm bekleniyor.</p>'; 
-                
-                document.getElementById('view-content').innerHTML = `
-                    <div class="grid md:grid-cols-2 gap-10 view-fade">
-                        <form id="hw-form" class="bg-white dark:bg-darkCard p-8 rounded-3xl border space-y-4 h-fit">
-                            <select id="hw-student" class="w-full p-4 rounded-xl border dark:bg-darkBg">${(s||[]).map(st => `<option value="${st.id}">${st.full_name}</option>`).join('') || ''}</select>
-                            <input type="text" id="hw-title" placeholder="Başlık" required class="w-full p-4 rounded-xl border dark:bg-darkBg">
-                            <div class="p-5 border-2 border-dashed rounded-2xl bg-slate-50 dark:bg-slate-900/30">
-                                <p class="text-[10px] font-black uppercase text-slate-400 mb-2 tracking-widest italic">Eklenti Dosyası</p>
-                                <input type="file" id="hw-file" class="w-full text-[10px]">
+                        <div class="filterable-item p-6 bg-white dark:bg-darkCard border-2 brand-border rounded-[2.5rem] shadow-sm mb-4 transition hover:shadow-md ${isCompleted ? 'opacity-60 grayscale' : ''}" data-student="${h.student_id}" data-search="${h.title.toLowerCase()}" data-date="${h.deadline ? h.deadline.split('T')[0] : ''}">
+                            <div class="flex justify-between items-start mb-4 border-b pb-4 dark:border-slate-800">
+                                <div>
+                                    <h5 class="font-black uppercase text-sm">${h.title} ${statusBadge}</h5>
+                                    <p class="text-[10px] font-bold text-slate-400 mt-1">${h.profiles?.full_name || 'Bilinmiyor'} • Son Teslim: ${new Date(h.deadline).toLocaleString('tr-TR')}</p>
+                                    ${h.pdf_url ? `<a href="${h.pdf_url}" target="_blank" class="text-[10px] text-blue-500 hover:underline mt-2 inline-block"><i class="fa-solid fa-link"></i> Ödev Dosyasını Gör</a>` : ''}
+                                </div>
+                                <div class="flex gap-2">
+                                    ${!isCompleted ? `<button type="button" onclick="window.markHomeworkCompleted('${h.id}')" class="w-8 h-8 bg-green-50 text-green-600 rounded-xl transition hover:scale-110 flex items-center justify-center" title="Ödevi Tamamla"><i class="fa-solid fa-check"></i></button>` : `<button type="button" onclick="window.markHomeworkActive('${h.id}')" class="w-8 h-8 bg-orange-50 text-orange-600 rounded-xl transition hover:scale-110 flex items-center justify-center" title="Aktif Yap"><i class="fa-solid fa-rotate-left"></i></button>`}
+                                    <button type="button" onclick="window.deleteItem('homeworks', '${h.id}', window.renderTeacherHomeworks)" class="w-8 h-8 bg-red-50 text-red-600 rounded-xl transition hover:scale-110 flex items-center justify-center" title="Sil"><i class="fa-solid fa-trash"></i></button>
+                                </div>
                             </div>
-                            <input type="datetime-local" id="hw-deadline" required class="w-full p-4 rounded-xl border dark:bg-darkBg">
-                            <button type="submit" id="hw-btn" class="w-full brand-bg text-white py-4 rounded-xl font-black uppercase shadow-lg">Yayınla</button>
-                        </form>
-                        <div class="space-y-4">${sbHTML}</div>
+                            <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2"><i class="fa-solid fa-inbox text-blue-500 mr-1"></i> Öğrenci Gönderimleri</div>
+                            ${subsHTML}
+                        </div>`;
+                }).join('') || '<p class="p-10 text-center text-slate-400 italic font-bold uppercase text-xs">Oluşturulmuş ödev bulunmuyor.</p>'; 
+                
+                let filterUI = `
+                    <div class="bg-white dark:bg-darkCard p-4 rounded-2xl border shadow-sm mb-4 flex flex-col md:flex-row gap-4 items-center">
+                        <div class="font-black text-xs uppercase text-slate-400 shrink-0"><i class="fa-solid fa-filter mr-1"></i> Filtrele:</div>
+                        <input type="text" id="filter-hw-search" placeholder="Ödev Adı..." class="flex-1 p-3 rounded-xl border dark:bg-darkBg outline-none text-xs font-bold" oninput="window.applyFilters('hw-list-container', 'filter-hw-search', 'filter-hw-student', 'filter-hw-date')">
+                        <select id="filter-hw-student" class="flex-1 p-3 rounded-xl border dark:bg-darkBg outline-none text-xs font-bold" onchange="window.applyFilters('hw-list-container', 'filter-hw-search', 'filter-hw-student', 'filter-hw-date')">
+                            <option value="">Tüm Öğrenciler</option>
+                            ${(s||[]).map(st => `<option value="${st.id}">${st.full_name}</option>`).join('')}
+                        </select>
+                        <input type="date" id="filter-hw-date" class="flex-1 p-3 rounded-xl border dark:bg-darkBg outline-none text-xs font-bold" onchange="window.applyFilters('hw-list-container', 'filter-hw-search', 'filter-hw-student', 'filter-hw-date')">
+                    </div>`;
+
+                document.getElementById('view-content').innerHTML = `
+                    <div class="grid lg:grid-cols-3 gap-10 view-fade">
+                        <div class="lg:col-span-1">
+                            <form id="hw-form" class="bg-white dark:bg-darkCard p-8 rounded-3xl border shadow-sm space-y-4 sticky top-24">
+                                <h4 class="font-black text-lg mb-4 italic uppercase tracking-tighter">Yeni Ödev Ata</h4>
+                                <select id="hw-student" class="w-full p-4 rounded-xl border dark:bg-darkBg font-bold outline-none">${(s||[]).map(st => `<option value="${st.id}">${st.full_name}</option>`).join('') || ''}</select>
+                                <input type="text" id="hw-title" placeholder="Başlık" required class="w-full p-4 rounded-xl border dark:bg-darkBg font-bold uppercase">
+                                <div class="p-5 border-2 border-dashed rounded-2xl bg-slate-50 dark:bg-slate-900/30">
+                                    <p class="text-[10px] font-black uppercase text-slate-400 mb-2 tracking-widest italic">Eklenti Dosyası</p>
+                                    <input type="file" id="hw-file" class="w-full text-[10px]">
+                                </div>
+                                <input type="datetime-local" id="hw-deadline" required class="w-full p-4 rounded-xl border dark:bg-darkBg font-black text-blue-600">
+                                <button type="submit" id="hw-btn" class="w-full brand-bg text-white py-4 rounded-xl font-black uppercase shadow-lg transition hover:brightness-110">Yayınla</button>
+                            </form>
+                        </div>
+                        <div class="lg:col-span-2 space-y-4">
+                            ${filterUI}
+                            <div id="hw-list-container">${hwHTML}</div>
+                        </div>
                     </div>`; 
                     
                 document.getElementById('hw-form').onsubmit = async (e) => { 
