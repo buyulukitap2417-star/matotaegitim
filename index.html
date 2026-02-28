@@ -1562,7 +1562,7 @@
                             <p class="text-[10px] font-bold text-slate-400 mt-1">${ls.profiles?.full_name || 'Bilinmiyor'} • ${new Date(ls.scheduled_at).toLocaleString('tr-TR')}</p>
                         </div>
                         <div class="flex gap-2">
-                            ${!isCompleted ? `<button type="button" onclick="window.markLessonCompleted('${ls.id}')" class="w-10 h-10 bg-green-50 text-green-600 rounded-xl transition hover:scale-110" title="Dersi Tamamla"><i class="fa-solid fa-check"></i></button>` : `<button type="button" onclick="window.markLessonActive('${ls.id}')" class="w-10 h-10 bg-orange-50 text-orange-600 rounded-xl transition hover:scale-110" title="Aktif Yap"><i class="fa-solid fa-rotate-left"></i></button>`}
+                            ${!isCompleted ? launchBtn + `<button type="button" onclick="window.markLessonCompleted('${ls.id}')" class="w-10 h-10 bg-green-50 text-green-600 rounded-xl transition hover:scale-110" title="Dersi Tamamla"><i class="fa-solid fa-check"></i></button>` : `<button type="button" onclick="window.markLessonActive('${ls.id}')" class="w-10 h-10 bg-orange-50 text-orange-600 rounded-xl transition hover:scale-110" title="Aktif Yap"><i class="fa-solid fa-rotate-left"></i></button>`}
                             <button type="button" onclick="window.startEditLesson('${ls.id}')" class="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl transition hover:scale-110" title="Düzenle"><i class="fa-solid fa-pencil"></i></button>
                             <button type="button" onclick="window.deleteItem('lessons', '${ls.id}', window.renderTeacherLessons)" class="w-10 h-10 bg-red-50 text-red-600 rounded-xl transition hover:scale-110" title="Sil"><i class="fa-solid fa-trash"></i></button>
                         </div>
@@ -1576,9 +1576,20 @@
                         <select id="l-student" class="w-full p-4 rounded-xl border dark:bg-darkBg">${(s||[]).map(st => `<option value="${st.id}">${st.full_name}</option>`).join('') || ''}</select>
                         <input type="text" id="l-title" placeholder="Ders Başlığı" required class="w-full p-4 rounded-xl border dark:bg-darkBg font-bold uppercase">
                         
-                        <input type="url" id="l-link" placeholder="Meet / Zoom Linki" required class="w-full p-4 rounded-xl border dark:bg-darkBg font-medium text-xs">
+                        <div class="flex items-center">
+                            <button type="button" id="btn-toggle-link" class="text-[10px] font-bold uppercase bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 text-slate-500 hover:text-blue-600 px-4 py-3 rounded-xl transition w-full text-left flex justify-between items-center shadow-sm">
+                                <span><i class="fa-solid fa-link mr-2"></i> Harici Link Ekle (İsteğe Bağlı)</span>
+                                <i class="fa-solid fa-chevron-down"></i>
+                            </button>
+                        </div>
+                        
+                        <div id="link-container" class="hidden">
+                            <input type="url" id="l-link" placeholder="Zoom / Meet Linki Yapıştır" class="w-full p-4 rounded-xl border dark:bg-darkBg font-medium text-xs">
+                        </div>
                         
                         <input type="datetime-local" id="l-time" required class="w-full p-4 rounded-xl border dark:bg-darkBg font-black text-blue-600">
+                        <p class="text-[10px] text-slate-400 italic mb-2 mt-2">* Harici link girmezseniz, sistem otomatik canlı ders odası oluşturur.</p>
+                        
                         <button type="submit" id="lesson-form-btn" class="w-full brand-bg text-white py-4 rounded-xl font-black uppercase shadow-lg transition hover:brightness-110">Yayınla</button>
                     </form>
                     <div class="space-y-4">
@@ -1587,19 +1598,34 @@
                     </div>
                 </div>`; 
             
+            document.getElementById('btn-toggle-link').onclick = () => {
+                const c = document.getElementById('link-container');
+                c.classList.toggle('hidden');
+                if(!c.classList.contains('hidden')) {
+                    document.getElementById('l-link').focus();
+                } else {
+                    document.getElementById('l-link').value = '';
+                }
+            };
+
             document.getElementById('lesson-form').onsubmit = async (e) => { 
                 e.preventDefault(); 
                 const btn = document.getElementById('lesson-form-btn'); 
                 btn.disabled = true; 
                 
+                let linkVal = document.getElementById('l-link').value.trim();
+                if (!linkVal) {
+                    linkVal = 'matota_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 4);
+                }
+                
                 const d = { 
                     student_id: document.getElementById('l-student').value, 
                     title: document.getElementById('l-title').value, 
-                    link: document.getElementById('l-link').value.trim(), 
+                    link: linkVal, 
                     scheduled_at: new Date(document.getElementById('l-time').value).toISOString() 
                 }; 
                 let { error } = editingLessonId ? await supabaseClient.from('lessons').update(d).eq('id', editingLessonId) : await supabaseClient.from('lessons').insert([d]); 
-                if(!error) { alert("Gönderildi!"); editingLessonId = null; window.renderTeacherLessons(); } else { alert(error.message); btn.disabled = false; } 
+                if(!error) { alert("Ders başarıyla planlandı!"); editingLessonId = null; window.renderTeacherLessons(); } else { alert(error.message); btn.disabled = false; } 
             }; 
         }
 
@@ -1610,7 +1636,19 @@
                 document.getElementById('lesson-form-title').innerText = "Dersi Düzenle"; 
                 document.getElementById('l-student').value = l.student_id; 
                 document.getElementById('l-title').value = l.title; 
-                document.getElementById('l-link').value = l.link; 
+                
+                const linkInput = document.getElementById('l-link');
+                const linkContainer = document.getElementById('link-container');
+                
+                // Eğer MATOTA koduyse dış link kutusunu gizli bırak
+                if (l.link && !l.link.startsWith('matota_')) {
+                    linkContainer.classList.remove('hidden');
+                    linkInput.value = l.link;
+                } else {
+                    linkContainer.classList.add('hidden');
+                    linkInput.value = '';
+                }
+
                 const d = new Date(l.scheduled_at); 
                 const off = new Date(d.getTime() - (d.getTimezoneOffset() * 60000)); 
                 document.getElementById('l-time').value = off.toISOString().slice(0, 16); 
