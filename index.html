@@ -4,9 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MATOTA | Modern Eğitim Ekosistemi</title>
+    
+    <!-- Ekstra Fontlar ve Kütüphaneler (PeerJS Canlı Ders İçin) -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    
     <script>
         tailwind.config = {
             darkMode: 'class',
@@ -16,12 +21,14 @@
                         darkBg: '#0f172a',
                         darkCard: '#1e293b',
                         brand: { blue: '#2563eb', orange: '#ea580c' }
-                    }
+                    },
+                    animation: { 'float': 'float 6s ease-in-out infinite' }
                 }
             }
         }
     </script>
     <style>
+        /* MATOTA ANA STİLLERİ */
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
         body { font-family: 'Inter', sans-serif; transition: background-color 0.3s ease; scroll-behavior: smooth; }
         .glass { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(12px); }
@@ -39,11 +46,70 @@
         .q-opt-btn.selected { background-color: #ea580c !important; color: white !important; border-color: transparent !important; }
         .theme-blue .q-opt-btn.selected { background-color: #2563eb !important; }
         
-        /* ÇÖKME SEBEBİ OLAN CSS ÇAKIŞMASI DÜZELTİLDİ: Analiz Modalı buradaki ezici kurallardan tamamen çıkarıldı. Sadece Tailwind sınıfları ile yönetilecek. */
         #custom-modal { display: none; }
         #custom-modal.active { display: flex; }
         
         .hero-gradient { background: radial-gradient(circle at top right, rgba(37, 99, 235, 0.1), transparent); }
+
+        /* ========================================================================= */
+        /* MATOTA CANLI DERS MODÜLÜ İZOLE EDİLMİŞ STİLLER (ASLA SİSTEMİ BOZMAZ)      */
+        /* ========================================================================= */
+        #matota-meeting-module {
+            font-family: 'Plus Jakarta Sans', sans-serif !important;
+            position: fixed; inset: 0; width: 100vw; height: 100dvh; overflow: hidden;
+            background: #0f172a; color: white; z-index: 999999;
+        }
+        #matota-meeting-module * {
+            cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5" fill="%233b82f6" stroke="rgba(255,255,255,0.8)" stroke-width="2"/></svg>') 12 12, auto;
+        }
+        #matota-meeting-module button, #matota-meeting-module a, #matota-meeting-module input, #matota-meeting-module .meet-video-card, #matota-meeting-module .cursor-pointer {
+            cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><circle cx="12" cy="12" r="6" fill="%2310b981" stroke="rgba(255,255,255,0.8)" stroke-width="2"/></svg>') 12 12, pointer !important;
+        }
+        .meet-click-ripple {
+            position: absolute; border-radius: 50%; pointer-events: none; width: 20px; height: 20px; background: rgba(59, 130, 246, 0.6); transform: translate(-50%, -50%) scale(1); animation: meet-ripple-anim 0.5s ease-out forwards; z-index: 99999;
+        }
+        @keyframes meet-ripple-anim { 0% { transform: translate(-50%, -50%) scale(1); opacity: 1; } 100% { transform: translate(-50%, -50%) scale(4); opacity: 0; } }
+        
+        #matota-meeting-module .meet-glass-panel { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.08); }
+        
+        #meet-video-area { flex: 1; width: 100%; height: 100%; display: flex; flex-direction: row; gap: 16px; padding: 16px; padding-bottom: 100px; overflow: hidden; }
+        #meet-stage-wrapper { flex: 1; height: 100%; border-radius: 12px; overflow: hidden; background: #000; border: 2px solid #3b82f6; display: none; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        #meet-stage-wrapper .meet-video-card { width: 100%; height: 100%; border-radius: 0; box-shadow: none; max-height: none; }
+        #meet-stage-wrapper .meet-video-card video { object-fit: contain !important; }
+        
+        #meet-gallery-wrapper { height: 100%; overflow-y: auto; overflow-x: hidden; scrollbar-width: thin; transition: all 0.3s ease; }
+        #meet-video-area.mode-grid #meet-gallery-wrapper { flex: 1; display: flex; flex-wrap: wrap; align-content: center; justify-content: center; gap: 16px; }
+        #meet-video-area.mode-grid .meet-video-card { flex: 1 1 320px; max-width: 600px; height: auto; aspect-ratio: 16 / 9; }
+        
+        #meet-video-area.mode-speaker #meet-stage-wrapper { display: block; }
+        #meet-video-area.mode-speaker #meet-gallery-wrapper { width: 260px; flex-shrink: 0; display: flex; flex-direction: column; gap: 12px; align-items: center; }
+        #meet-video-area.mode-speaker #meet-gallery-wrapper .meet-video-card { width: 100%; height: 146px !important; flex-shrink: 0; aspect-ratio: 16 / 9; }
+        
+        @media (max-width: 768px) {
+            #meet-video-area { flex-direction: column; padding-bottom: 90px; }
+            #meet-video-area.mode-speaker #meet-stage-wrapper { flex: 1; min-height: 40vh; }
+            #meet-video-area.mode-speaker #meet-gallery-wrapper { width: 100%; height: 130px; flex-direction: row; overflow-x: auto; overflow-y: hidden; padding-bottom: 8px; }
+            #meet-video-area.mode-speaker #meet-gallery-wrapper .meet-video-card { width: 180px; height: 100px !important; }
+            #meet-video-area.mode-grid .meet-video-card { max-width: 100%; }
+        }
+        
+        #matota-meeting-module .meet-video-card { position: relative; border-radius: 12px; overflow: hidden; background: #1e293b; box-shadow: 0 4px 15px rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; cursor: pointer; }
+        #matota-meeting-module .meet-video-card video { width: 100%; height: 100%; object-fit: cover; background: #000; }
+        #matota-meeting-module .mirror-mode { transform: scaleX(-1); }
+        
+        #matota-meeting-module .cam-placeholder { position: absolute; inset: 0; background-color: #111827; display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 2; }
+        #matota-meeting-module .cam-placeholder img { max-width: 60px; max-height: 60px; object-fit: contain; opacity: 0.8; margin-bottom: 6px; }
+        #matota-meeting-module .meet-video-card.cam-off .cam-placeholder { display: flex; }
+        #matota-meeting-module .meet-video-card.is-screen-share .cam-placeholder, #matota-meeting-module .meet-video-card.is-timer .cam-placeholder { display: none !important; }
+        
+        #matota-meeting-module .meet-side-panel { position: absolute; top: 56px; bottom: 0; right: 0; height: calc(100dvh - 56px); z-index: 150; background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(16px); border-left: 1px solid rgba(255, 255, 255, 0.1); transform: translateX(100%); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); display: flex; flex-direction: column; }
+        #matota-meeting-module .meet-side-panel.open { transform: translateX(0); }
+        
+        #meet-floating-controls { position: absolute; bottom: 24px; left: 50%; transform: translateX(-50%); z-index: 100; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 9999px; padding: 8px 16px; display: flex; gap: 12px; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5); }
+        @media (max-width: 768px) { #meet-floating-controls { width: 90%; justify-content: space-between; bottom: env(safe-area-inset-bottom, 20px); border-radius: 20px; padding: 10px; } }
+        
+        #matota-meeting-module .meet-chat-msg { animation: meetFadeIn 0.3s ease-out forwards; }
+        @keyframes meetFadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body class="text-slate-800 dark:text-slate-100 dark:bg-darkBg theme-blue overflow-x-hidden" id="main-body">
@@ -60,9 +126,9 @@
                 <div class="flex items-center gap-4">
                     <a href="#about" class="hidden md:block text-sm font-bold text-slate-500 hover:text-blue-600 transition">MATOTA Nedir?</a>
                     <a href="#contact" class="hidden md:block text-sm font-bold text-slate-500 hover:text-blue-600 transition">İletişim</a>
-                    <button onclick="toggleDarkMode()" class="p-2 text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg transition"><i class="fa-solid fa-moon dark:hidden"></i><i class="fa-solid fa-sun hidden dark:block"></i></button>
-                    <button onclick="showAuthScreen('student')" class="px-5 py-2 bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl font-bold text-sm transition hover:scale-105 border">Öğrenci Girişi</button>
-                    <button onclick="showAuthScreen('teacher')" class="px-5 py-2 bg-blue-600 text-white rounded-xl font-bold shadow-lg text-sm transition hover:scale-105">Eğitmen Girişi</button>
+                    <button type="button" onclick="toggleDarkMode()" class="p-2 text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg transition"><i class="fa-solid fa-moon dark:hidden"></i><i class="fa-solid fa-sun hidden dark:block"></i></button>
+                    <button type="button" onclick="showAuthScreen('student')" class="px-5 py-2 bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl font-bold text-sm transition hover:scale-105 border">Öğrenci Girişi</button>
+                    <button type="button" onclick="showAuthScreen('teacher')" class="px-5 py-2 bg-blue-600 text-white rounded-xl font-bold shadow-lg text-sm transition hover:scale-105">Eğitmen Girişi</button>
                 </div>
             </div>
         </nav>
@@ -74,7 +140,7 @@
                 Ali ŞENGÜL ile veriye dayalı, mantıksal ve ölçülebilir başarı süreci.
             </p>
             <div class="flex justify-center gap-4 view-fade">
-                <button onclick="showAuthScreen('student')" class="px-10 py-5 bg-blue-600 text-white rounded-[2rem] font-black text-lg shadow-2xl transition hover:scale-105">Hemen Başla</button>
+                <button type="button" onclick="showAuthScreen('student')" class="px-10 py-5 bg-blue-600 text-white rounded-[2rem] font-black text-lg shadow-2xl transition hover:scale-105">Hemen Başla</button>
             </div>
         </section>
         <section id="about" class="py-32 bg-slate-50/50 dark:bg-slate-900/50 px-6">
@@ -167,6 +233,172 @@
         </div>
         <div class="h-24 glass border-t p-4 flex justify-center gap-2" id="exam-pagination"></div>
     </div>
+
+    <!-- ======================================================================= -->
+    <!-- MATOTA CANLI DERS KAPSÜLÜ (SİSTEME GÖMÜLÜ, İZOLE, KUSURSUZ)              -->
+    <!-- ======================================================================= -->
+    <div id="matota-meeting-module" class="hidden">
+        
+        <!-- Meet Loader -->
+        <div id="meet-loader" class="fixed inset-0 z-[60] bg-gray-900 flex items-center justify-center hidden">
+            <div class="text-center">
+                <div class="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                <p class="text-gray-400 text-sm">Canlı Ders Hazırlanıyor...</p>
+            </div>
+        </div>
+
+        <!-- 1. LOBİ EKRANI -->
+        <div id="meet-lobby-screen" class="absolute inset-0 z-50 flex flex-col items-center justify-center p-4 bg-[#0f172a] hidden">
+            <div class="text-center mb-6">
+                <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 shadow-lg shadow-indigo-500/30 mb-4 animate-float">
+                    <i class="fas fa-graduation-cap text-2xl text-white"></i>
+                </div>
+                <h1 id="meet-app-title-display" class="text-3xl md:text-4xl font-bold tracking-tight text-white"></h1>
+                <p id="meet-welcome-msg-display" class="text-gray-400 mt-2 text-xs md:text-sm max-w-md mx-auto leading-relaxed"></p>
+            </div>
+
+            <div class="meet-glass-panel w-full max-w-4xl rounded-3xl p-2 flex flex-col md:flex-row shadow-2xl overflow-hidden">
+                <div class="w-full md:w-1/2 bg-black/40 rounded-2xl overflow-hidden relative aspect-video group flex justify-center items-center">
+                    <video id="meet-local-preview" autoplay muted playsinline class="w-full h-full object-cover mirror-mode"></video>
+                    <div class="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-3 p-2 bg-black/60 backdrop-blur rounded-2xl border border-white/10 z-20">
+                        <button type="button" id="meet-prev-mic-btn" class="w-10 h-10 rounded-xl bg-gray-700 hover:bg-gray-600 text-white transition flex items-center justify-center"><i class="fas fa-microphone"></i></button>
+                        <button type="button" id="meet-prev-cam-btn" class="w-10 h-10 rounded-xl bg-gray-700 hover:bg-gray-600 text-white transition flex items-center justify-center"><i class="fas fa-video"></i></button>
+                    </div>
+                </div>
+
+                <div class="w-full md:w-1/2 p-6 flex flex-col justify-center gap-4">
+                    <div>
+                        <label class="text-[10px] font-bold text-gray-500 uppercase tracking-wider ml-1">Kullanıcı Adı</label>
+                        <input type="text" id="meet-nickname-input" class="w-full mt-1 bg-gray-900/50 border border-gray-700 rounded-xl px-4 py-3 text-white focus:outline-none text-sm">
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-gray-500 uppercase tracking-wider ml-1">Oda Kodu</label>
+                        <input type="text" id="meet-room-input" class="w-full bg-gray-900/50 border border-gray-700 rounded-xl px-4 py-3 text-white focus:outline-none font-mono text-sm">
+                        <p id="meet-room-hint" class="text-[10px] text-gray-500 mt-1 ml-1">* MATOTA Otomatik Kodudur.</p>
+                    </div>
+                    <div id="meet-button-group" class="grid grid-cols-1 mt-2">
+                        <button type="button" id="meet-create-btn" class="group relative px-4 py-4 bg-blue-600 hover:bg-blue-500 rounded-xl text-white font-bold transition overflow-hidden shadow-lg hidden">
+                            <span id="meet-btn-create-text" class="relative flex items-center justify-center gap-2 text-sm"><i class="fas fa-video"></i> Yayını Başlat</span>
+                        </button>
+                        <button type="button" id="meet-join-btn" class="px-4 py-4 bg-green-600 hover:bg-green-500 rounded-xl text-white font-bold transition shadow-lg hidden">
+                            <span id="meet-btn-join-text" class="flex items-center justify-center gap-2 text-sm"><i class="fas fa-video"></i> Derse Katıl</span>
+                        </button>
+                    </div>
+                    <button type="button" onclick="window.leaveMatotaMeeting()" class="mt-4 text-[10px] text-gray-400 hover:text-white uppercase font-bold tracking-widest"><i class="fa-solid fa-arrow-left mr-1"></i> MATOTA'ya Dön</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. ODA EKRANI -->
+        <div id="meet-room-screen" class="hidden flex-1 w-full h-full flex flex-col relative bg-[#0b1120] overflow-hidden">
+            <header class="h-14 meet-glass-panel border-b border-white/5 flex items-center justify-between px-4 shrink-0 z-20">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-lg">
+                        <i class="fas fa-video text-xs"></i>
+                    </div>
+                    <div>
+                        <h2 id="meet-room-title" class="font-bold text-white text-sm leading-tight">MATOTA Canlı Ders</h2>
+                        <div class="flex items-center gap-1.5 text-[10px] text-gray-400">
+                            <span class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span> 
+                            <span id="meet-conn-status">Bağlantı Kuruluyor...</span>
+                            <span id="meet-meeting-timer" class="hidden ml-2 font-mono text-blue-400 font-bold border-l border-white/10 pl-2">00:00:00</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex gap-2">
+                    <button type="button" id="meet-btn-toggle-layout" class="px-3 py-1.5 bg-white/5 hover:bg-white/10 rounded-lg text-xs text-gray-300 border border-white/10 transition flex items-center gap-2" title="Görünümü Değiştir">
+                        <i class="fas fa-th-large"></i> <span class="hidden sm:inline">Görünüm</span>
+                    </button>
+                    <button type="button" onclick="window.meetToggleChat()" class="px-3 py-1.5 bg-white/5 hover:bg-white/10 rounded-lg text-xs text-gray-300 border border-white/10 transition flex items-center gap-2 relative">
+                        <i class="fas fa-comment-alt"></i>
+                        <span class="hidden sm:inline">Sohbet</span>
+                        <span id="meet-chat-notification" class="hidden bg-red-500 border-2 border-[#0f172a] w-3 h-3 rounded-full absolute -top-1 -right-1"></span>
+                    </button>
+                    <button type="button" onclick="window.meetToggleParticipants()" class="px-3 py-1.5 bg-white/5 hover:bg-white/10 rounded-lg text-xs text-gray-300 border border-white/10 transition flex items-center gap-2 relative">
+                        <i class="fas fa-users"></i> 
+                        <span class="hidden sm:inline">Kişiler</span>
+                        <span id="meet-participant-count" class="bg-blue-500 text-white text-[8px] rounded-full px-1.5 py-0.5 absolute -top-1 -right-1">1</span>
+                    </button>
+                </div>
+            </header>
+
+            <main id="meet-video-area" class="mode-speaker">
+                <div id="meet-stage-wrapper"></div>
+                <div id="meet-gallery-wrapper"></div>
+            </main>
+
+            <!-- YAN PANELLER -->
+            <div id="meet-participants-sidebar" class="meet-side-panel w-64 p-4 shadow-2xl">
+                <div class="flex justify-between items-center mb-4 border-b border-white/10 pb-2 shrink-0">
+                    <h3 class="font-bold text-sm">Katılımcılar</h3>
+                    <button type="button" onclick="window.meetToggleParticipants()" class="text-gray-400 hover:text-white"><i class="fas fa-times"></i></button>
+                </div>
+                <div id="meet-participants-list" class="flex-1 overflow-y-auto space-y-2"></div>
+            </div>
+
+            <div id="meet-chat-sidebar" class="meet-side-panel w-72 md:w-80 p-4 shadow-2xl">
+                <div class="flex justify-between items-center mb-2 border-b border-white/10 pb-2 shrink-0">
+                    <h3 class="font-bold text-sm"><i class="fas fa-comments text-blue-400 mr-1"></i> Ders Sohbeti</h3>
+                    <button type="button" onclick="window.meetToggleChat()" class="text-gray-400 hover:text-white"><i class="fas fa-times"></i></button>
+                </div>
+                <div id="meet-chat-messages" class="flex-1 overflow-y-auto space-y-3 mb-3 pr-2 flex flex-col">
+                    <div class="text-xs text-center text-gray-500 my-2">Sohbete hoş geldiniz. Mesajlar kayıt altına alınmaz.</div>
+                </div>
+                <div class="flex gap-2 shrink-0">
+                    <input type="text" id="meet-chat-input" placeholder="Mesajınız..." class="flex-1 bg-gray-900 border border-gray-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500">
+                    <button type="button" id="meet-btn-send-chat" class="bg-blue-600 hover:bg-blue-500 text-white rounded-xl px-4 py-2 transition"><i class="fas fa-paper-plane"></i></button>
+                </div>
+            </div>
+
+            <!-- YÜZEN KONTROL PANELİ -->
+            <div id="meet-floating-controls">
+                <button type="button" id="meet-toggle-mic" class="w-12 h-12 rounded-full bg-gray-700 hover:bg-gray-600 text-white transition flex items-center justify-center text-lg" title="Mikrofon"><i class="fas fa-microphone"></i></button>
+                <button type="button" id="meet-toggle-cam" class="w-12 h-12 rounded-full bg-gray-700 hover:bg-gray-600 text-white transition flex items-center justify-center text-lg" title="Kamera"><i class="fas fa-video"></i></button>
+                <div class="w-px h-8 bg-gray-600 mx-1 self-center"></div>
+                <button type="button" id="meet-share-screen" class="w-12 h-12 rounded-full bg-gray-700 hover:bg-blue-600 text-white transition flex items-center justify-center text-lg" title="Ekran Paylaş"><i class="fas fa-desktop"></i></button>
+                <button type="button" id="meet-btn-utilities" onclick="document.getElementById('meet-utils-modal').classList.remove('hidden')" class="hidden w-12 h-12 rounded-full bg-gray-700 hover:bg-purple-600 text-white transition flex items-center justify-center text-lg" title="Yönetici Araçları"><i class="fas fa-toolbox"></i></button>
+                <div class="w-px h-8 bg-gray-600 mx-1 self-center"></div>
+                <button type="button" id="meet-leave-btn" class="w-14 h-12 rounded-full bg-red-600 hover:bg-red-700 text-white transition flex items-center justify-center text-xl shadow-lg shadow-red-900/20" title="Ayrıl"><i class="fas fa-phone-slash"></i></button>
+            </div>
+
+            <!-- ARAÇLAR MODAL -->
+            <div id="meet-utils-modal" class="hidden fixed inset-0 z-[200] bg-black/70 flex items-center justify-center backdrop-blur-sm p-4">
+                <div class="bg-gray-800 border border-white/10 rounded-2xl p-6 w-full max-w-sm shadow-2xl relative">
+                    <button type="button" onclick="document.getElementById('meet-utils-modal').classList.add('hidden')" class="absolute top-4 right-4 text-gray-400 hover:text-white"><i class="fas fa-times text-lg"></i></button>
+                    <h3 class="text-lg font-bold mb-5 flex items-center gap-2 border-b border-white/10 pb-3"><i class="fas fa-toolbox text-purple-400"></i> Yönetici Araçları</h3>
+
+                    <div class="mb-6 bg-gray-900/50 p-4 rounded-xl border border-gray-700">
+                        <h4 class="text-xs text-gray-400 font-bold mb-2 uppercase flex justify-between">
+                            <span><i class="fas fa-record-vinyl mr-1 text-red-500"></i> Ders Kaydı</span>
+                            <span id="meet-record-status" class="hidden text-red-500 animate-pulse">Kaydediliyor</span>
+                        </h4>
+                        <button type="button" id="meet-btn-record-toggle" class="w-full bg-gray-700 hover:bg-gray-600 border border-gray-600 text-white rounded-lg py-2 text-sm flex items-center justify-center gap-2 transition">
+                            <i class="fas fa-play text-xs"></i> Kaydı Başlat
+                        </button>
+                        <p class="text-[10px] text-gray-500 mt-2">Dersi bilgisayarınıza WebM formatında kaydeder.</p>
+                    </div>
+
+                    <div class="bg-gray-900/50 p-4 rounded-xl border border-gray-700">
+                        <h4 class="text-xs text-gray-400 font-bold mb-2 uppercase"><i class="fas fa-hourglass-half mr-1 text-yellow-500"></i> Zamanlayıcı</h4>
+                        <div class="flex gap-2 mb-3">
+                            <div class="flex-1 relative">
+                                <input type="number" id="meet-timer-minutes" value="5" min="1" class="w-full bg-gray-800 border border-gray-600 rounded-lg pl-3 pr-8 py-2 text-sm text-white focus:outline-none">
+                                <span class="absolute right-3 top-2 text-xs text-gray-400">Dk</span>
+                            </div>
+                        </div>
+                        <div class="flex gap-2">
+                            <button type="button" id="meet-btn-timer-start" class="flex-1 bg-blue-600 hover:bg-blue-500 text-white rounded-lg py-2 text-sm transition font-medium">Başlat</button>
+                            <button type="button" id="meet-btn-timer-pause" class="flex-1 bg-yellow-600 hover:bg-yellow-500 text-white rounded-lg py-2 text-sm transition font-medium hidden">Beklet</button>
+                            <button type="button" id="meet-btn-timer-stop" class="flex-1 bg-red-600 hover:bg-red-500 text-white rounded-lg py-2 text-sm transition font-medium hidden">Kapat</button>
+                        </div>
+                        <p class="text-[10px] text-gray-500 mt-2">Odaya süre sayan katılımcı kamerası ekler.</p>
+                    </div>
+                </div>
+            </div>
+            <canvas id="meet-timer-canvas" width="640" height="360" class="hidden"></canvas>
+        </div>
+    </div>
+    <!-- CANLI DERS KAPSÜLÜ SONU -->
 
     <script>
         // ==========================================
@@ -701,7 +933,6 @@
                         actionButtons += `<button type="button" onclick="window.showGroupedAnalysisModal('${h.id}', '${userProfile.id}')" class="flex-1 px-6 py-4 bg-orange-500 text-white rounded-2xl font-black text-xs uppercase shadow-lg transition hover:scale-105 border border-orange-600" title="Analizi Gör"><i class="fa-solid fa-chart-pie text-lg mr-2"></i> ANALİZİ GÖR</button>`;
                     }
 
-                    // BUTONLARIN OLDUĞU DIV'E flex-col md:flex-row EKLENDİ
                     return `
                         <div class="bg-white dark:bg-darkCard p-8 rounded-[2.5rem] border flex flex-col justify-between gap-6 shadow-sm mb-4 transition hover:shadow-md">
                             <div class="flex items-center gap-6">
@@ -717,7 +948,6 @@
                         </div>`;
                 }).join('') || '<p class="py-20 text-center italic text-slate-400 font-bold uppercase text-xs">Henüz ödev atanmadı.</p>';
                 
-                // YÜKLEME KISMI DÜZELTİLDİ: max-h-[30vh] overflow-y-auto eklendi. Buton ve form taşmaları engellendi.
                 document.getElementById('view-content').innerHTML = `
                     <div class="grid md:grid-cols-2 gap-8 view-fade">${hHTML}</div>
                     <div id="submit-overlay" class="fixed inset-0 bg-slate-900/60 backdrop-blur-md hidden items-center justify-center p-6" style="z-index:99999;">
@@ -867,11 +1097,17 @@
 
                 let activeHTML = activeLessons.map(ls => {
                     const isLive = now >= new Date(ls.scheduled_at);
+                    const isMatotaLive = ls.link && ls.link.startsWith('matota_');
+                    
+                    const joinBtn = isMatotaLive
+                        ? `<button type="button" onclick="window.startMatotaMeeting('${ls.link}', false, '${ls.title.replace(/'/g, "\\'")}')" class="w-full brand-bg text-white py-5 rounded-2xl font-black block text-center shadow-xl transition hover:brightness-110"><i class="fa-solid fa-video mr-2"></i>SİSTEMDEN DERSE KATIL</button>`
+                        : `<a href="${ls.link}" target="_blank" class="w-full bg-blue-600 text-white py-5 rounded-2xl font-black block text-center shadow-xl transition hover:brightness-110"><i class="fa-solid fa-external-link-alt mr-2"></i>HARİCİ DERSE KATIL</a>`;
+
                     return `
                         <div class="bg-white dark:bg-darkCard p-10 rounded-[3rem] border relative transition shadow-sm mb-4">
                             <h4 class="text-2xl font-black mb-2 italic uppercase">${ls.title}</h4>
                             <p class="text-slate-400 font-black text-[10px] mb-8">${new Date(ls.scheduled_at).toLocaleString('tr-TR')}</p>
-                            ${isLive ? `<a href="${ls.link}" target="_blank" class="w-full brand-bg text-white py-5 rounded-2xl font-black block text-center shadow-xl transition hover:brightness-110"><i class="fa-solid fa-video mr-2"></i>DERSE KATIL</a>` : `<button disabled class="w-full bg-slate-100 dark:bg-slate-800 text-slate-400 py-5 rounded-2xl font-black uppercase cursor-not-allowed text-[10px] italic tracking-widest"><i class="fa-solid fa-clock mr-2"></i>Zamanı Bekleniyor</button>`}
+                            ${isLive ? joinBtn : `<button disabled class="w-full bg-slate-100 dark:bg-slate-800 text-slate-400 py-5 rounded-2xl font-black uppercase cursor-not-allowed text-[10px] italic tracking-widest"><i class="fa-solid fa-clock mr-2"></i>Zamanı Bekleniyor</button>`}
                         </div>`;
                 }).join('') || '<p class="py-10 col-span-full text-center font-black italic text-slate-400">Planlanmış aktif dersiniz bulunmuyor.</p>';
 
@@ -1026,7 +1262,6 @@
             try {
                 const { data: students } = await supabaseClient.from('profiles').select('*').eq('role', 'student');
                 
-                // Fallback join to prevent crashing
                 let analysesData = [];
                 const { data: aData, error } = await supabaseClient.from('detailed_analyses').select('*, profiles(full_name)').order('created_at', { ascending: false });
                 if(error) {
@@ -1043,7 +1278,6 @@
                     if(!grouped[key]) {
                         let baseTitle = a.title || 'İsimsiz Görev';
                         if(baseTitle.includes('-')) baseTitle = baseTitle.split('-')[0].trim();
-                        // profiles:student_id might not work depending on join structure, fallback to empty string
                         let studentName = a.profiles?.full_name || 'Öğrenci'; 
                         grouped[key] = { task_id: a.task_id, student_id: a.student_id, student_name: studentName, title: baseTitle, type: a.type, tests: [] };
                     }
@@ -1055,7 +1289,7 @@
                     g.tests.forEach(t => { totalQ+=t.total_questions; totalC+=t.correct_count; totalW+=t.wrong_count; totalE+=t.empty_count; });
                     const rate = Math.round((totalC/totalQ)*100)||0;
                     return `
-                    <div class="p-6 bg-white dark:bg-darkCard border-2 brand-border rounded-[2.5rem] flex flex-col md:flex-row justify-between items-center shadow-sm mb-4 transition hover:shadow-md gap-4">
+                    <div class="p-6 bg-white dark:bg-darkCard border-2 brand-border rounded-[2rem] flex flex-col md:flex-row justify-between items-center shadow-sm mb-4 transition hover:shadow-md gap-4">
                         <div class="w-full md:w-auto">
                             <h5 class="font-black italic uppercase text-lg text-slate-800 dark:text-white">${g.title} <span class="bg-slate-100 dark:bg-slate-800 text-[8px] px-2 py-1 rounded ml-2 not-italic">${g.type === 'exam' ? 'SINAV' : 'ÖDEV'}</span></h5>
                             <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">${g.student_name} • ${g.tests.length} Test İçeriyor</p>
@@ -1226,7 +1460,6 @@
                         const scorePercentage = (a.correct_count / a.total_questions) * 100;
                         const removedPoints = Math.round(scorePercentage / 10);
                         const pointCategory = a.type === 'exam' ? 'Sınav Uygulama' : 'Ödev Yapma';
-                        // Negatif puan girerek işlemi tersine çeviriyoruz
                         await supabaseClient.from('points').insert([{ student_id: a.student_id, category: pointCategory, amount: -removedPoints }]);
                     }
                 }
@@ -1548,10 +1781,16 @@
             
             let listHTML = (l||[]).map(ls => {
                 const isCompleted = ls.is_completed;
+                const isMatotaLive = ls.link && ls.link.startsWith('matota_');
+                
                 const statusBadge = isCompleted 
                     ? `<span class="bg-slate-100 text-slate-500 px-2 py-1 rounded-md text-[8px] uppercase font-black ml-2"><i class="fa-solid fa-archive mr-1"></i>Geçmiş</span>` 
                     : `<span class="bg-green-50 text-green-600 px-2 py-1 rounded-md text-[8px] uppercase font-black ml-2"><i class="fa-solid fa-satellite-dish mr-1"></i>Aktif</span>`;
                 
+                const launchBtn = isMatotaLive 
+                    ? `<button type="button" onclick="window.startMatotaMeeting('${ls.link}', true, '${ls.title.replace(/'/g, "\\'")}')" class="w-10 h-10 bg-purple-50 text-purple-600 rounded-xl transition hover:scale-110 shadow-sm" title="Canlı Yayını Başlat"><i class="fa-solid fa-video"></i></button>`
+                    : `<a href="${ls.link}" target="_blank" class="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl transition hover:scale-110 shadow-sm flex items-center justify-center" title="Harici Linke Git"><i class="fa-solid fa-external-link-alt"></i></a>`;
+
                 return `
                     <div class="p-6 bg-white dark:bg-darkCard border rounded-2xl flex flex-col md:flex-row gap-4 justify-between items-center shadow-sm mb-4 transition hover:shadow-md ${isCompleted ? 'opacity-60 grayscale' : ''}">
                         <div>
@@ -1559,9 +1798,7 @@
                             <p class="text-[10px] font-bold text-slate-400 mt-1">${ls.profiles?.full_name || 'Bilinmiyor'} • ${new Date(ls.scheduled_at).toLocaleString('tr-TR')}</p>
                         </div>
                         <div class="flex gap-2">
-                            ${!isCompleted 
-                                ? `<button type="button" onclick="window.markLessonCompleted('${ls.id}')" class="w-10 h-10 bg-green-50 text-green-600 rounded-xl transition hover:scale-110" title="Dersi Tamamla"><i class="fa-solid fa-check"></i></button>` 
-                                : `<button type="button" onclick="window.markLessonActive('${ls.id}')" class="w-10 h-10 bg-orange-50 text-orange-600 rounded-xl transition hover:scale-110" title="Aktif Yap"><i class="fa-solid fa-rotate-left"></i></button>`}
+                            ${!isCompleted ? launchBtn + `<button type="button" onclick="window.markLessonCompleted('${ls.id}')" class="w-10 h-10 bg-green-50 text-green-600 rounded-xl transition hover:scale-110" title="Dersi Tamamla"><i class="fa-solid fa-check"></i></button>` : `<button type="button" onclick="window.markLessonActive('${ls.id}')" class="w-10 h-10 bg-orange-50 text-orange-600 rounded-xl transition hover:scale-110" title="Aktif Yap"><i class="fa-solid fa-rotate-left"></i></button>`}
                             <button type="button" onclick="window.startEditLesson('${ls.id}')" class="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl transition hover:scale-110" title="Düzenle"><i class="fa-solid fa-pencil"></i></button>
                             <button type="button" onclick="window.deleteItem('lessons', '${ls.id}', window.renderTeacherLessons)" class="w-10 h-10 bg-red-50 text-red-600 rounded-xl transition hover:scale-110" title="Sil"><i class="fa-solid fa-trash"></i></button>
                         </div>
@@ -1574,7 +1811,9 @@
                         <h4 class="font-black text-lg mb-4 italic uppercase tracking-tighter" id="lesson-form-title">Yeni Ders Planla</h4>
                         <select id="l-student" class="w-full p-4 rounded-xl border dark:bg-darkBg">${(s||[]).map(st => `<option value="${st.id}">${st.full_name}</option>`).join('') || ''}</select>
                         <input type="text" id="l-title" placeholder="Ders Başlığı" required class="w-full p-4 rounded-xl border dark:bg-darkBg font-bold uppercase">
-                        <input type="url" id="l-link" placeholder="Meet / Zoom Linki" required class="w-full p-4 rounded-xl border dark:bg-darkBg font-medium">
+                        
+                        <input type="url" id="l-link" placeholder="Harici Link (Boş bırakırsanız MATOTA Canlı Ders oluşur)" class="w-full p-4 rounded-xl border dark:bg-darkBg font-medium text-xs">
+                        
                         <input type="datetime-local" id="l-time" required class="w-full p-4 rounded-xl border dark:bg-darkBg font-black text-blue-600">
                         <button type="submit" id="lesson-form-btn" class="w-full brand-bg text-white py-4 rounded-xl font-black uppercase shadow-lg transition hover:brightness-110">Yayınla</button>
                     </form>
@@ -1588,7 +1827,18 @@
                 e.preventDefault(); 
                 const btn = document.getElementById('lesson-form-btn'); 
                 btn.disabled = true; 
-                const d = { student_id: document.getElementById('l-student').value, title: document.getElementById('l-title').value, link: document.getElementById('l-link').value, scheduled_at: new Date(document.getElementById('l-time').value).toISOString() }; 
+                
+                let linkVal = document.getElementById('l-link').value.trim();
+                if (!linkVal) {
+                    linkVal = 'matota_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 4);
+                }
+                
+                const d = { 
+                    student_id: document.getElementById('l-student').value, 
+                    title: document.getElementById('l-title').value, 
+                    link: linkVal, 
+                    scheduled_at: new Date(document.getElementById('l-time').value).toISOString() 
+                }; 
                 let { error } = editingLessonId ? await supabaseClient.from('lessons').update(d).eq('id', editingLessonId) : await supabaseClient.from('lessons').insert([d]); 
                 if(!error) { alert("Gönderildi!"); editingLessonId = null; window.renderTeacherLessons(); } else { alert(error.message); btn.disabled = false; } 
             }; 
@@ -1601,7 +1851,7 @@
                 document.getElementById('lesson-form-title').innerText = "Dersi Düzenle"; 
                 document.getElementById('l-student').value = l.student_id; 
                 document.getElementById('l-title').value = l.title; 
-                document.getElementById('l-link').value = l.link; 
+                document.getElementById('l-link').value = l.link.startsWith('matota_') ? '' : l.link; 
                 const d = new Date(l.scheduled_at); 
                 const off = new Date(d.getTime() - (d.getTimezoneOffset() * 60000)); 
                 document.getElementById('l-time').value = off.toISOString().slice(0, 16); 
@@ -1686,6 +1936,17 @@
                     } catch (err) { alert(err.message); btn.disabled = false; } 
                 }; 
             } catch(e) { console.error(e); }
+        }
+
+        function meetToggleVideo() {
+            if (!meetState.localStream) return;
+            const track = meetState.localStream.getVideoTracks()[0];
+            track.enabled = !track.enabled;
+            meetState.isCamOn = track.enabled;
+            meetUpdateButtonUI(meetEls.btnCam, meetState.isCamOn, 'fa-video', 'fa-video-slash');
+            meetUpdateButtonUI(meetEls.prevCam, meetState.isCamOn, 'fa-video', 'fa-video-slash');
+            meetTogglePeerVideoPlaceholder('me', meetState.isCamOn);
+            meetBroadcastData({ type: 'cam-status', enabled: meetState.isCamOn });
         }
 
         window.onload = initAuth;
