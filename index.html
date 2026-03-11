@@ -43,9 +43,30 @@
         #custom-modal { display: none; }
         #custom-modal.active { display: flex; }
         .hero-gradient { background: radial-gradient(circle at top right, rgba(37, 99, 235, 0.1), transparent); }
-
-        /* Filtre geçişleri için */
         .filterable-item { transition: opacity 0.3s ease; }
+
+        /* YENİ: REELS / VİDEO KAYDIRMA STİLLERİ */
+        .reels-container {
+            scroll-snap-type: y mandatory;
+            overflow-y: scroll;
+            height: 75vh;
+            border-radius: 2rem;
+            background: #000;
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+            position: relative;
+        }
+        .reels-container::-webkit-scrollbar { display: none; }
+        .reel-item {
+            scroll-snap-align: start;
+            height: 100%;
+            width: 100%;
+            position: relative;
+            background: #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
     </style>
 </head>
 <body class="text-slate-800 dark:text-slate-100 dark:bg-darkBg theme-blue overflow-x-hidden" id="main-body">
@@ -153,21 +174,24 @@
         </div>
     </div>
 
-    <!-- Exam Overlay -->
-    <div id="exam-overlay" class="fixed inset-0 bg-white dark:bg-darkBg hidden flex flex-col" style="z-index: 99999;">
-        <div class="h-20 glass border-b px-8 flex justify-between items-center">
-            <h3 class="font-black text-xl italic" id="active-exam-title">SINAV</h3>
-            <div class="flex items-center gap-6">
-                <div class="font-black text-blue-600 bg-blue-50 px-5 py-2 rounded-xl">
-                    <i class="fa-solid fa-clock"></i> <span id="exam-timer">00:00</span>
-                </div>
-                <button type="button" onclick="showCustomModal('Sınavı Bitirmek İstediğinden Emin Misin?', window.finishExam)" class="bg-red-600 text-white px-6 py-2 rounded-xl font-bold uppercase text-xs shadow-lg">Sınavı Bitir</button>
+    <!-- YENİ: VİDEO YORUMLARI MODALI -->
+    <div id="video-comments-modal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-md hidden items-end justify-center p-4 sm:items-center" style="z-index: 99999;">
+        <div class="w-full max-w-lg bg-white dark:bg-darkCard rounded-t-[2rem] sm:rounded-[3rem] shadow-2xl relative flex flex-col h-[75vh] view-fade">
+            <div class="p-6 border-b dark:border-slate-800 flex justify-between items-center shrink-0">
+                <h3 class="text-xl font-black italic uppercase"><i class="fa-solid fa-comments text-blue-500 mr-2"></i>Yorumlar</h3>
+                <button type="button" onclick="document.getElementById('video-comments-modal').classList.add('hidden'); document.getElementById('video-comments-modal').classList.remove('flex');" class="text-slate-400 hover:text-slate-600 transition"><i class="fa-solid fa-xmark text-2xl"></i></button>
+            </div>
+            <div id="comments-list-container" class="flex-1 overflow-y-auto p-6 space-y-4"></div>
+            <div class="p-4 border-t dark:border-slate-800 shrink-0 bg-slate-50 dark:bg-slate-900/50 rounded-b-[3rem]">
+                <form id="comment-form" class="flex gap-2" onsubmit="window.submitVideoComment(event)">
+                    <input type="hidden" id="comment-video-id">
+                    <input type="hidden" id="comment-parent-id">
+                    <div id="replying-to-badge" class="hidden absolute -top-8 left-6 text-[10px] bg-blue-100 text-blue-700 px-3 py-1 rounded-full font-bold"></div>
+                    <input type="text" id="comment-input" placeholder="Yorum ekle..." class="flex-1 p-4 rounded-2xl border dark:bg-darkBg outline-none text-sm font-medium focus:ring-2 focus:ring-blue-500" required>
+                    <button type="submit" id="comment-submit-btn" class="bg-blue-600 text-white px-6 py-4 rounded-2xl font-bold shadow-lg transition hover:scale-105"><i class="fa-solid fa-paper-plane"></i></button>
+                </form>
             </div>
         </div>
-        <div class="flex-1 overflow-y-auto p-12">
-            <div class="max-w-4xl mx-auto flex flex-col md:flex-row gap-12" id="exam-question-area"></div>
-        </div>
-        <div class="h-24 glass border-t p-4 flex justify-center gap-2" id="exam-pagination"></div>
     </div>
 
     <script>
@@ -180,12 +204,8 @@
         
         let currentUser = null;
         let userProfile = null;
-        let activeExamData = null;
-        let currentQuestionIndex = 0;
-        let studentAnswers = [];
-        let examTimerInterval = null;
         let editingLessonId = null;
-        let tempQuestions = [];
+        let tempQuestions = []; // Sınav havuzu için
         let studentSelectedFiles = [];
         
         const globalTopics = [
@@ -198,28 +218,22 @@
         // ==========================================
         // TEMEL FONKSIYONLAR & GENEL FİLTRE MOTORU
         // ==========================================
-        
-        // Evrensel Filtreleme Fonksiyonu
         window.applyFilters = function(containerId, searchInputId, studentSelectId, dateInputId) {
             const container = document.getElementById(containerId);
             if (!container) return;
-            
             const search = document.getElementById(searchInputId)?.value.toLowerCase() || '';
             const student = document.getElementById(studentSelectId)?.value || '';
             const date = document.getElementById(dateInputId)?.value || ''; 
-            
             const items = container.querySelectorAll('.filterable-item');
             
             items.forEach(item => {
                 const textStr = (item.dataset.search || '').toLowerCase();
                 const stuId = item.dataset.student || '';
                 const itemDate = item.dataset.date || '';
-                
                 let match = true;
                 if (search && !textStr.includes(search)) match = false;
                 if (student && stuId !== student) match = false;
                 if (date && !itemDate.startsWith(date)) match = false;
-                
                 item.style.display = match ? '' : 'none';
             });
         }
@@ -250,10 +264,7 @@
 
         function hideLoading() { 
             const l = document.getElementById('loading'); 
-            if(l) { 
-                l.classList.add('opacity-0'); 
-                setTimeout(() => l.classList.add('hidden'), 500); 
-            } 
+            if(l) { l.classList.add('opacity-0'); setTimeout(() => l.classList.add('hidden'), 500); } 
         }
 
         function showLanding() { 
@@ -268,56 +279,32 @@
             document.getElementById('login-overlay').classList.remove('hidden'); 
         }
 
-        function hideAuthScreen() { 
-            document.getElementById('login-overlay').classList.add('hidden'); 
-        }
+        function hideAuthScreen() { document.getElementById('login-overlay').classList.add('hidden'); }
 
         function showCustomModal(text, action) { 
             document.getElementById('modal-text').innerText = text; 
-            document.getElementById('modal-confirm-btn').onclick = () => { 
-                action(); 
-                hideCustomModal(); 
-            }; 
+            document.getElementById('modal-confirm-btn').onclick = () => { action(); hideCustomModal(); }; 
             document.getElementById('custom-modal').classList.add('active'); 
         }
 
-        function hideCustomModal() { 
-            document.getElementById('custom-modal').classList.remove('active'); 
-        }
+        function hideCustomModal() { document.getElementById('custom-modal').classList.remove('active'); }
 
-        function logout() { 
-            localStorage.clear(); 
-            supabaseClient.auth.signOut(); 
-            location.reload(); 
-        }
+        function logout() { localStorage.clear(); supabaseClient.auth.signOut(); location.reload(); }
 
-        function sanitizeFileName(str) { 
-            return str.replace(/[^a-z0-9.]/gi, '_').toLowerCase(); 
-        }
+        function sanitizeFileName(str) { return str.replace(/[^a-z0-9.]/gi, '_').toLowerCase(); }
 
         window.closeAnalysisModal = function() {
             const modal = document.getElementById('analysis-detail-modal');
-            if(modal) {
-                modal.classList.add('hidden');
-                modal.classList.remove('flex');
-            }
+            if(modal) { modal.classList.add('hidden'); modal.classList.remove('flex'); }
         };
 
         window.submitContactForm = async function(e) {
             e.preventDefault(); 
-            const btn = document.getElementById('c-btn'); 
-            btn.disabled = true; 
+            const btn = document.getElementById('c-btn'); btn.disabled = true; 
             const { error } = await supabaseClient.from('contact_messages').insert([{ 
-                full_name: document.getElementById('c-name').value, 
-                email: document.getElementById('c-email').value, 
-                message: document.getElementById('c-msg').value 
+                full_name: document.getElementById('c-name').value, email: document.getElementById('c-email').value, message: document.getElementById('c-msg').value 
             }]); 
-            if(!error) { 
-                alert("Mesajınız başarıyla gönderildi!"); 
-                document.getElementById('contact-form').reset(); 
-            } else {
-                alert(error.message); 
-            }
+            if(!error) { alert("Mesajınız başarıyla gönderildi!"); document.getElementById('contact-form').reset(); } else { alert(error.message); }
             btn.disabled = false;
         };
 
@@ -339,40 +326,21 @@
             }
             updateLogos();
             const { data: { session } } = await supabaseClient.auth.getSession();
-            if (session) {
-                await handleSession(session); 
-            } else { 
-                showLanding(); 
-                hideLoading(); 
-            }
+            if (session) { await handleSession(session); } else { showLanding(); hideLoading(); }
             
             supabaseClient.auth.onAuthStateChange((event, session) => {
-                if (event === 'SIGNED_IN' && !userProfile) { 
-                    if(session) handleSession(session); 
-                } else if (event === 'SIGNED_OUT') {
-                    location.reload();
-                }
+                if (event === 'SIGNED_IN' && !userProfile) { if(session) handleSession(session); } 
+                else if (event === 'SIGNED_OUT') { location.reload(); }
             });
         }
 
         async function handleSession(session) {
             try {
                 let { data, error } = await supabaseClient.from('profiles').select('*').eq('id', session.user.id).maybeSingle();
+                if (!data) { const { data: fb } = await supabaseClient.from('profiles').select('*').eq('email', session.user.email).maybeSingle(); data = fb; }
+                if (!data) { logout(); return; }
                 
-                if (!data) { 
-                    const { data: fb } = await supabaseClient.from('profiles').select('*').eq('email', session.user.email).maybeSingle(); 
-                    data = fb; 
-                }
-                
-                if (!data) { 
-                    logout(); 
-                    return; 
-                }
-                
-                currentUser = session.user; 
-                userProfile = data; 
-                updateTheme(data.role);
-                
+                currentUser = session.user; userProfile = data; updateTheme(data.role);
                 document.getElementById('user-name').innerText = data.full_name;
                 document.getElementById('user-role').innerText = data.role === 'teacher' ? 'EĞİTMEN' : 'ÖĞRENCİ';
                 document.getElementById('user-avatar').innerText = data.full_name ? data.full_name[0].toUpperCase() : '?';
@@ -384,37 +352,21 @@
                 renderSidebar();
                 const lastView = localStorage.getItem('lastView') || 'dashboard';
                 navigate(lastView);
-            } catch (err) { 
-                console.error("Session Error", err); 
-                logout(); 
-            } finally { 
-                hideLoading(); 
-            }
+            } catch (err) { console.error("Session Error", err); logout(); } finally { hideLoading(); }
         }
 
         window.handleLogin = async function(e) {
             e.preventDefault(); 
-            const btn = document.getElementById('login-btn'); 
-            btn.disabled = true; 
-            btn.innerText = "KONTROL EDİLİYOR...";
-            
-            const { error } = await supabaseClient.auth.signInWithPassword({ 
-                email: document.getElementById('login-email').value, 
-                password: document.getElementById('login-password').value 
-            });
-            
+            const btn = document.getElementById('login-btn'); btn.disabled = true; btn.innerText = "KONTROL EDİLİYOR...";
+            const { error } = await supabaseClient.auth.signInWithPassword({ email: document.getElementById('login-email').value, password: document.getElementById('login-password').value });
             if (error) { 
-                document.getElementById('login-error-container').innerText = error.message; 
-                document.getElementById('login-error-container').classList.remove('hidden'); 
-                btn.disabled = false; 
-                btn.innerText = "Giriş Yap"; 
-            } else {
-                window.location.reload();
-            }
+                document.getElementById('login-error-container').innerText = error.message; document.getElementById('login-error-container').classList.remove('hidden'); 
+                btn.disabled = false; btn.innerText = "Giriş Yap"; 
+            } else { window.location.reload(); }
         };
 
         // ==========================================
-        // MENU VE NAVIGASYON
+        // MENU VE NAVIGASYON (GÜNCELLENDİ)
         // ==========================================
         function renderSidebar() {
             const nav = document.getElementById('sidebar-nav');
@@ -424,6 +376,7 @@
                 { id: 't-lessons', name: 'Ders Planla', icon: 'fa-calendar-day' }, 
                 { id: 't-homeworks', name: 'Ödev Yönetimi', icon: 'fa-book' }, 
                 { id: 't-exams', name: 'Sınav Hazırla', icon: 'fa-file-signature' }, 
+                { id: 't-videos', name: 'Video Yönetimi', icon: 'fa-video' }, // YENİ
                 { id: 't-points', name: 'Puan Sistemi', icon: 'fa-star' }, 
                 { id: 't-analytics', name: 'Analiz Motoru', icon: 'fa-chart-pie' },
                 { id: 't-progress', name: 'Gelişim Raporu', icon: 'fa-chart-area' },
@@ -435,7 +388,7 @@
                 { id: 'dashboard', name: 'Panelim', icon: 'fa-house' }, 
                 { id: 's-lessons', name: 'Derslerim', icon: 'fa-video' }, 
                 { id: 's-homeworks', name: 'Ödevlerim', icon: 'fa-pencil-ruler' }, 
-                { id: 's-exams', name: 'Sınavlarım', icon: 'fa-file-lines' }, 
+                { id: 's-videos', name: 'Kısa Videolar', icon: 'fa-play' }, // YENİ
                 { id: 's-points', name: 'Puanlarım', icon: 'fa-trophy' },
                 { id: 's-analytics', name: 'Analizlerim', icon: 'fa-chart-pie' } 
             ];
@@ -443,8 +396,7 @@
             const menu = userProfile.role === 'teacher' ? teacherViews : studentViews;
             nav.innerHTML = (menu || []).map(item => `
                 <button type="button" onclick="navigate('${item.id}')" id="nav-${item.id}" class="sidebar-link w-full flex items-center space-x-4 px-6 py-4 rounded-2xl font-bold text-xs uppercase tracking-widest transition hover:bg-slate-100 dark:hover:bg-slate-800/50">
-                    <i class="fa-solid ${item.icon} text-lg"></i>
-                    <span>${item.name}</span>
+                    <i class="fa-solid ${item.icon} text-lg"></i><span>${item.name}</span>
                 </button>
             `).join('');
         }
@@ -465,26 +417,287 @@
                     case 't-lessons': await window.renderTeacherLessons(); break;
                     case 't-homeworks': await window.renderTeacherHomeworks(); break;
                     case 't-exams': await window.renderTeacherExams(); break;
+                    case 't-videos': await window.renderTeacherVideos(); break; // YENİ
                     case 't-points': await window.renderTeacherPoints(); break;
                     case 't-analytics': await window.renderTeacherAnalytics(); break;
                     case 't-progress': await window.renderTeacherProgress(); break;
                     case 't-messages': await window.renderTeacherMessages(); break;
                     case 't-settings': await window.renderTeacherSettings(); break;
+                    
                     case 's-lessons': await window.renderStudentLessons(); break;
                     case 's-homeworks': await window.renderStudentHomeworks(); break;
-                    case 's-exams': await window.renderStudentExams(); break;
+                    case 's-videos': await window.renderStudentVideos(); break; // YENİ
                     case 's-points': await window.renderStudentPoints(); break;
                     case 's-analytics': await window.renderStudentAnalytics(); break;
                     default: await renderDashboard();
                 }
             } catch(e) { 
-                content.innerHTML = `<p class="p-10 text-center font-bold text-red-500 uppercase text-xs">Yükleme hatası: ${e.message}</p>`; 
-                console.error(e); 
+                content.innerHTML = `<p class="p-10 text-center font-bold text-red-500 uppercase text-xs">Yükleme hatası: ${e.message}</p>`; console.error(e); 
             }
         }
 
         // ==========================================
-        // ORTAK: DASHBOARD & ANALIZ MODALI
+        // YENİ EKLENEN VİDEO VE REELS MODÜLLERİ
+        // ==========================================
+        
+        // 1. ÖĞRENCİ REELS (KISA VİDEOLAR) GÖRÜNÜMÜ
+        window.renderStudentVideos = async function() {
+            document.getElementById('page-title').innerText = 'Kısa Videolar (Reels)';
+            try {
+                // Videoları ve kullanıcının beğenilerini çek
+                const { data: vids } = await supabaseClient.from('videos').select('*, profiles(full_name)').order('created_at', { ascending: false });
+                const { data: myLikes } = await supabaseClient.from('video_likes').select('video_id').eq('student_id', userProfile.id);
+                
+                // Beğenilen video ID'lerini bir Set'e al
+                const likedSet = new Set(myLikes ? myLikes.map(l => l.video_id) : []);
+
+                if(!vids || vids.length === 0) {
+                    document.getElementById('view-content').innerHTML = '<p class="text-center p-20 italic font-bold text-slate-400 uppercase text-xs">Henüz video yüklenmemiş.</p>';
+                    return;
+                }
+
+                let html = `<div class="reels-container max-w-[400px] mx-auto shadow-2xl border-4 dark:border-slate-800 view-fade">`;
+                
+                vids.forEach(v => {
+                    const isLiked = likedSet.has(v.id);
+                    const heartClass = isLiked ? 'text-red-500' : 'text-white';
+                    
+                    html += `
+                        <div class="reel-item group">
+                            <video src="${v.video_url}" controls preload="metadata" class="w-full h-full object-cover sm:object-contain bg-black"></video>
+                            
+                            <div class="absolute bottom-32 right-4 flex flex-col gap-6 z-10">
+                                <button type="button" onclick="window.toggleVideoLike('${v.id}')" class="flex flex-col items-center gap-1 group/btn transition hover:scale-110">
+                                    <div class="w-12 h-12 rounded-full bg-black/60 backdrop-blur-md flex items-center justify-center text-xl shadow-lg border border-white/10 ${heartClass}">
+                                        <i class="fa-solid fa-heart" id="heart-icon-${v.id}"></i>
+                                    </div>
+                                </button>
+                                <button type="button" onclick="window.openVideoComments('${v.id}')" class="flex flex-col items-center gap-1 group/btn transition hover:scale-110">
+                                    <div class="w-12 h-12 rounded-full bg-black/60 backdrop-blur-md flex items-center justify-center text-white text-xl shadow-lg border border-white/10">
+                                        <i class="fa-solid fa-comment-dots"></i>
+                                    </div>
+                                </button>
+                            </div>
+                            
+                            <div class="absolute bottom-10 left-4 right-20 z-10 p-4 bg-gradient-to-t from-black/80 to-transparent rounded-xl pointer-events-none">
+                                <p class="text-[10px] font-black text-blue-400 mb-1 tracking-widest uppercase">${v.profiles?.full_name || 'Eğitmen'}</p>
+                                <h4 class="font-black text-lg text-white leading-tight" style="text-shadow: 0 2px 4px rgba(0,0,0,0.8);">${v.title}</h4>
+                            </div>
+                        </div>
+                    `;
+                });
+                html += `</div>`;
+                document.getElementById('view-content').innerHTML = html;
+            } catch(e) { console.error("Reels Error", e); }
+        };
+
+        // Beğeni Butonu Mantığı
+        window.toggleVideoLike = async function(vid) {
+            try {
+                const icon = document.getElementById(`heart-icon-${vid}`);
+                const isLiked = icon.parentElement.classList.contains('text-red-500');
+                
+                if (isLiked) {
+                    // Beğeniyi Kaldır
+                    await supabaseClient.from('video_likes').delete().eq('video_id', vid).eq('student_id', userProfile.id);
+                    icon.parentElement.classList.remove('text-red-500');
+                    icon.parentElement.classList.add('text-white');
+                } else {
+                    // Beğen
+                    await supabaseClient.from('video_likes').insert([{ video_id: vid, student_id: userProfile.id }]);
+                    icon.parentElement.classList.remove('text-white');
+                    icon.parentElement.classList.add('text-red-500');
+                }
+            } catch(e) { console.error(e); }
+        };
+
+        // 2. ÖĞRETMEN VİDEO YÖNETİMİ
+        window.renderTeacherVideos = async function() {
+            document.getElementById('page-title').innerText = 'Video Yönetimi';
+            try {
+                const { data: vids } = await supabaseClient.from('videos').select('*').order('created_at', { ascending: false });
+                
+                let listHTML = (vids||[]).map(v => `
+                    <div class="p-6 bg-white dark:bg-darkCard border-2 dark:border-slate-800 rounded-[2rem] shadow-sm mb-4 flex flex-col md:flex-row justify-between md:items-center gap-4 transition hover:shadow-md">
+                        <div class="flex items-center gap-4">
+                            <div class="w-16 h-16 bg-slate-100 dark:bg-slate-900 rounded-xl flex items-center justify-center text-2xl text-slate-400 overflow-hidden shrink-0">
+                                <i class="fa-solid fa-video"></i>
+                            </div>
+                            <div>
+                                <h5 class="font-black uppercase text-sm">${v.title}</h5>
+                                <p class="text-[10px] font-bold text-slate-400 mt-1">${new Date(v.created_at).toLocaleString('tr-TR')}</p>
+                            </div>
+                        </div>
+                        <div class="flex gap-2 w-full md:w-auto">
+                            <button type="button" onclick="window.openVideoComments('${v.id}')" class="flex-1 md:flex-none px-4 py-3 bg-blue-50 text-blue-600 rounded-xl font-black text-[10px] uppercase transition hover:scale-105"><i class="fa-solid fa-comments mr-1"></i> Yorumlar</button>
+                            <button type="button" onclick="window.deleteItem('videos', '${v.id}', window.renderTeacherVideos)" class="px-4 py-3 bg-red-50 text-red-600 rounded-xl font-black text-[10px] uppercase transition hover:scale-105"><i class="fa-solid fa-trash"></i></button>
+                        </div>
+                    </div>
+                `).join('') || '<p class="text-center p-10 italic text-slate-400 font-bold text-xs uppercase">Yüklenmiş video bulunmuyor.</p>';
+
+                document.getElementById('view-content').innerHTML = `
+                    <div class="grid md:grid-cols-3 gap-10 view-fade">
+                        <div class="md:col-span-1">
+                            <form id="video-upload-form" class="bg-white dark:bg-darkCard p-8 rounded-[3rem] border shadow-sm space-y-4 sticky top-24">
+                                <h4 class="font-black text-lg mb-4 italic uppercase tracking-tighter">Yeni Video Yükle</h4>
+                                <input type="text" id="v-title" placeholder="Video Başlığı" required class="w-full p-4 rounded-xl border dark:bg-darkBg font-bold uppercase text-xs outline-none">
+                                <div class="p-6 border-2 border-dashed rounded-2xl bg-slate-50 dark:bg-slate-900/30 text-center">
+                                    <i class="fa-solid fa-cloud-arrow-up text-2xl text-slate-400 mb-2 block"></i>
+                                    <p class="text-[10px] font-black uppercase text-slate-400 mb-2 tracking-widest italic">Video Dosyası Seç</p>
+                                    <input type="file" id="v-file" accept="video/*" required class="w-full text-[10px]">
+                                </div>
+                                <button type="submit" id="v-submit-btn" class="w-full brand-bg text-white py-4 rounded-xl font-black uppercase shadow-lg transition hover:brightness-110">Yükle</button>
+                            </form>
+                        </div>
+                        <div class="md:col-span-2 space-y-4">
+                            <h4 class="font-black text-[10px] uppercase text-slate-400 tracking-[0.2em] italic mb-4">Yayındaki Videolar</h4>
+                            ${listHTML}
+                        </div>
+                    </div>
+                `;
+
+                document.getElementById('video-upload-form').onsubmit = async (e) => {
+                    e.preventDefault();
+                    const btn = document.getElementById('v-submit-btn');
+                    const file = document.getElementById('v-file').files[0];
+                    if (!file) return;
+
+                    btn.disabled = true;
+                    btn.innerText = "YÜKLENİYOR...";
+
+                    try {
+                        // Yeni bucket'a yüklüyoruz
+                        const { data, error } = await supabaseClient.storage.from('matota-videos').upload(Date.now() + '_' + sanitizeFileName(file.name), file);
+                        if (error) throw error;
+                        const { data: { publicUrl } } = supabaseClient.storage.from('matota-videos').getPublicUrl(data.path);
+
+                        const { error: dbError } = await supabaseClient.from('videos').insert([{
+                            teacher_id: userProfile.id,
+                            title: document.getElementById('v-title').value,
+                            video_url: publicUrl
+                        }]);
+
+                        if (dbError) throw dbError;
+                        
+                        alert("Video başarıyla yüklendi ve yayınlandı!");
+                        window.renderTeacherVideos();
+                    } catch(err) {
+                        alert("Hata: " + err.message);
+                        btn.disabled = false;
+                        btn.innerText = "Yükle";
+                    }
+                };
+            } catch(e) { console.error("Video Error", e); }
+        };
+
+        // 3. YORUM (COMMENTS) MODÜLÜ (HEM ÖĞRENCİ HEM ÖĞRETMEN İÇİN ORTAK)
+        window.openVideoComments = async function(vid) {
+            document.getElementById('comment-video-id').value = vid;
+            document.getElementById('comment-parent-id').value = '';
+            document.getElementById('replying-to-badge').classList.add('hidden');
+            document.getElementById('replying-to-badge').innerText = '';
+            
+            const modal = document.getElementById('video-comments-modal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            
+            await window.loadVideoComments(vid);
+        };
+
+        window.loadVideoComments = async function(vid) {
+            const container = document.getElementById('comments-list-container');
+            container.innerHTML = '<div class="flex justify-center p-10"><div class="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full"></div></div>';
+            
+            try {
+                // Tüm yorumları ve profillerini çek
+                const { data: comments, error } = await supabaseClient.from('video_comments').select('*, profiles(full_name, role)').eq('video_id', vid).order('created_at', { ascending: true });
+                if(error) throw error;
+
+                if (!comments || comments.length === 0) {
+                    container.innerHTML = '<p class="text-center italic text-xs text-slate-400 p-10 font-bold uppercase">İlk yorumu sen yap!</p>';
+                    return;
+                }
+
+                // Yorumları ağaç yapısına (İç içe) çevir
+                const commentMap = {};
+                const roots = [];
+                comments.forEach(c => {
+                    c.replies = [];
+                    commentMap[c.id] = c;
+                    if(c.parent_id) {
+                        if(commentMap[c.parent_id]) commentMap[c.parent_id].replies.push(c);
+                    } else {
+                        roots.push(c);
+                    }
+                });
+
+                const buildHtml = (c, isReply = false) => {
+                    const isTeacher = c.profiles?.role === 'teacher';
+                    const badge = isTeacher ? `<span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest ml-2">EĞİTMEN</span>` : '';
+                    
+                    let replyHtml = '';
+                    if (c.replies && c.replies.length > 0) {
+                        replyHtml = `<div class="mt-3 space-y-3 border-l-2 border-slate-100 dark:border-slate-800 pl-4">` + c.replies.map(r => buildHtml(r, true)).join('') + `</div>`;
+                    }
+
+                    // Sadece ana yorumlara cevap verilebilsin (iç içe girmeyi önlemek için)
+                    const replyBtn = !isReply && userProfile.role === 'teacher' ? `<button type="button" onclick="window.prepareCommentReply('${c.id}', '${c.profiles?.full_name}')" class="text-[10px] text-blue-500 font-bold uppercase mt-2 hover:underline">Yanıtla</button>` : '';
+
+                    return `
+                        <div class="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-2xl ${isReply ? '' : 'border dark:border-slate-800'}">
+                            <div class="flex justify-between items-start mb-2">
+                                <span class="font-bold text-xs">${c.profiles?.full_name || 'Bilinmiyor'} ${badge}</span>
+                                <span class="text-[9px] text-slate-400 font-bold">${new Date(c.created_at).toLocaleDateString('tr-TR')}</span>
+                            </div>
+                            <p class="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">${c.text}</p>
+                            ${replyBtn}
+                            ${replyHtml}
+                        </div>
+                    `;
+                };
+
+                container.innerHTML = roots.map(r => buildHtml(r, false)).join('');
+                container.scrollTop = container.scrollHeight;
+            } catch (e) {
+                container.innerHTML = '<p class="text-red-500 text-xs text-center">Yorumlar yüklenemedi.</p>';
+            }
+        };
+
+        window.prepareCommentReply = function(commentId, userName) {
+            document.getElementById('comment-parent-id').value = commentId;
+            const badge = document.getElementById('replying-to-badge');
+            badge.innerText = `Yanıtlanıyor: ${userName}`;
+            badge.classList.remove('hidden');
+            document.getElementById('comment-input').focus();
+        };
+
+        window.submitVideoComment = async function(e) {
+            e.preventDefault();
+            const btn = document.getElementById('comment-submit-btn');
+            const input = document.getElementById('comment-input');
+            const vidId = document.getElementById('comment-video-id').value;
+            const parentId = document.getElementById('comment-parent-id').value || null;
+            const text = input.value.trim();
+
+            if(!text) return;
+            btn.disabled = true;
+
+            const payload = { video_id: vidId, user_id: userProfile.id, text: text, parent_id: parentId };
+            const { error } = await supabaseClient.from('video_comments').insert([payload]);
+
+            if(!error) {
+                input.value = '';
+                document.getElementById('comment-parent-id').value = '';
+                document.getElementById('replying-to-badge').classList.add('hidden');
+                await window.loadVideoComments(vidId);
+            } else {
+                alert("Hata: " + error.message);
+            }
+            btn.disabled = false;
+        };
+
+        // ==========================================
+        // ESKİ VE SORUNSUZ ÇALIŞAN DİĞER MODÜLLER 
         // ==========================================
         async function renderDashboard() {
             document.getElementById('page-title').innerText = 'Dashboard';
@@ -652,10 +865,6 @@
             }
         }
 
-        // ==========================================
-        // ÖGRENCİ (STUDENT) MODÜLLERİ
-        // ==========================================
-        
         window.submitHomeworkData = async function() {
             const btn = document.getElementById('submit-btn-final'); 
             if (studentSelectedFiles.length === 0) return alert("Lütfen en az 1 dosya veya fotoğraf seçin!"); 
@@ -696,7 +905,6 @@
             } 
         };
 
-        // YENİ: ÖĞRENCİ ÖDEVLERİ (AKTİF VE GEÇMİŞ)
         window.renderStudentHomeworks = async function() {
             try {
                 document.getElementById('page-title').innerText = 'Ödevlerim';
@@ -812,49 +1020,6 @@
             window.updateFileUI(); 
         }
 
-        window.renderStudentExams = async function() {
-            document.getElementById('page-title').innerText = 'Sınavlarım';
-            try {
-                const { data: exams } = await supabaseClient.from('exams').select('*').eq('student_id', userProfile.id);
-                const { data: mySubs } = await supabaseClient.from('submissions').select('exam_id, score').eq('student_id', userProfile.id);
-                const { data: analyses } = await supabaseClient.from('detailed_analyses').select('task_id').eq('student_id', userProfile.id).eq('type', 'exam');
-                
-                const subMap = {}; 
-                if(mySubs) mySubs.forEach(s => { subMap[s.exam_id] = s; });
-                const analyzedTaskIds = new Set(analyses ? analyses.map(a => a.task_id) : []);
-
-                let html = (exams || []).map(e => {
-                    const submission = subMap[e.id]; 
-                    const hasAnalysis = analyzedTaskIds.has(e.id);
-                    
-                    let buttonsHTML = '';
-                    if(submission) {
-                        buttonsHTML += `<span class="flex-1 text-center py-4 bg-green-50 text-green-600 rounded-2xl font-black uppercase text-xs italic border border-green-200 shadow-sm flex items-center justify-center"><i class="fa-solid fa-lock mr-2"></i> Puan: ${Math.round(submission.score)}</span>`;
-                    } else {
-                        buttonsHTML += `<button type="button" onclick="window.startStudentExam('${e.id}')" class="flex-1 brand-bg text-white py-4 rounded-2xl font-black shadow-lg uppercase text-xs transition hover:scale-105">BAŞLA</button>`;
-                    }
-
-                    if(hasAnalysis) {
-                        buttonsHTML += `<button type="button" onclick="window.showGroupedAnalysisModal('${e.id}', '${userProfile.id}')" class="flex-1 px-6 py-4 bg-orange-500 text-white rounded-2xl font-black text-xs uppercase shadow-lg transition hover:scale-105 border border-orange-600" title="Analizi Gör"><i class="fa-solid fa-chart-pie text-lg mr-2"></i> ANALİZİ GÖR</button>`;
-                    }
-
-                    return `
-                        <div class="bg-white dark:bg-darkCard p-10 rounded-[3rem] border shadow-sm flex flex-col justify-between transition hover:shadow-lg mb-4">
-                            <div>
-                                <h4 class="text-2xl font-black italic uppercase mb-4 tracking-tighter">${e.title}</h4>
-                                <div class="flex gap-4 text-[10px] font-black uppercase tracking-widest mb-10 text-slate-400">
-                                    <span>${e.duration || 40} DK</span>
-                                    <span>${e.questions?.length || 0} SORU</span>
-                                </div>
-                            </div>
-                            <div class="flex gap-3 flex-col md:flex-row">${buttonsHTML}</div>
-                        </div>`;
-                }).join('') || '<p class="col-span-3 text-center text-slate-300 p-20 font-black italic uppercase">Atanmış sınavın yok.</p>';
-                
-                document.getElementById('view-content').innerHTML = `<div class="grid md:grid-cols-3 gap-8 view-fade">${html}</div>`;
-            } catch(e) { console.error(e); }
-        }
-
         window.renderStudentAnalytics = async function() {
             document.getElementById('page-title').innerText = 'Analizlerim';
             try {
@@ -908,6 +1073,7 @@
 
                 let activeHTML = activeLessons.map(ls => {
                     const isLive = now >= new Date(ls.scheduled_at);
+                    
                     const joinBtn = `<a href="${ls.link}" target="_blank" class="w-full bg-blue-600 text-white py-5 rounded-2xl font-black block text-center shadow-xl transition hover:brightness-110"><i class="fa-solid fa-external-link-alt mr-2"></i>DERSE KATIL</a>`;
 
                     return `
@@ -962,109 +1128,15 @@
                         <span class="text-8xl">${total}</span>
                     </div>
                     <div class="space-y-6">
-                        <h4 class="font-black text-[10px] uppercase tracking-widest text-slate-400 italic mb-4">Son 3 Kazanımın</h4>
+                        <h4 class="font-black text-[10px] uppercase tracking-[0.2em] text-slate-400 italic mb-4">Son 3 Kazanımın</h4>
                         ${l3}
                     </div>
                 </div>`; 
         }
 
-        window.startStudentExam = async function(eid) {
-            const { data: check } = await supabaseClient.from('submissions').select('id').eq('exam_id', eid).eq('student_id', userProfile.id).maybeSingle();
-            if(check) { 
-                alert("Bu sınavı zaten tamamladın! Mühürlenmiş sınavlara tekrar girilemez."); 
-                window.renderStudentExams(); 
-                return; 
-            }
-
-            const { data: exam } = await supabaseClient.from('exams').select('*').eq('id', eid).single();
-            activeExamData = exam; 
-            currentQuestionIndex = 0; 
-            studentAnswers = new Array(exam?.questions?.length || 0).fill(null);
-            
-            document.getElementById('active-exam-title').innerText = exam.title; 
-            document.getElementById('exam-overlay').classList.remove('hidden');
-            
-            let t = (exam.duration || 40) * 60; 
-            window.updateExamUI();
-            
-            examTimerInterval = setInterval(() => { 
-                t--; 
-                const m = Math.floor(t / 60);
-                const s = t % 60; 
-                document.getElementById('exam-timer').innerText = (m<10?'0':'')+m+':'+(s<10?'0':'')+s; 
-                if(t <= 0) window.finishExam(); 
-            }, 1000);
-        }
-
-        window.updateExamUI = function() {
-            if(!activeExamData || !activeExamData.questions) return;
-            const q = activeExamData.questions[currentQuestionIndex];
-            
-            const opts = ['A','B','C','D'].map(o => `
-                <button type="button" onclick="window.pickAns('${o}')" class="ans-btn w-full p-5 rounded-2xl border-2 font-black text-xl flex justify-between items-center transition ${studentAnswers[currentQuestionIndex] === o ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/30 text-blue-600 shadow-lg' : 'bg-white dark:bg-darkCard hover:bg-slate-50'}">
-                    <span>SEÇENEK ${o}</span>
-                    ${studentAnswers[currentQuestionIndex] === o ? '<i class="fa-solid fa-circle-check"></i>' : ''}
-                </button>
-            `).join('');
-            
-            document.getElementById('exam-question-area').innerHTML = `
-                <div class="md:w-3/5 bg-slate-50 dark:bg-slate-900 rounded-[3rem] p-4 flex items-center justify-center border shadow-inner">
-                    <img src="${q.image}" class="max-w-full h-auto rounded-2xl shadow-xl">
-                </div>
-                <div class="md:w-2/5 flex flex-col justify-center space-y-4">
-                    <p class="text-[10px] font-black text-slate-400 italic">Soru ${currentQuestionIndex+1} / ${activeExamData.questions.length}</p>
-                    <div class="grid gap-3">${opts}</div>
-                </div>`;
-                
-            document.getElementById('exam-pagination').innerHTML = activeExamData.questions.map((_, i) => `
-                <button type="button" onclick="currentQuestionIndex = ${i};window.updateExamUI();" class="w-10 h-10 rounded-xl font-black text-[10px] border ${i === currentQuestionIndex ? 'brand-bg text-white shadow-lg' : (studentAnswers[i] !== null ? 'bg-green-100 text-green-700' : 'bg-white dark:bg-darkCard')}">${i+1}</button>
-            `).join('');
-        }
-
-        window.pickAns = function(o) { 
-            studentAnswers[currentQuestionIndex] = o; 
-            window.updateExamUI(); 
-        }
-
-        window.finishExam = async function() { 
-            try {
-                clearInterval(examTimerInterval); 
-                let score = 0; 
-                let totalQs = activeExamData.questions ? activeExamData.questions.length : 0;
-                
-                if (totalQs > 0) {
-                    activeExamData.questions.forEach((q, i) => { if(q.correct === studentAnswers[i]) score++; }); 
-                    const finalScore = (score / totalQs) * 100;
-                    
-                    const { error } = await supabaseClient.from('submissions').insert([{ 
-                        exam_id: activeExamData.id, 
-                        student_id: userProfile.id, 
-                        answers: studentAnswers, 
-                        score: finalScore 
-                    }]); 
-                    
-                    if (error) {
-                        alert("Sınav kaydedilirken hata oluştu: " + error.message);
-                    } else {
-                        document.getElementById('exam-overlay').classList.add('hidden'); 
-                        alert("Sınav başarıyla tamamlandı! Puanın: " + finalScore.toFixed(0));
-                        await window.renderStudentExams(); 
-                    }
-                } else {
-                    document.getElementById('exam-overlay').classList.add('hidden');
-                    alert("Bu sınavda soru bulunmuyor.");
-                    await window.renderStudentExams();
-                }
-            } catch (err) {
-                console.error("Sınav Gönderme Hatası:", err);
-                alert("Sınav bitirilirken beklenmeyen bir hata oluştu.");
-            }
-        }
-
         // ==========================================
-        // EGITMEN (TEACHER) MODÜLLERİ VE FİLTRELER
+        // EGITMEN (TEACHER) MODÜLLERİ
         // ==========================================
-
         window.renderTeacherAnalytics = async function() {
             document.getElementById('page-title').innerText = 'Gelişmiş Analiz Merkezi';
             try {
@@ -1093,7 +1165,6 @@
                     grouped[key].tests.push(a);
                 });
 
-                // YENİ: Filtrelenebilir div eklendi
                 let listHTML = Object.values(grouped).map(g => {
                     let totalQ = 0, totalC = 0, totalW = 0, totalE = 0;
                     g.tests.forEach(t => { totalQ+=t.total_questions; totalC+=t.correct_count; totalW+=t.wrong_count; totalE+=t.empty_count; });
@@ -1118,7 +1189,6 @@
                     </div>`;
                 }).join('') || '<p class="text-center italic text-xs text-slate-400 p-10 font-bold uppercase">Analiz bulunmuyor.</p>';
 
-                // YENİ: Arama/Filtre Arayüzü
                 let filterUI = `
                     <div class="bg-white dark:bg-darkCard p-4 rounded-2xl border shadow-sm mb-4 flex flex-col md:flex-row gap-4 items-center">
                         <div class="font-black text-xs uppercase text-slate-400 shrink-0"><i class="fa-solid fa-filter mr-1"></i> Filtrele:</div>
@@ -1263,7 +1333,6 @@
             if(error) {
                 alert("Kaydetme Hatası: " + error.message); 
             } else { 
-                // Otomatik 10'da 1 Puan Ekleme Sistemi
                 const scorePercentage = (correctCount / count) * 100;
                 const addedPoints = Math.round(scorePercentage / 10); 
                 const pointCategory = type === 'exam' ? 'Sınav Uygulama' : 'Ödev Yapma';
@@ -1293,7 +1362,6 @@
             }
         }
 
-        // YENİ: GELİŞİM RAPORU İÇİN TARİH FİLTRESİ
         window.renderTeacherProgress = async function() {
             document.getElementById('page-title').innerText = 'Genel Gelişim Raporu';
             const { data: students } = await supabaseClient.from('profiles').select('*').eq('role', 'student');
@@ -1325,13 +1393,11 @@
                 return;
             }
 
-            // Tarih Filtresi Uygula
             let filteredAnalyses = analyses;
             if (startDate) {
                 filteredAnalyses = filteredAnalyses.filter(a => new Date(a.created_at) >= new Date(startDate));
             }
             if (endDate) {
-                // Günün sonuna kadar dahil et
                 filteredAnalyses = filteredAnalyses.filter(a => new Date(a.created_at) <= new Date(endDate + 'T23:59:59'));
             }
 
@@ -1620,7 +1686,6 @@
             }; 
         }
 
-        // YENİ: DERSLERİ FİLTRELEME VE YAN YANA GÖSTERME
         window.renderTeacherLessons = async function() { 
             const { data: s } = await supabaseClient.from('profiles').select('*').eq('role', 'student'); 
             const { data: l } = await supabaseClient.from('lessons').select('*, profiles(full_name)').order('scheduled_at', { ascending: false }); 
@@ -1713,7 +1778,6 @@
             }
         };
 
-        // YENİ: ÖĞRETMEN ÖDEVLERİ, ARŞİVLEME, FİLTRELEME VE GÖNDERİLENLER LİSTESİ EKLENDİ
         window.markHomeworkCompleted = async function(id) {
             if(confirm("Bu ödevi süresi doldu (geçmiş) olarak işaretlemek istediğinize emin misiniz?")) {
                 const { error } = await supabaseClient.from('homeworks').update({ is_completed: true }).eq('id', id);
@@ -1740,7 +1804,6 @@
                     analyses.forEach(a => analyzedTasks.add(a.task_id + '_' + a.student_id));
                 }
 
-                // Submissions grouplama (Hangi ödeve hangi çözümler gelmiş?)
                 const subsByHw = {};
                 (sb||[]).forEach(sub => {
                     if(!subsByHw[sub.homework_id]) subsByHw[sub.homework_id] = [];
