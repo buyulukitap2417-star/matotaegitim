@@ -30,8 +30,6 @@
         #custom-modal { display: none; } #custom-modal.active { display: flex; }
         .hero-gradient { background: radial-gradient(circle at top right, rgba(37, 99, 235, 0.1), transparent); }
         .filterable-item { transition: opacity 0.3s ease; }
-
-        /* REELS STİLLERİ */
         .reels-container { scroll-snap-type: y mandatory; overflow-y: scroll; height: 100%; border-radius: 2rem; background: #000; -ms-overflow-style: none; scrollbar-width: none; position: relative; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5); }
         .reels-container::-webkit-scrollbar { display: none; }
         .reel-item { scroll-snap-align: start; height: 100%; width: 100%; position: relative; background: #000; display: flex; align-items: center; justify-content: center; overflow: hidden; }
@@ -166,24 +164,19 @@
         let currentUser = null, userProfile = null, editingLessonId = null, tempQuestions = [], studentSelectedFiles = [], reelsObserver = null; 
         const globalTopics = ['Çarpanlar ve Katlar', 'Üslü İfadeler', 'Kareköklü İfadeler', 'Veri Analizi', 'Basit Olayların Olma Olasılığı', 'Cebirsel İfadeler ve Özdeşlikler', 'Doğrusal Denklemler', 'Eşitsizlikler', 'Üçgenler', 'Eşlik ve Benzerlik', 'Dönüşüm Geometrisi', 'Geometrik Cisimler'];
 
-        // CORE
+        // CORE & UTILS
         window.applyFilters = function(cId, sId, stId, dId) {
             const container = document.getElementById(cId); if (!container) return;
-            const search = document.getElementById(sId)?.value.toLowerCase() || '';
-            const student = document.getElementById(stId)?.value || '';
-            const date = document.getElementById(dId)?.value || ''; 
+            const search = document.getElementById(sId)?.value.toLowerCase() || ''; const student = document.getElementById(stId)?.value || ''; const date = document.getElementById(dId)?.value || ''; 
             const items = container.querySelectorAll('.filterable-item');
             items.forEach(item => {
-                const textStr = (item.dataset.search || '').toLowerCase();
-                const stuId = item.dataset.student || '';
-                const itemDate = item.dataset.date || '';
+                const textStr = (item.dataset.search || '').toLowerCase(); const stuId = item.dataset.student || ''; const itemDate = item.dataset.date || '';
                 let match = true;
-                if (search && !textStr.includes(search)) match = false;
-                if (student && stuId !== student) match = false;
-                if (date && !itemDate.startsWith(date)) match = false;
+                if (search && !textStr.includes(search)) match = false; if (student && stuId !== student) match = false; if (date && !itemDate.startsWith(date)) match = false;
                 item.style.display = match ? '' : 'none';
             });
         }
+
         function updateLogos() { const isDark = document.documentElement.classList.contains('dark'); const url = SUPABASE_URL + "/storage/v1/object/public/logos/" + (isDark ? "acik.png" : "koyu.png"); const nl = document.getElementById('nav-logo'), sl = document.getElementById('sidebar-logo'); if(nl) nl.src = url; if(sl) sl.src = url; }
         function updateTheme(role) { const body = document.getElementById('main-body'); if (body) { body.classList.remove('theme-blue', 'theme-orange'); body.classList.add(role === 'teacher' ? 'theme-orange' : 'theme-blue'); } updateLogos(); }
         function toggleDarkMode() { document.documentElement.classList.toggle('dark'); localStorage.theme = document.documentElement.classList.contains('dark') ? 'dark' : 'light'; updateLogos(); }
@@ -195,6 +188,11 @@
         function hideCustomModal() { document.getElementById('custom-modal').classList.remove('active'); }
         function logout() { localStorage.clear(); supabaseClient.auth.signOut(); location.reload(); }
         function sanitizeFileName(str) { return str.replace(/[^a-z0-9.]/gi, '_').toLowerCase(); }
+
+        window.closeAnalysisModal = function() {
+            const modal = document.getElementById('analysis-detail-modal');
+            if(modal) { modal.style.display = 'none'; modal.classList.add('hidden'); modal.classList.remove('flex'); }
+        };
 
         window.submitContactForm = async function(e) {
             e.preventDefault(); const btn = document.getElementById('c-btn'); btn.disabled = true; 
@@ -280,7 +278,7 @@
                     case 's-analytics': await window.renderStudentAnalytics(); break;
                     default: await renderDashboard();
                 }
-            } catch(e) { content.innerHTML = `<p class="p-10 text-center font-bold text-red-500 uppercase text-xs">Hata: ${e.message}</p>`; console.error(e); }
+            } catch(e) { content.innerHTML = `<p class="p-10 text-center font-bold text-red-500 uppercase text-xs">Yükleme hatası: ${e.message}</p>`; console.error(e); }
         }
 
         // ==========================================
@@ -299,48 +297,17 @@
                 let vids = rawVids.sort(() => Math.random() - 0.5);
                 let infiniteVids = []; for(let i=0; i<15; i++) { infiniteVids = infiniteVids.concat(vids); }
 
-                let reelsHtml = `
-                    <div class="flex-1 flex items-center justify-center relative h-full w-full bg-slate-950 md:bg-transparent md:p-6 pb-0">
-                        <div class="relative w-full max-w-[420px] h-full md:h-[90vh] md:rounded-[2.5rem] overflow-hidden shadow-2xl border-0 md:border-4 dark:border-slate-800 bg-black group/reels">
-                            <button type="button" onclick="window.scrollReels(-1)" class="absolute top-10 right-4 z-50 w-12 h-12 bg-black/60 text-white rounded-full flex items-center justify-center backdrop-blur-md hover:bg-blue-600 transition shadow-lg border border-white/20 opacity-0 group-hover/reels:opacity-100"><i class="fa-solid fa-chevron-up"></i></button>
-                            <button type="button" onclick="window.scrollReels(1)" class="absolute bottom-10 right-4 z-50 w-12 h-12 bg-black/60 text-white rounded-full flex items-center justify-center backdrop-blur-md hover:bg-blue-600 transition shadow-lg border border-white/20 opacity-0 group-hover/reels:opacity-100"><i class="fa-solid fa-chevron-down"></i></button>
-                            <div class="reels-container" id="main-reels-container">
-                `;
+                let reelsHtml = `<div class="flex-1 flex items-center justify-center relative h-full w-full bg-slate-950 md:bg-transparent md:p-6 pb-0"><div class="relative w-full max-w-[420px] h-full md:h-[90vh] md:rounded-[2.5rem] overflow-hidden shadow-2xl border-0 md:border-4 dark:border-slate-800 bg-black group/reels"><button type="button" onclick="window.scrollReels(-1)" class="absolute top-10 right-4 z-50 w-12 h-12 bg-black/60 text-white rounded-full flex items-center justify-center backdrop-blur-md hover:bg-blue-600 transition shadow-lg border border-white/20 opacity-0 group-hover/reels:opacity-100"><i class="fa-solid fa-chevron-up"></i></button><button type="button" onclick="window.scrollReels(1)" class="absolute bottom-10 right-4 z-50 w-12 h-12 bg-black/60 text-white rounded-full flex items-center justify-center backdrop-blur-md hover:bg-blue-600 transition shadow-lg border border-white/20 opacity-0 group-hover/reels:opacity-100"><i class="fa-solid fa-chevron-down"></i></button><div class="reels-container" id="main-reels-container">`;
                 
                 infiniteVids.forEach((v, index) => {
-                    const isLiked = likedSet.has(v.id);
-                    const heartClass = isLiked ? 'text-red-500' : 'text-white';
-                    reelsHtml += `
-                        <div class="reel-item" id="reel-${v.id}-${index}">
-                            <div class="absolute inset-0 cursor-pointer z-10 flex items-center justify-center" onclick="window.toggleVideoPlay(this)">
-                                <i class="fa-solid fa-play text-white/70 text-6xl drop-shadow-lg opacity-0 transition-opacity duration-200 play-icon"></i>
-                            </div>
-                            <video src="${v.video_url}" loop playsinline class="video-player-layer"></video>
-                            <div class="absolute bottom-32 right-4 flex flex-col gap-6 z-20">
-                                <button type="button" onclick="window.toggleVideoLike('${v.id}')" class="flex flex-col items-center gap-1 transition hover:scale-110"><div class="w-12 h-12 rounded-full bg-black/60 backdrop-blur-md flex items-center justify-center text-xl shadow-lg border border-white/10 ${heartClass} heart-icon-${v.id}"><i class="fa-solid fa-heart"></i></div></button>
-                                <button type="button" onclick="window.openVideoComments('${v.id}')" class="flex flex-col items-center gap-1 transition hover:scale-110"><div class="w-12 h-12 rounded-full bg-black/60 backdrop-blur-md flex items-center justify-center text-white text-xl shadow-lg border border-white/10"><i class="fa-solid fa-comment-dots"></i></div></button>
-                            </div>
-                            <div class="absolute bottom-0 left-0 right-0 z-20 p-6 pt-32 bg-gradient-to-t from-black via-black/80 to-transparent pointer-events-none">
-                                <div class="pr-20 max-h-[30vh] overflow-y-auto custom-scrollbar pointer-events-auto">
-                                    <p class="text-[10px] font-black text-blue-400 mb-1 tracking-widest uppercase drop-shadow-md">${v.profiles?.full_name || 'Eğitmen'}</p>
-                                    <h4 class="font-black text-sm text-white leading-relaxed drop-shadow-lg break-words whitespace-normal">${v.title}</h4>
-                                </div>
-                            </div>
-                        </div>`;
+                    const isLiked = likedSet.has(v.id); const heartClass = isLiked ? 'text-red-500' : 'text-white';
+                    reelsHtml += `<div class="reel-item" id="reel-${v.id}-${index}"><div class="absolute inset-0 cursor-pointer z-10 flex items-center justify-center" onclick="window.toggleVideoPlay(this)"><i class="fa-solid fa-play text-white/70 text-6xl drop-shadow-lg opacity-0 transition-opacity duration-200 play-icon"></i></div><video src="${v.video_url}" loop playsinline class="video-player-layer"></video><div class="absolute bottom-32 right-4 flex flex-col gap-6 z-20"><button type="button" onclick="window.toggleVideoLike('${v.id}')" class="flex flex-col items-center gap-1 transition hover:scale-110"><div class="w-12 h-12 rounded-full bg-black/60 backdrop-blur-md flex items-center justify-center text-xl shadow-lg border border-white/10 ${heartClass} heart-icon-${v.id}"><i class="fa-solid fa-heart"></i></div></button><button type="button" onclick="window.openVideoComments('${v.id}')" class="flex flex-col items-center gap-1 transition hover:scale-110"><div class="w-12 h-12 rounded-full bg-black/60 backdrop-blur-md flex items-center justify-center text-white text-xl shadow-lg border border-white/10"><i class="fa-solid fa-comment-dots"></i></div></button></div><div class="absolute bottom-0 left-0 right-0 z-20 p-6 pt-32 bg-gradient-to-t from-black via-black/80 to-transparent pointer-events-none"><div class="pr-20 max-h-[30vh] overflow-y-auto custom-scrollbar pointer-events-auto"><p class="text-[10px] font-black text-blue-400 mb-1 tracking-widest uppercase drop-shadow-md">${v.profiles?.full_name || 'Eğitmen'}</p><h4 class="font-black text-sm text-white leading-relaxed drop-shadow-lg break-words whitespace-normal">${v.title}</h4></div></div></div>`;
                 });
                 reelsHtml += `</div></div></div>`;
 
-                let catalogHtml = `
-                    <div class="hidden lg:flex w-72 xl:w-80 h-full bg-white dark:bg-darkCard border-l dark:border-slate-800 p-6 flex-col gap-4 overflow-y-auto custom-scrollbar shrink-0 z-10">
-                        <div class="shrink-0 border-b dark:border-slate-800 pb-4"><h2 class="text-xl font-black italic tracking-tighter uppercase">Katalog</h2><p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">Videoya anında atla</p></div>
-                        <div class="grid grid-cols-1 gap-4">
-                `;
+                let catalogHtml = `<div class="hidden lg:flex w-72 xl:w-80 h-full bg-white dark:bg-darkCard border-l dark:border-slate-800 p-6 flex-col gap-4 overflow-y-auto custom-scrollbar shrink-0 z-10"><div class="shrink-0 border-b dark:border-slate-800 pb-4"><h2 class="text-xl font-black italic tracking-tighter uppercase">Katalog</h2><p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">Videoya anında atla</p></div><div class="grid grid-cols-1 gap-4">`;
                 vids.forEach((v, k) => {
-                    catalogHtml += `
-                        <div class="cursor-pointer group flex gap-3 items-center transition hover:-translate-y-1 p-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-900" onclick="window.scrollToReel('reel-${v.id}-${k}')">
-                            <div class="w-16 h-24 bg-slate-900 rounded-lg overflow-hidden relative shadow-sm border border-transparent group-hover:border-blue-500 transition shrink-0"><video src="${v.video_url}#t=0.5" class="w-full h-full object-cover opacity-70 group-hover:opacity-100 transition"></video><div class="absolute inset-0 flex items-center justify-center"><i class="fa-solid fa-play text-white/50 text-xs group-hover:text-white transition drop-shadow-md"></i></div></div>
-                            <p class="text-xs font-bold text-slate-800 dark:text-white line-clamp-3 leading-snug flex-1">${v.title}</p>
-                        </div>`;
+                    catalogHtml += `<div class="cursor-pointer group flex gap-3 items-center transition hover:-translate-y-1 p-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-900" onclick="window.scrollToReel('reel-${v.id}-${k}')"><div class="w-16 h-24 bg-slate-900 rounded-lg overflow-hidden relative shadow-sm border border-transparent group-hover:border-blue-500 transition shrink-0"><video src="${v.video_url}#t=0.5" class="w-full h-full object-cover opacity-70 group-hover:opacity-100 transition"></video><div class="absolute inset-0 flex items-center justify-center"><i class="fa-solid fa-play text-white/50 text-xs group-hover:text-white transition drop-shadow-md"></i></div></div><p class="text-xs font-bold text-slate-800 dark:text-white line-clamp-3 leading-snug flex-1">${v.title}</p></div>`;
                 });
                 catalogHtml += `</div></div>`;
 
@@ -363,14 +330,9 @@
             } catch(e) { console.error("Reels Error", e); }
         };
 
-        window.toggleVideoPlay = function(overlay) {
-            const container = overlay.closest('.reel-item'); const video = container.querySelector('video'); const icon = overlay.querySelector('.play-icon');
-            if (video.paused) { video.play(); icon.classList.add('opacity-0'); } else { video.pause(); icon.classList.remove('opacity-0'); }
-        };
-
+        window.toggleVideoPlay = function(overlay) { const container = overlay.closest('.reel-item'); const video = container.querySelector('video'); const icon = overlay.querySelector('.play-icon'); if (video.paused) { video.play(); icon.classList.add('opacity-0'); } else { video.pause(); icon.classList.remove('opacity-0'); } };
         window.scrollReels = function(dir) { const c = document.getElementById('main-reels-container'); if(c) c.scrollBy({ top: dir * c.clientHeight, behavior: 'smooth' }); };
         window.scrollToReel = function(id) { const el = document.getElementById(id); const c = document.getElementById('main-reels-container'); if(el && c) c.scrollTo({ top: el.offsetTop, behavior: 'smooth' }); };
-        
         window.toggleVideoLike = async function(vid) {
             try {
                 const icons = document.querySelectorAll(`.heart-icon-${vid}`); let isLiked = false; if(icons.length > 0) isLiked = icons[0].classList.contains('text-red-500');
@@ -389,39 +351,10 @@
 
                 let listHTML = (vids||[]).map(v => {
                     const cCount = commentCounts[v.id] || 0;
-                    return `
-                    <div class="p-6 bg-white dark:bg-darkCard border-2 dark:border-slate-800 rounded-[2rem] shadow-sm mb-4 flex flex-col md:flex-row justify-between md:items-center gap-4 transition hover:shadow-md">
-                        <div class="flex items-center gap-4 w-full md:w-auto">
-                            <div class="w-16 h-24 bg-slate-900 rounded-xl flex items-center justify-center overflow-hidden shrink-0 shadow-inner"><video src="${v.video_url}#t=1" class="w-full h-full object-cover" muted></video></div>
-                            <div class="flex-1"><h5 class="font-black uppercase text-sm line-clamp-2">${v.title}</h5><p class="text-[10px] font-bold text-slate-400 mt-2"><i class="fa-regular fa-clock mr-1"></i>${new Date(v.created_at).toLocaleString('tr-TR')}</p></div>
-                        </div>
-                        <div class="flex gap-2 w-full md:w-auto shrink-0">
-                            <button type="button" onclick="window.openVideoComments('${v.id}')" class="flex-1 md:flex-none px-6 py-4 bg-blue-50 text-blue-600 rounded-xl font-black text-[10px] uppercase transition hover:scale-105"><i class="fa-solid fa-comments mr-2 text-sm"></i> Yorumlar (${cCount})</button>
-                            <button type="button" onclick="window.deleteItem('videos', '${v.id}', window.renderTeacherVideos)" class="px-6 py-4 bg-red-50 text-red-600 rounded-xl font-black text-[10px] uppercase transition hover:scale-105"><i class="fa-solid fa-trash text-sm"></i></button>
-                        </div>
-                    </div>`;
+                    return `<div class="p-6 bg-white dark:bg-darkCard border-2 dark:border-slate-800 rounded-[2rem] shadow-sm mb-4 flex flex-col md:flex-row justify-between md:items-center gap-4 transition hover:shadow-md"><div class="flex items-center gap-4 w-full md:w-auto"><div class="w-16 h-24 bg-slate-900 rounded-xl flex items-center justify-center overflow-hidden shrink-0 shadow-inner"><video src="${v.video_url}#t=1" class="w-full h-full object-cover" muted></video></div><div class="flex-1"><h5 class="font-black uppercase text-sm line-clamp-2">${v.title}</h5><p class="text-[10px] font-bold text-slate-400 mt-2"><i class="fa-regular fa-clock mr-1"></i>${new Date(v.created_at).toLocaleString('tr-TR')}</p></div></div><div class="flex gap-2 w-full md:w-auto shrink-0"><button type="button" onclick="window.openVideoComments('${v.id}')" class="flex-1 md:flex-none px-6 py-4 bg-blue-50 text-blue-600 rounded-xl font-black text-[10px] uppercase transition hover:scale-105"><i class="fa-solid fa-comments mr-2 text-sm"></i> Yorumlar (${cCount})</button><button type="button" onclick="window.deleteItem('videos', '${v.id}', window.renderTeacherVideos)" class="px-6 py-4 bg-red-50 text-red-600 rounded-xl font-black text-[10px] uppercase transition hover:scale-105"><i class="fa-solid fa-trash text-sm"></i></button></div></div>`;
                 }).join('') || '<p class="text-center p-10 italic text-slate-400 font-bold text-xs uppercase">Yüklenmiş video bulunmuyor.</p>';
 
-                document.getElementById('view-content').innerHTML = `
-                    <div class="grid lg:grid-cols-3 gap-10 view-fade">
-                        <div class="lg:col-span-1">
-                            <form id="video-upload-form" class="bg-white dark:bg-darkCard p-8 rounded-[3rem] border shadow-sm space-y-4 sticky top-24">
-                                <h4 class="font-black text-lg mb-4 italic uppercase tracking-tighter">Yeni Video Yükle</h4>
-                                <textarea id="v-title" placeholder="Video Açıklaması (Tüm metin burada görünecek)" required class="w-full p-4 rounded-xl border dark:bg-darkBg font-medium text-sm outline-none h-32 custom-scrollbar"></textarea>
-                                <div class="p-6 border-2 border-dashed rounded-2xl bg-slate-50 dark:bg-slate-900/30 text-center">
-                                    <i class="fa-solid fa-file-video text-3xl text-blue-500 mb-3 block drop-shadow-md"></i>
-                                    <p class="text-[10px] font-black uppercase text-slate-400 mb-3 tracking-widest italic">Dikey Video Önerilir</p>
-                                    <input type="file" id="v-file" accept="video/*" required class="w-full text-[10px]">
-                                </div>
-                                <button type="submit" id="v-submit-btn" class="w-full brand-bg text-white py-5 rounded-xl font-black uppercase shadow-lg transition hover:brightness-110">Yükle ve Yayınla</button>
-                                <div id="upload-progress-container" class="hidden w-full mt-4 p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl border dark:border-slate-800">
-                                    <div class="h-3 w-full bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden shadow-inner mb-2"><div id="upload-progress-bar" class="h-full bg-blue-500 w-0 transition-all duration-300"></div></div>
-                                    <p id="upload-progress-text" class="text-[10px] text-center font-black text-blue-500 uppercase tracking-widest">Hazırlanıyor...</p>
-                                </div>
-                            </form>
-                        </div>
-                        <div class="lg:col-span-2 space-y-4"><h4 class="font-black text-[10px] uppercase text-slate-400 tracking-[0.2em] italic mb-4 border-b dark:border-slate-800 pb-2">Yayındaki Videolar Kütüphanesi</h4>${listHTML}</div>
-                    </div>`;
+                document.getElementById('view-content').innerHTML = `<div class="grid lg:grid-cols-3 gap-10 view-fade"><div class="lg:col-span-1"><form id="video-upload-form" class="bg-white dark:bg-darkCard p-8 rounded-[3rem] border shadow-sm space-y-4 sticky top-24"><h4 class="font-black text-lg mb-4 italic uppercase tracking-tighter">Yeni Video Yükle</h4><textarea id="v-title" placeholder="Video Açıklaması (Tüm metin burada görünecek)" required class="w-full p-4 rounded-xl border dark:bg-darkBg font-medium text-sm outline-none h-32 custom-scrollbar"></textarea><div class="p-6 border-2 border-dashed rounded-2xl bg-slate-50 dark:bg-slate-900/30 text-center"><i class="fa-solid fa-file-video text-3xl text-blue-500 mb-3 block drop-shadow-md"></i><p class="text-[10px] font-black uppercase text-slate-400 mb-3 tracking-widest italic">Dikey Video Önerilir</p><input type="file" id="v-file" accept="video/*" required class="w-full text-[10px]"></div><button type="submit" id="v-submit-btn" class="w-full brand-bg text-white py-5 rounded-xl font-black uppercase shadow-lg transition hover:brightness-110">Yükle ve Yayınla</button><div id="upload-progress-container" class="hidden w-full mt-4 p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl border dark:border-slate-800"><div class="h-3 w-full bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden shadow-inner mb-2"><div id="upload-progress-bar" class="h-full bg-blue-500 w-0 transition-all duration-300"></div></div><p id="upload-progress-text" class="text-[10px] text-center font-black text-blue-500 uppercase tracking-widest">Hazırlanıyor...</p></div></form></div><div class="lg:col-span-2 space-y-4"><h4 class="font-black text-[10px] uppercase text-slate-400 tracking-[0.2em] italic mb-4 border-b dark:border-slate-800 pb-2">Yayındaki Videolar Kütüphanesi</h4>${listHTML}</div></div>`;
 
                 document.getElementById('video-upload-form').onsubmit = async (e) => {
                     e.preventDefault(); const btn = document.getElementById('v-submit-btn'); const file = document.getElementById('v-file').files[0]; if (!file) return;
@@ -441,7 +374,7 @@
                         setTimeout(() => { alert("Video başarıyla yüklendi ve yayınlandı!"); window.renderTeacherVideos(); }, 800);
                     } catch(err) { clearInterval(fakeProgressInterval); progContainer.classList.add('hidden'); btn.classList.remove('hidden'); alert("Hata: " + err.message); }
                 };
-            } catch(e) { console.error(e); }
+            } catch(e) { console.error("Video Error", e); }
         };
 
         // COMMENTS (COMMON)
@@ -479,7 +412,7 @@
         };
 
         // ==========================================
-        // DİĞER MODÜLLER
+        // DİĞER MODÜLLER (DASHBOARD, ÖDEVLER, ANALİZLER, DERSLER)
         // ==========================================
         async function renderDashboard() {
             document.getElementById('page-title').innerText = 'Dashboard'; const content = document.getElementById('view-content');
@@ -669,6 +602,9 @@
         window.startEditLesson = async function(id) { editingLessonId = id; const { data: l } = await supabaseClient.from('lessons').select('*').eq('id', id).single(); if (l) { document.getElementById('lesson-form-title').innerText = "Dersi Düzenle"; document.getElementById('l-student').value = l.student_id; document.getElementById('l-title').value = l.title; const linkInput = document.getElementById('l-link'); const linkContainer = document.getElementById('link-container'); if (l.link && !l.link.startsWith('matota_')) { linkContainer.classList.remove('hidden'); linkInput.value = l.link; } else { linkContainer.classList.add('hidden'); linkInput.value = ''; } const d = new Date(l.scheduled_at); const off = new Date(d.getTime() - (d.getTimezoneOffset() * 60000)); document.getElementById('l-time').value = off.toISOString().slice(0, 16); document.getElementById('lesson-form').scrollIntoView({ behavior: 'smooth' }); } }
         window.markLessonCompleted = async function(id) { if(confirm("Geçmiş olarak işaretlemek istediğinize emin misiniz?")) { const { error } = await supabaseClient.from('lessons').update({ is_completed: true }).eq('id', id); if(!error) window.renderTeacherLessons(); else alert("Hata: " + error.message); } };
         window.markLessonActive = async function(id) { if(confirm("Tekrar aktif yapmak istediğinize emin misiniz?")) { const { error } = await supabaseClient.from('lessons').update({ is_completed: false }).eq('id', id); if(!error) window.renderTeacherLessons(); else alert("Hata: " + error.message); } };
+
+        window.markHomeworkCompleted = async function(id) { if(confirm("Geçmiş olarak işaretlemek istediğinize emin misiniz?")) { const { error } = await supabaseClient.from('homeworks').update({ is_completed: true }).eq('id', id); if(!error) window.renderTeacherHomeworks(); else alert("Hata: " + error.message); } };
+        window.markHomeworkActive = async function(id) { if(confirm("Tekrar aktif yapmak istediğinize emin misiniz?")) { const { error } = await supabaseClient.from('homeworks').update({ is_completed: false }).eq('id', id); if(!error) window.renderTeacherHomeworks(); else alert("Hata: " + error.message); } };
 
         window.renderTeacherExams = async function() { 
             document.getElementById('page-title').innerText = 'Sınav Hazırlama ve Sonuçlar'; 
